@@ -1724,7 +1724,7 @@ library:CreateWindow({
         Text = "Change Theme:",
         Name = "Dropdown2",
         Options = AllAvailableThemes,
-        Default = selectedTheme,
+        Default = "Dark Fantasy",
         MultiSelect = false,
         Flag = "Dropdown2",
         Callback = function(choice)
