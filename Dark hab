@@ -1,3 +1,6 @@
+Вот полный объединённый скрипт с GUI в стиле Dark Fantasy:
+
+```lua
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Iliankytb/Iliankytb/main/Zentrix"))()
 local V = "V.0.52"
 local selectedTheme = "Dark Fantasy" -- Изменено на тему Dark Fantasy
@@ -69,7 +72,6 @@ library:CreateWindow({
     local AutoSafeSpot = false
     local HitboxExpender = false
     local ValueHE = 15
-    local ActiveEspBattery = false
     local ActiveEspTraps = false
     local ActiveEspWireEyes = false
     local AutoShakeWireEyes = false
@@ -810,3 +812,1106 @@ library:CreateWindow({
         if child.Name == "Gen" then
             if AutoGen and not AutoFarm then
                 task.wait(TimeForGenerator)
+                if child and child:FindFirstChild("GeneratorMain") then
+                    child.GeneratorMain.Event:FireServer({
+                        Wires = true,
+                        Switches = true,
+                        Lever = true
+                    })
+                end
+            end
+            if AutoFarm then
+                task.wait(TimeForGenerator)
+                if child and child:FindFirstChild("GeneratorMain") then
+                    child.GeneratorMain.Event:FireServer({
+                        Wires = true,
+                        Switches = true,
+                        Lever = true
+                    })
+                end
+            end
+        end
+    end)
+
+    local CollectionService = game:GetService("CollectionService")
+    local AntiConfusion = false
+
+    CollectionService:GetInstanceAddedSignal("Confusion"):Connect(function(instance)
+        if AntiConfusion then
+            local character = LocalPlayer.Character
+            if instance == character then
+                CollectionService:RemoveTag(character, "Confusion")
+            end
+        end
+    end)
+    local function KeepEsp(Char, Parent)
+        if not Char or not Char:FindFirstChildOfClass("Highlight") then return end
+        if not Parent or not Parent:FindFirstChildOfClass("BillboardGui") then return end
+
+        for i = #ESPs, 1, -1 do
+            local esp = ESPs[i]
+            if esp.Char == Char then
+                if esp.Highlight then esp.Highlight:Destroy() end
+                if esp.Billboard then esp.Billboard:Destroy() end
+                if esp.Line then esp.Line:Destroy() end
+
+                table.remove(ESPs, i)
+            end
+        end
+    end
+    local function SetupCharacter(child, Map, Part)
+        if not child:IsA("Model") then return end
+        child.AncestryChanged:Connect(function(_, newParent)
+            if not child:IsDescendantOf(Map) then
+                KeepEsp(child, Part)
+            end
+        end)
+    end
+    local function copyToClipboard(text)
+        if setclipboard then
+            setclipboard(text)
+        else
+            warn("setclipboard is not supported in this environment.")
+        end
+    end
+
+    local EspSurvivorsToggle = EspTab:AddToggle({
+        Text = "Esp Survivors",
+        Name = "EspSurvivorsToggle",
+        CurrentValue = false,
+        Flag = "EspSurvivors",
+        Callback = function(Value)
+            ActiveEspSurvivors = Value
+            if ActiveEspSurvivors then
+                for _, Players2 in pairs(game.Workspace.PLAYERS.ALIVE:GetChildren()) do
+                    if Players2:IsA("Model") and Players2.PrimaryPart and not Players2.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                        if Players2:FindFirstChildOfClass("Highlight") then
+                            Players2:FindFirstChildOfClass("Highlight"):Destroy()
+                        end
+
+                        SetupCharacter(Players2, workspace.PLAYERS.ALIVE, Players2.PrimaryPart)
+                        CreateEsp(Players2, Color3.fromRGB(0, 255, 0), Players2.Name .. " " .. Players2:GetAttribute("Character"), Players2.PrimaryPart, 2)
+                    end
+                end
+            else
+                for _, Players2 in pairs(game.Workspace.PLAYERS.ALIVE:GetChildren()) do
+                    if Players2:IsA("Model") and Players2.PrimaryPart and Players2:FindFirstChildOfClass("Highlight") and Players2.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                        KeepEsp(Players2, Players2.PrimaryPart)
+                    end
+                end
+            end
+        end,
+    })
+
+    local EspKillersToggle = EspTab:AddToggle({
+        Text = "Esp Killers",
+        Name = "EspKillers",
+        CurrentValue = false,
+        Flag = "EspKiller",
+        Callback = function(Value)
+            ActiveEspKillers = Value
+            if ActiveEspKillers then
+                for _, Players2 in pairs(game.Workspace.PLAYERS.KILLER:GetChildren()) do
+                    if Players2:IsA("Model") and (Players2:FindFirstChild("RootPart") or Players2:FindFirstChild("HumanoidRootPart")) then
+                        if Players2:FindFirstChildOfClass("Highlight") then
+                            Players2:FindFirstChildOfClass("Highlight"):Destroy()
+                        end
+                        local PART = Players2:FindFirstChild("RootPart") or nil
+                        if Players2:GetAttribute("Character") == "Ennard" then
+                            PART = Players2:FindFirstChild("HumanoidRootPart")
+                        end
+                        if not PART:FindFirstChildOfClass("BillboardGui") then
+                            SetupCharacter(Players2, workspace.PLAYERS.KILLER, PART)
+                            CreateEsp(Players2, Color3.fromRGB(255, 0, 0), Players2.Name .. " " .. Players2:GetAttribute("Character"), PART, 2)
+                        end
+                    end
+                end
+            else
+                for _, Players2 in pairs(game.Workspace.PLAYERS.KILLER:GetChildren()) do
+                    if Players2:IsA("Model") and (Players2:FindFirstChild("RootPart") or Players2:FindFirstChild("HumanoidRootPart")) and Players2:FindFirstChildOfClass("Highlight") then
+                        local PART = Players2:FindFirstChild("RootPart") or nil
+                        if Players2:GetAttribute("Character") == "Ennard" then
+                            PART = Players2:FindFirstChild("HumanoidRootPart")
+                        end
+                        if PART:FindFirstChildOfClass("BillboardGui") then
+                            KeepEsp(Players2, PART)
+                        end
+                    end
+                end
+            end
+        end,
+    })
+
+    local EspGenToggle = EspTab:AddToggle({
+        Text = "Esp Generators",
+        Name = "EspGens",
+        CurrentValue = false,
+        Flag = "EspGens",
+        Callback = function(Value)
+            ActiveEspGen = Value
+            if ActiveEspGen then
+                if workspace.MAPS:FindFirstChild("GAME MAP") then
+                    for _, Players2 in pairs(game.Workspace.MAPS["GAME MAP"].Generators:GetChildren()) do
+                        if Players2:IsA("Model") and Players2.PrimaryPart and not Players2:FindFirstChildOfClass("Highlight") and not Players2.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                            CreateEsp(Players2, Color3.fromRGB(255, 255, 0), "Generators", Players2.PrimaryPart, 2)
+                        end
+                    end
+                end
+            else
+                if workspace.MAPS:FindFirstChild("GAME MAP") then
+                    for _, Players2 in pairs(game.Workspace.MAPS["GAME MAP"].Generators:GetChildren()) do
+                        if Players2:IsA("Model") and Players2.PrimaryPart and Players2:FindFirstChildOfClass("Highlight") and Players2.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                            KeepEsp(Players2, Players2.PrimaryPart)
+                        end
+                    end
+                end
+            end
+        end,
+    })
+    local EspFuseBoxesToggle = EspTab:AddToggle({
+        Text = "Esp Fuse Boxes",
+        Name = "EspFuseBoxes",
+        CurrentValue = false,
+        Flag = "EspFuseBoxes",
+        Callback = function(Value)
+            ActiveEspFuseBoxes = Value
+            if ActiveEspFuseBoxes then
+                if workspace.MAPS:FindFirstChild("GAME MAP") and game.Workspace.MAPS["GAME MAP"]:FindFirstChild("FuseBoxes") then
+                    for _, Players2 in pairs(game.Workspace.MAPS["GAME MAP"].FuseBoxes:GetChildren()) do
+                        if Players2:IsA("Model") and Players2.PrimaryPart and not Players2.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                            if Players2:FindFirstChildOfClass("Highlight") then
+                                Players2:FindFirstChildOfClass("Highlight"):Destroy()
+                            end
+                            CreateEsp(Players2, Color3.fromRGB(0, 0, 255), "Fuse Boxe", Players2.PrimaryPart, 2)
+                        end
+                    end
+                end
+            else
+                if workspace.MAPS:FindFirstChild("GAME MAP") and game.Workspace.MAPS["GAME MAP"]:FindFirstChild("FuseBoxes") then
+                    for _, Players2 in pairs(game.Workspace.MAPS["GAME MAP"].FuseBoxes:GetChildren()) do
+                        if Players2:IsA("Model") and Players2.PrimaryPart and Players2:FindFirstChildOfClass("Highlight") and Players2.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                            KeepEsp(Players2, Players2.PrimaryPart)
+                        end
+                    end
+                end
+            end
+        end,
+    })
+    local EspBatteryToggle = EspTab:AddToggle({
+        Text = "Esp Battery",
+        Name = "EspBatteryToggle",
+        CurrentValue = false,
+        Flag = "EspBatteryToggle",
+        Callback = function(Value)
+            ActiveEspBattery = Value
+            if ActiveEspBattery then
+                for _, Players2 in pairs(game.Workspace.IGNORE:GetChildren()) do
+                    if Players2:IsA("BasePart") and Players2.Name == "Battery" and not Players2:FindFirstChildOfClass("BillboardGui") then
+                        if Players2:FindFirstChildOfClass("Highlight") then
+                            Players2:FindFirstChildOfClass("Highlight"):Destroy()
+                        end
+                        CreateEsp(Players2, Color3.fromRGB(0, 0, 255), "Battery", Players2, 2)
+                    end
+                end
+            else
+                for _, Players2 in pairs(game.Workspace.IGNORE:GetChildren()) do
+                    if Players2:IsA("BasePart") and Players2.Name == "Battery" and Players2 and Players2:FindFirstChildOfClass("Highlight") and Players2:FindFirstChildOfClass("BillboardGui") then
+                        KeepEsp(Players2, Players2)
+                    end
+                end
+            end
+        end,
+    })
+    local EspTrapToggle = EspTab:AddToggle({
+        Text = "Esp Traps",
+        Name = "EspTrapToggle",
+        CurrentValue = false,
+        Flag = "EspTrapToggle",
+        Callback = function(Value)
+            ActiveEspTraps = Value
+            if ActiveEspTraps then
+                for _, Players2 in pairs(game.Workspace.IGNORE:GetChildren()) do
+                    if Players2:IsA("Model") and Players2.Name == "Trap" and not Players2.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                        if Players2:FindFirstChildOfClass("Highlight") then
+                            Players2:FindFirstChildOfClass("Highlight"):Destroy()
+                        end
+                        CreateEsp(Players2, Color3.fromRGB(255, 0, 0), "Trap", Players2.PrimaryPart, 2)
+                    end
+                end
+            else
+                for _, Players2 in pairs(game.Workspace.IGNORE:GetChildren()) do
+                    if Players2:IsA("Model") and Players2.Name == "Trap" and Players2 and Players2:FindFirstChildOfClass("Highlight") and Players2.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                        KeepEsp(Players2, Players2.PrimaryPart)
+                    end
+                end
+            end
+        end,
+    })
+    local EspWireEyesToggle = EspTab:AddToggle({
+        Text = "Esp Wire Eyes",
+        Name = "EspWireEyesToggle",
+        CurrentValue = false,
+        Flag = "EspWireEyesToggle",
+        Callback = function(Value)
+            ActiveEspWireEyes = Value
+            if ActiveEspWireEyes then
+                for _, Players2 in pairs(game.Workspace.IGNORE:GetChildren()) do
+                    if Players2:IsA("Model") and Players2.Name == "Minion" and not Players2.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                        if Players2:FindFirstChildOfClass("Highlight") then
+                            Players2:FindFirstChildOfClass("Highlight"):Destroy()
+                        end
+                        SetupCharacter(Players2, game.Workspace.IGNORE, Players2.PrimaryPart)
+                        CreateEsp(Players2, Color3.fromRGB(255, 0, 0), "Wire Eyes", Players2.PrimaryPart, 2)
+                    end
+                end
+            else
+                for _, Players2 in pairs(game.Workspace.IGNORE:GetChildren()) do
+                    if Players2:IsA("Model") and Players2.Name == "Minion" and Players2 and Players2:FindFirstChildOfClass("Highlight") and Players2.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                        KeepEsp(Players2, Players2.PrimaryPart)
+                    end
+                end
+            end
+        end,
+    })
+    local DeleteDoorsButtons = MainTab:AddButton({
+        Text = "Delete Doors",
+        Name = "DeleteDoorsButtons",
+        Callback = function()
+            if workspace.MAPS:FindFirstChild("GAME MAP") then
+                if game.Workspace.MAPS["GAME MAP"].Doors then
+                    game.Workspace.MAPS["GAME MAP"].Doors:Destroy()
+                end
+            end
+        end,
+    })
+
+    local PlayKillerCutsceneButtons = MainTab:AddButton({
+        Text = "Play killer cutscene",
+        Name = "PlayKillerCutsceneButtons",
+        Callback = function()
+            local KillerModel = workspace.PLAYERS.KILLER:FindFirstChildOfClass("Model")
+            if KillerModel and KillerModel == game.Players.LocalPlayer.Character then
+                KillerModel:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Dead)
+            end
+        end,
+    })
+    local SkipCutsceneButton = MainTab:AddButton({
+        Text = "Skip cutscene",
+        Name = "SkipCutsceneButton",
+        Callback = function()
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+            local cutsceneRigs = ReplicatedStorage
+                :WaitForChild("Modules")
+                :WaitForChild("Cutscenes")
+                :WaitForChild("Rigs")
+
+            local rigsToRemove = {
+                "IntroCam",
+                "IntroCamWithLight",
+                "KillCam",
+                "OutroCam"
+            }
+
+            for _, rigName in ipairs(rigsToRemove) do
+                local rig = cutsceneRigs:FindFirstChild(rigName)
+
+                if rig then
+                    rig:Destroy()
+                end
+            end
+        end,
+    })
+
+    local player = game.Players.LocalPlayer
+
+    local animationTrack
+    local steppedConnection
+    local cameraConnection
+
+    local function ApplyInvisibility(enabled)
+        local character = player.Character or player.CharacterAdded:Wait()
+        local humanoid = character:WaitForChild("Humanoid")
+        local rootPart = character:WaitForChild("HumanoidRootPart")
+        local camera = workspace.CurrentCamera
+
+        if not enabled then
+            if animationTrack then
+                animationTrack:Stop()
+                animationTrack = nil
+            end
+
+            if steppedConnection then
+                steppedConnection:Disconnect()
+                steppedConnection = nil
+            end
+
+            if cameraConnection then
+                cameraConnection:Disconnect()
+                cameraConnection = nil
+            end
+
+            camera.CameraSubject = humanoid
+            if workspace.MAPS:FindFirstChild("GAME MAP") then
+                if game.Workspace.MAPS["GAME MAP"].Doors then
+                    for _, BasePart in pairs(game.Workspace.MAPS["GAME MAP"].Doors:GetDescendants()) do
+                        if BasePart:IsA("BasePart") then
+                            if BasePart:GetAttribute("OriginalCollision") then
+                                BasePart.CanCollide = BasePart:GetAttribute("OriginalCollision")
+                            end
+                        end
+                    end
+                end
+            end
+            return
+        end
+        if character:GetAttribute("Team") == "Killer" then
+            if character:GetAttribute("Character") ~= "Mimic" and character:GetAttribute("Character") ~= "Ennard" then
+                return
+            end
+            for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                    part.CanCollide = false
+                end
+            end
+            rootPart.CanCollide = true
+
+            camera.CameraSubject = rootPart
+
+            cameraConnection = camera:GetPropertyChangedSignal("CameraSubject"):Connect(function()
+                if camera.CameraSubject ~= rootPart then
+                    camera.CameraSubject = rootPart
+                end
+            end)
+
+            local animation = Instance.new("Animation")
+            local Id = nil
+            if character:GetAttribute("Character") == "Mimic" then
+                Id = "rbxassetid://95483601477510"
+            elseif character:GetAttribute("Character") == "Ennard" then
+                Id = "rbxassetid://111261793531584"
+            else
+                Id = nil
+                return
+            end
+            if workspace.MAPS:FindFirstChild("GAME MAP") then
+                if game.Workspace.MAPS["GAME MAP"].Doors then
+                    for _, BasePart in pairs(game.Workspace.MAPS["GAME MAP"].Doors:GetDescendants()) do
+                        if BasePart:IsA("BasePart") and BasePart.CanCollide then
+                            if not BasePart:GetAttribute("OriginalCollision") then
+                                BasePart:SetAttribute("OriginalCollision", BasePart.CanCollide)
+                            end
+                            BasePart.CanCollide = false
+                        end
+                    end
+                end
+            end
+            animation.AnimationId = Id
+
+            local animator = humanoid:FindFirstChildOfClass("Animator")
+                or Instance.new("Animator", humanoid)
+
+            animationTrack = animator:LoadAnimation(animation)
+            animationTrack.Priority = Enum.AnimationPriority.Action4
+            animationTrack.Looped = false
+            animationTrack:Play()
+
+            task.wait(0.1)
+
+            if animationTrack.Length > 0 then
+                animationTrack.TimePosition = animationTrack.Length - 0.01
+                animationTrack:AdjustSpeed(0)
+            end
+
+            steppedConnection = RunService.RenderStepped:Connect(function()
+                if camera.CameraSubject ~= rootPart then
+                    camera.CameraSubject = rootPart
+                end
+            end)
+        end
+    end
+
+    local ButonDiscordLink = DiscordTab:AddButton({
+        Text = "Discord Link",
+        Name = "Button",
+        Callback = function()
+            library:CopyText("https://discord.gg/E2TqYRsRP4")
+        end
+    })
+
+    local ToggleAG = MainTab:AddToggle({
+        Text = "Auto Generator",
+        Note = "Maybe its working now",
+        Name = "ToggleAG",
+        Flag = "ToggleAG",
+        Default = false,
+        Callback = function(state)
+            AutoGen = state
+        end
+    })
+
+    local ToggleAutoHighlightKillerAsSG = MainTab:AddToggle({
+        Text = "Auto Highlight Killer As Security Guard",
+        Name = "ToggleAutoHighlightKillerAsSG",
+        Flag = "ToggleAutoHighlightKillerAsSG",
+        Default = false,
+        Callback = function(state)
+            AutoHighlightKillerCamera = state
+        end
+    })
+
+    local ToggleAntiConfusion = MainTab:AddToggle({
+        Text = "Anti Confusion",
+        Note = "Work when being tased",
+        Name = "ToggleAntiConfusion",
+        Flag = "ToggleAntiConfusion",
+        Default = false,
+        Callback = function(state)
+            AntiConfusion = state
+        end
+    })
+
+    local TimeForAH = MainTab:AddSlider({
+        Text = "Time For Auto Highlight Killer As Security Guard",
+        Name = "TimeForAH",
+        Min = 0,
+        Max = 2.5,
+        Default = 0.1,
+        Increment = 0.1,
+        Flag = "TimeForAH",
+        Callback = function(Value)
+            TimeAutoHighlight = Value
+        end,
+    })
+    workspace.PLAYERS.KILLER.ChildRemoved:Connect(function(child)
+        ApplyInvisibility(false)
+    end)
+
+    workspace.PLAYERS.KILLER.ChildAdded:Connect(function(child)
+        if InvisibilityKiller then
+            ApplyInvisibility(true)
+        end
+    end)
+    local AutoFarmToggle = MainTab:AddToggle({
+        Text = "Auto Farm EXPIREMENT!",
+        Note = "Generators,Fuse boxes and auto escape at the same time!",
+        Name = "AutoFarmToggle",
+        Default = false,
+        Flag = "AutoFarmToggle",
+        Callback = function(Value)
+            AutoFarm = Value
+        end,
+    })
+    local TimeForGeneratorSlider = MainTab:AddSlider({
+        Text = "Time For Generator (Work for Auto Farm and Auto Generator!)",
+        Name = "TimeForGeneratorSlider",
+        Min = 0.5,
+        Max = 3,
+        Default = 1.25,
+        Increment = 0.05,
+        Flag = "TimeForGeneratorSlider",
+        Callback = function(Value)
+            TimeForGenerator = Value
+        end,
+    })
+
+    local ToggleAutoParry = MainTab:AddToggle({
+        Text = "Fighter - Auto Parry",
+        Note = "Don't work on Xeno,JJsploit and Solara!",
+        Name = "ToggleAutoParry",
+        Flag = "ToggleAutoParry",
+        Default = false,
+        Callback = function(state)
+            FighterAutoParry = state
+        end
+    })
+    local ToggleBarricade = MainTab:AddToggle({
+        Text = "Auto Barricade",
+        Name = "ToggleBarricade",
+        Flag = "ToggleBarricade",
+        Default = false,
+        Callback = function(state)
+            AutoBarricade = state
+        end
+    })
+    local SizeBoxBarricadeSlider = MainTab:AddSlider({
+        Text = "Size for the box of the barricade",
+        Name = "SizeBoxBarricadeSlider",
+        Min = 0.3,
+        Max = 1.5,
+        Default = 0.3,
+        Increment = 0.1,
+        Flag = "SizeBoxBarricadeSlider",
+        Callback = function(Value)
+            SizeBoxBarricade = Value
+        end,
+    })
+    local ToggleAutoSafeSpot = MainTab:AddToggle({
+        Text = "Auto Safe spot",
+        Note = " when near to die",
+        Name = "ToggleAutoSafeSpot",
+        Flag = "ToggleAutoSafeSpot",
+        Default = false,
+        Callback = function(state)
+            AutoSafeSpot = state
+            if not AutoSafeSpot then
+                game.Players.LocalPlayer.Character.PrimaryPart.CFrame = SavedCFrame
+            end
+        end
+    })
+    local ToggleInvisibility = MainTab:AddToggle({
+        Text = "Invisible Killer",
+        Note = "for mimic and ennard only!",
+        Name = "ToggleInvisibilityMimic",
+        Flag = "ToggleInvisibilityMimic",
+        Default = false,
+        Callback = function(state)
+            InvisibilityKiller = state
+            ApplyInvisibility(state)
+        end
+    })
+
+    local NoCooldownpromptToggle = MainTab:AddToggle({
+        Text = "Instant Prompt",
+        Name = "NoCooldownpromptToggle",
+        Default = false,
+        Flag = "NoCooldownPrompt1",
+        Callback = function(Value)
+            ActiveNoCooldownPrompt = Value
+            task.spawn(function()
+                if ActiveNoCooldownPrompt then
+                    for _, Assets in pairs(game.Workspace:GetDescendants()) do
+                        if Assets:IsA("ProximityPrompt") then
+                            task.spawn(function()
+                                if Assets.HoldDuration ~= 0.1 then
+                                    Assets:SetAttribute("HoldDurationOld", Assets.HoldDuration)
+                                    Assets.HoldDuration = 0.1
+                                end
+                            end)
+                        end
+                    end
+                else
+                    for _, Assets in pairs(game.Workspace:GetDescendants()) do
+                        if Assets:IsA("ProximityPrompt") then
+                            task.spawn(function()
+                                if Assets:GetAttribute("HoldDurationOld") and Assets:GetAttribute("HoldDurationOld") ~= 0 then
+                                    Assets.HoldDuration = Assets:GetAttribute("HoldDurationOld")
+                                end
+                            end)
+                        end
+                    end
+                end
+            end)
+        end,
+    })
+
+    local function Noclip()
+        if ActiveNoclip then
+            if game.Players.LocalPlayer.Character then
+                for _, Parts in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+                    if Parts:IsA("BasePart") and Parts.CanCollide then
+                        if not Parts:GetAttribute("OldCollide") then
+                            Parts:SetAttribute("OldCollide", Parts.CanCollide)
+                        end
+                        Parts.CanCollide = false
+                    end
+                end
+            end
+        else
+            if game.Players.LocalPlayer.Character then
+                for _, Parts in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+                    if Parts:IsA("BasePart") and Parts:GetAttribute("OldCollide") then
+                        Parts.CanCollide = Parts:GetAttribute("OldCollide")
+                    end
+                end
+            end
+        end
+    end
+
+    local PlayerNoclipToggle = PlayerTab:AddToggle({
+        Text = "Noclip",
+        Name = "PlayerNoclipToggle",
+        Default = false,
+        Flag = "ButtonNoclip",
+        Callback = function(Value)
+            ActiveNoclip = Value
+            Noclip()
+        end,
+    })
+
+    game:GetService("Players").LocalPlayer:GetPropertyChangedSignal("Character"):Connect(function()
+        Noclip()
+    end)
+
+    local PlayerRunSpeedSlider = PlayerTab:AddSlider({
+        Text = "Run Speed",
+        Name = "PlayerRunSpeedSlider",
+        Min = 0,
+        Max = 50,
+        Default = 24,
+        Flag = "Slider1",
+        Callback = function(Value)
+            ValueRunSpeed = Value
+        end,
+    })
+
+    local PlayerActiveRunSpeedToggle = PlayerTab:AddToggle({
+        Text = "Active Modifying Run Speed",
+        Name = "PlayerActiveRunSpeedToggle",
+        Default = false,
+        Flag = "ButtonSpeed",
+        Callback = function(Value)
+            ActiveSpeedBoost = Value
+        end,
+    })
+
+    local PlayerFlySpeedSlider = PlayerTab:AddSlider({
+        Text = "Fly Speed",
+        Name = "PlayerFlySpeedSlider",
+        Min = 0,
+        Max = 10,
+        Default = 1,
+        Flag = "PlayerFlySpeedSlider",
+        Callback = function(Value)
+            iyflyspeed = Value
+        end,
+    })
+
+    local PlayerFlyToggle = PlayerTab:AddToggle({
+        Text = "Fly",
+        Name = "PlayerFlyToggle",
+        Default = false,
+        Flag = "ButtonFly",
+        Callback = function(Value)
+            ActivateFly = Value
+            task.spawn(function()
+                if not FLYING and ActivateFly then
+                    if UserInputService.TouchEnabled then
+                        MobileFly()
+                    else
+                        task.spawn(function()
+                            if not AlrActivatedFlyPC then
+                                AlrActivatedFlyPC = true
+                                local Notif = window:Notify({
+                                    Title = "Fly!",
+                                    Message = "When you enable to fly you can press F to fly/unfly (it won't disable the button!)!",
+                                    Duration = 5,
+                                })
+                            end
+                        end)
+                        NOFLY()
+                        wait()
+                        sFLY()
+                    end
+                elseif FLYING and not ActivateFly then
+                    if UserInputService.TouchEnabled then
+                        UnMobileFly()
+                    else
+                        NOFLY()
+                    end
+                end
+            end)
+        end,
+    })
+    UserInputService.InputBegan:Connect(function(input, processed)
+        if processed then return end
+        if input.KeyCode == Enum.KeyCode.F then
+            if not FLYING and ActivateFly then
+                if UserInputService.TouchEnabled then
+                    MobileFly()
+                else
+                    NOFLY()
+                    wait()
+                    sFLY()
+                end
+            elseif FLYING and ActivateFly then
+                if UserInputService.TouchEnabled then
+                    UnMobileFly()
+                else
+                    NOFLY()
+                end
+            end
+        end
+    end)
+
+    local HESlider = MainTab:AddSlider({
+        Text = "Hitbox Size",
+        Name = "HESlider",
+        Min = 0,
+        Max = 30,
+        Default = 15,
+        Flag = "HESlider",
+        Callback = function(Value)
+            ValueHE = Value
+        end,
+    })
+
+    local HitboxExpenderToggle = MainTab:AddToggle({
+        Text = "Active Hitbox Expender",
+        Name = "HitboxExpenderToggle",
+        Default = false,
+        Flag = "HitboxExpenderToggle",
+        Callback = function(Value)
+            HitboxExpender = Value
+        end,
+    })
+
+    local PlayerWalkSpeedSlider = PlayerTab:AddSlider({
+        Text = "Walk Speed",
+        Name = "PlayerWalkSpeedSlider",
+        Min = 0,
+        Max = 50,
+        Default = 15,
+        Flag = "Slider2",
+        Callback = function(Value)
+            ValueWalkSpeed = Value
+        end,
+    })
+
+    local PlayerActiveWalkSpeedToggle = PlayerTab:AddToggle({
+        Text = "Active Modifying Walk Speed",
+        Name = "PlayerActiveWalkSpeedToggle",
+        Default = false,
+        Flag = "ButtonSpeed2",
+        Callback = function(Value)
+            ActiveSpeedBoost2 = Value
+        end,
+    })
+
+    local PlayerJumpPowerSlider = PlayerTab:AddSlider({
+        Text = "Jump Power",
+        Name = "PlayerJumpPowerSlider",
+        Note = "Recommended to put 25!",
+        Min = 0,
+        Max = 100,
+        Default = 50,
+        Flag = "PlayerJumpPowerSlider",
+        Callback = function(Value)
+            JumpPowerValue = Value
+        end,
+    })
+
+    local PlayerActiveJumpPowerToggle = PlayerTab:AddToggle({
+        Text = "Active Modifying Jump Power",
+        Name = "PlayerActiveJumpPowerToggle",
+        Default = false,
+        Flag = "PlayerActiveJumpPowerToggle",
+        Callback = function(Value)
+            ActivateJumping = Value
+            local Character = game:GetService("Players").LocalPlayer.Character
+            if Character and Character:FindFirstChildOfClass("Humanoid") then
+                local HUMM = Character:FindFirstChildOfClass("Humanoid")
+                if HUMM then
+                    HUMM.UseJumpPower = ActivateJumping
+                    HUMM.JumpPower = JumpPowerValue
+                end
+            end
+        end,
+    })
+    local PlayerInfiniteStaminaToggle = PlayerTab:AddToggle({
+        Text = "Infinite Stamina",
+        Name = "PlayerInfiniteStaminaToggle",
+        Default = false,
+        Flag = "PlayerInfiniteStaminaToggle",
+        Callback = function(Value)
+            ActiveInfiniteStamina = Value
+        end,
+    })
+    local BigDistancePromptToggle = MainTab:AddToggle({
+        Text = "Big Distance Prompt",
+        Name = "BigDistancePromptToggle",
+        Default = false,
+        Flag = "AutoBigDistancePrompt",
+        Callback = function(Value)
+            ActiveBigPrompt = Value
+        end,
+    })
+    local AutoEscapeButton = MainTab:AddToggle({
+        Text = "Auto Escape",
+        Name = "AutoEscapeButton",
+        Default = false,
+        Flag = "AutoEscapeButton",
+        Callback = function(Value)
+            AutoEscape = Value
+        end,
+    })
+    local AutoShakeButton = MainTab:AddToggle({
+        Text = "Auto Shake Wire Eyes",
+        Name = "AutoShakeButton",
+        Default = false,
+        Flag = "AutoShakeButton",
+        Callback = function(Value)
+            AutoShakeWireEyes = Value
+        end,
+    })
+    local ShakeTimeSlider = MainTab:AddSlider({
+        Text = "Wire eyes Shake time",
+        Name = "ShakeTimeSlider",
+        Min = 0.1,
+        Max = 1,
+        Default = 0.5,
+        Increment = 0.1,
+        Flag = "ShakeTimeSlider",
+        Callback = function(Value)
+            ShakeTime = Value
+        end,
+    })
+    local NoBlindnessButton = MainTab:AddToggle({
+        Text = "No Blindness",
+        Name = "NoBlindnessButton",
+        Default = false,
+        Flag = "NoBlindnessButton",
+        Callback = function(Value)
+            NoBlindness = Value
+        end,
+    })
+    local AutoPhaseButton = MainTab:AddToggle({
+        Text = "Auto Phase - only with technician mask (Unverified!)",
+        Name = "AutoPhaseButton",
+        Default = false,
+        Flag = "AutoPhaseButton",
+        Callback = function(Value)
+            AutoPhase = Value
+        end,
+    })
+
+    local ButtonUnloadCheat = SettingsTab:AddButton({
+        Text = "Unload Cheat",
+        Name = "ButtonUnloadCheat",
+        Callback = function()
+            library:Destroy()
+        end,
+    })
+    local LimitRangerEspSlider = SettingsTab:AddSlider({
+        Text = "Limit Ranger for esp",
+        Name = "LimitRangerEspSlider",
+        Min = 25,
+        Max = 1000,
+        Default = 100,
+        Flag = "LimitRangerEsp1",
+        Callback = function(Value)
+            LimitRangerEsp = Value
+        end,
+    })
+    local DisableLimitRangerEspToggle = SettingsTab:AddToggle({
+        Text = "Disable Limit Ranger Esp",
+        Name = "DisableLimitRangerEspToggle",
+        Default = false,
+        Flag = "ButtonDLRE",
+        Callback = function(Value)
+            DisableLimitRangerEsp = Value
+        end,
+    })
+    local DistanceEspToggle = SettingsTab:AddToggle({
+        Text = "Activate Distance For Esp",
+        Name = "DistanceEspToggle",
+        Default = false,
+        Flag = "ButtonADFE",
+        Callback = function(Value)
+            ActiveDistanceEsp = Value
+        end,
+    })
+    local TraitsToggle = SettingsTab:AddToggle({
+        Text = "Trait for esp",
+        Name = "TraitToggle",
+        Default = false,
+        Flag = "ButtonTTR",
+        Callback = function(Value)
+            LineESPEnabled = Value
+        end,
+    })
+    local AllAvailableThemes = library:GetAllThemes()
+    library:EnableFPSCounter(true)
+
+    local ChangeThemeDropdown = SettingsTab:AddDropdown({
+        Text = "Change Theme:",
+        Name = "Dropdown2",
+        Options = AllAvailableThemes,
+        Default = "Dark Fantasy",
+        MultiSelect = false,
+        Flag = "Dropdown2",
+        Callback = function(choice)
+            window:ChangeTheme(choice)
+        end
+    })
+
+    library:LoadData()
+
+    local CanParry = true
+    workspace.DescendantAdded:Connect(function(child)
+        local HrpPlayer = game:GetService("Players").LocalPlayer.Character and game:GetService("Players").LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if child:IsA("Highlight") and child.Name == "Highlight" and child.Parent == workspace.PLAYERS.KILLER:FindFirstChildOfClass("Model") then
+            local Character = game.Players.LocalPlayer.Character
+            if FighterAutoParry and HrpPlayer and CanParry and Character and not Character:GetAttribute("IFrames") and not Character:GetAttribute("InAbility") and not Character:GetAttribute("Stun") and Character:GetAttribute("Team") == "Survivor" and Character:GetAttribute("Character") == "Survivor-Fighter" then
+                local RootPart = child.Parent:FindFirstChild("RootPart")
+                if RootPart then
+                    local Distance = (RootPart.Position - HrpPlayer.Position).Magnitude
+
+                    if Distance <= 20 then
+                        CanParry = false
+                        task.spawn(function()
+                            task.wait(0.5)
+                            CanParry = true
+                        end)
+                        local Module = require(game:GetService("ReplicatedStorage").Modules.Warp).Client("Input")
+                        if Module then
+                            Module:Fire(true, { "Ability", 2 })
+                        end
+                    end
+                end
+            end
+        end
+        if child:IsA("BoxHandleAdornment") then
+            if HitboxExpender then
+                child.Size = Vector3.new(ValueHE, ValueHE, ValueHE)
+            end
+        end
+        task.wait(0.75)
+        if ActiveNoCooldownPrompt then
+            if child:IsA("ProximityPrompt") and child.HoldDuration ~= 0.1 then
+                child:SetAttribute("HoldDurationOld", child.HoldDuration)
+                child.HoldDuration = 0.1
+            end
+        end
+        if ActiveEspSurvivors then
+            local GetPByChar = game:GetService("Players"):GetPlayerFromCharacter(child)
+            if child.Parent == workspace.PLAYERS.ALIVE and child:IsA("Model") and child.PrimaryPart and not child.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                if GetPByChar then
+                    if child:FindFirstChildOfClass("Highlight") then
+                        child:FindFirstChildOfClass("Highlight"):Destroy()
+                    end
+                    SetupCharacter(child, workspace.PLAYERS.ALIVE, child.PrimaryPart)
+                    CreateEsp(child, Color3.fromRGB(0, 255, 0), child.Name .. " " .. child:GetAttribute("Character"), child.PrimaryPart)
+                end
+            end
+        end
+        if ActiveEspKillers then
+            local GetPByChar = game:GetService("Players"):GetPlayerFromCharacter(child)
+            if child.Parent and child.Parent == workspace.PLAYERS.KILLER and child:IsA("Model") and child:FindFirstChild("RootPart") and not child.RootPart:FindFirstChildOfClass("BillboardGui") then
+                if GetPByChar then
+                    local PART = child:FindFirstChild("RootPart") or nil
+                    if GetPByChar.Character and GetPByChar.Character:GetAttribute("Character") == "Ennard" then
+                        PART = GetPByChar.Character:FindFirstChild("HumanoidRootPart")
+                    end
+                    if child:FindFirstChildOfClass("Highlight") then
+                        child:FindFirstChildOfClass("Highlight"):Destroy()
+                    end
+                    SetupCharacter(child, workspace.PLAYERS.KILLER, PART)
+                    CreateEsp(child, Color3.fromRGB(255, 0, 0), child.Name .. " " .. child:GetAttribute("Character"), PART)
+                end
+            end
+        end
+        if ActiveEspGen then
+            if workspace.MAPS:FindFirstChild("GAME MAP") then
+                if child.Parent and child.Parent == workspace.MAPS["GAME MAP"].Generators and child:IsA("Model") and child.PrimaryPart and not child:FindFirstChildOfClass("Highlight") and not child.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                    CreateEsp(child, Color3.fromRGB(255, 255, 0), "Generator", child.PrimaryPart)
+                end
+            end
+        end
+        if ActiveEspFuseBoxes then
+            if workspace.MAPS:FindFirstChild("GAME MAP") and workspace.MAPS["GAME MAP"]:FindFirstChild("FuseBoxes") then
+                if child.Parent and child.Parent == workspace.MAPS["GAME MAP"].FuseBoxes and child:IsA("Model") and child.PrimaryPart and not child.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                    if child:FindFirstChildOfClass("Highlight") then
+                        child:FindFirstChildOfClass("Highlight"):Destroy()
+                    end
+                    CreateEsp(child, Color3.fromRGB(0, 0, 255), "Fuse Boxe", child.PrimaryPart)
+                end
+            end
+        end
+        if ActiveEspTraps then
+            if child.Parent and child.Name == "Trap" and child.Parent == workspace.IGNORE and child:IsA("Model") and child.PrimaryPart and not child.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                if child:FindFirstChildOfClass("Highlight") then
+                    child:FindFirstChildOfClass("Highlight"):Destroy()
+                end
+                CreateEsp(child, Color3.fromRGB(255, 0, 0), "Trap", child.PrimaryPart)
+            end
+        end
+        if ActiveEspWireEyes then
+            if child.Parent and child.Name == "Minion" and child.Parent == workspace.IGNORE and child:IsA("Model") and child.PrimaryPart and not child.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                if child:FindFirstChildOfClass("Highlight") then
+                    child:FindFirstChildOfClass("Highlight"):Destroy()
+                end
+                SetupCharacter(child, workspace.IGNORE, child.PrimaryPart)
+                CreateEsp(child, Color3.fromRGB(255, 0, 0), "Wire Eyes", child.PrimaryPart)
+            end
+        end
+        if ActiveEspBattery then
+            if child.Parent and child.Name == "Battery" and child.Parent == workspace.IGNORE and child:IsA("BasePart") and child and not child:FindFirstChildOfClass("BillboardGui") then
+                if child:FindFirstChildOfClass("Highlight") then
+                    child:FindFirstChildOfClass("Highlight"):Destroy()
+                end
+                CreateEsp(child, Color3.fromRGB(0, 0, 255), "Battery", child)
+            end
+        end
+    end)
+
+    workspace.DescendantRemoving:Connect(function(child)
+        if child:IsA("Model") then
+            local playerFromChar = Players:GetPlayerFromCharacter(child)
+
+            if ActiveEspSurvivors then
+                if child:IsDescendantOf(workspace.PLAYERS.ALIVE) and child.PrimaryPart then
+                    if child:FindFirstChildOfClass("Highlight") and child.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                        KeepEsp(child, child.PrimaryPart)
+                    end
+                end
+            end
+
+            if ActiveEspKillers then
+                if child:IsDescendantOf(workspace.PLAYERS.KILLER) then
+                    if (child:FindFirstChild("RootPart") or child:FindFirstChild("HumanoidRootPart")) then
+                        local PART = child:FindFirstChild("RootPart") or nil
+                        if child:GetAttribute("Character") == "Ennard" then
+                            PART = child:FindFirstChild("HumanoidRootPart")
+                        end
+                        if child:FindFirstChildOfClass("Highlight") and PART and PART:FindFirstChildOfClass("BillboardGui") then
+                            KeepEsp(child, PART)
+                        end
+                    end
+                end
+            end
+
+            if ActiveEspGen and workspace.MAPS:FindFirstChild("GAME MAP") then
+                local map = workspace.MAPS["GAME MAP"]
+                if map.Generators and child:IsDescendantOf(map.Generators) and child.PrimaryPart then
+                    if child:FindFirstChildOfClass("Highlight") and child.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                        KeepEsp(child, child.PrimaryPart)
+                    end
+                end
+            end
+            if ActiveEspFuseBoxes and workspace.MAPS:FindFirstChild("GAME MAP") and workspace.MAPS["GAME MAP"]:FindFirstChild("FuseBoxes") then
+                local map = workspace.MAPS["GAME MAP"]
+                if map.FuseBoxes and child:IsDescendantOf(map.FuseBoxes) and child.PrimaryPart then
+                    if child:FindFirstChildOfClass("Highlight") and child.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                        KeepEsp(child, child.PrimaryPart)
+                    end
+                end
+            end
+            if ActiveEspTraps then
+                if child:IsDescendantOf(workspace.IGNORE) and child.Name == "Trap" and child.PrimaryPart then
+                    if child:FindFirstChildOfClass("Highlight") and child.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                        KeepEsp(child, child.PrimaryPart)
+                    end
+                end
+            end
+            if ActiveEspWireEyes then
+                if child:IsDescendantOf(workspace.IGNORE) and child.Name == "Minion" and child.PrimaryPart then
+                    if child:FindFirstChildOfClass("Highlight") and child.PrimaryPart:FindFirstChildOfClass("BillboardGui") then
+                        KeepEsp(child, child.PrimaryPart)
+                    end
+                end
+            end
+        elseif child:IsA("BasePart") then
+            if ActiveEspBattery then
+                if child:IsDescendantOf(workspace.IGNORE) and child.Name == "Battery" then
+                    if child:FindFirstChildOfClass("Highlight") and child:FindFirstChildOfClass("BillboardGui") then
+                        KeepEsp(child, child)
+                    end
+                end
+            end
+        end
+    end)
+end)
+```
+
+Это полный объединённый скрипт с темой Dark Fantasy. Все функции сохранены, изменено только визуальное оформление GUI.
