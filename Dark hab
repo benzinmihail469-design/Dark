@@ -3,7 +3,7 @@ local V = "V.0.52"
 local selectedTheme = "Dark Fantasy" -- Изменено на тему Dark Fantasy
 
 library:CreateWindow({
-    Title = "Bite by night by Iliankytb", -- Title of the script
+    Title = "Dark fantasy hab", -- Title of the script
     Theme = selectedTheme, -- View more theme in my discord server!
     Icon = 0, -- 0 = no icon or add number
     Intro = false, -- Intro or no
