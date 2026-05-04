@@ -1,6 +1,4 @@
-Вот полный объединённый скрипт с GUI в стиле Dark Fantasy:
 
-```lua
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Iliankytb/Iliankytb/main/Zentrix"))()
 local V = "V.0.52"
 local selectedTheme = "Dark Fantasy" -- Изменено на тему Dark Fantasy
@@ -1912,6 +1910,4 @@ library:CreateWindow({
         end
     end)
 end)
-```
 
-Это полный объединённый скрипт с темой Dark Fantasy. Все функции сохранены, изменено только визуальное оформление GUI.
