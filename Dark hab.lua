@@ -1,14 +1,153 @@
--- // Код ниже можно вставить в любой скрипт, предварительно загрузив библиотеку Zentrix // --
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Iliankytb/Iliankytb/main/Zentrix"))()
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local IYMouse = LocalPlayer:GetMouse()
 
--- // ================= НАСТРОЙКИ ================= // --
+-- Создаём ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MovementGUI"
+ScreenGui.Parent = game:GetService("CoreGui") -- или PlayerGui
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Основной фрейм
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 250, 0, 300)
+MainFrame.Position = UDim2.new(0, 20, 0.5, -150)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+-- Заголовок
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
+Title.BorderSizePixel = 0
+Title.Text = "SPEED HACK"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 16
+Title.Font = Enum.Font.GothamBold
+Title.Parent = MainFrame
+
+-- Контейнер для кнопок
+local Container = Instance.new("Frame")
+Container.Name = "Container"
+Container.Size = UDim2.new(1, -20, 1, -40)
+Container.Position = UDim2.new(0, 10, 0, 35)
+Container.BackgroundTransparency = 1
+Container.Parent = MainFrame
+
+-- // ================= СТИЛИ ДЛЯ КНОПОК ================= //
+local function CreateButton(Name, YPos, Callback)
+    local Button = Instance.new("TextButton")
+    Button.Name = Name
+    Button.Size = UDim2.new(1, 0, 0, 35)
+    Button.Position = UDim2.new(0, 0, 0, YPos)
+    Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    Button.BorderSizePixel = 0
+    Button.Text = Name
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.TextSize = 14
+    Button.Font = Enum.Font.GothamSemibold
+    Button.Parent = Container
+    
+    local function UpdateVisual(isActive)
+        if isActive then
+            Button.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+            Button.Text = Name .. " [ON]"
+        else
+            Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            Button.Text = Name
+        end
+    end
+    
+    local Active = false
+    Button.MouseButton1Click:Connect(function()
+        Active = not Active
+        UpdateVisual(Active)
+        if Callback then Callback(Active) end
+    end)
+    
+    return {
+        UpdateVisual = UpdateVisual,
+        IsActive = function() return Active end
+    }
+end
+
+local function CreateSlider(Name, YPos, Min, Max, Default, Callback)
+    local SliderFrame = Instance.new("Frame")
+    SliderFrame.Name = Name .. "Frame"
+    SliderFrame.Size = UDim2.new(1, 0, 0, 60)
+    SliderFrame.Position = UDim2.new(0, 0, 0, YPos)
+    SliderFrame.BackgroundTransparency = 1
+    SliderFrame.Parent = Container
+    
+    local Label = Instance.new("TextLabel")
+    Label.Name = "Label"
+    Label.Size = UDim2.new(1, 0, 0, 20)
+    Label.BackgroundTransparency = 1
+    Label.Text = Name .. ": " .. tostring(Default)
+    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Label.TextSize = 12
+    Label.Font = Enum.Font.Gotham
+    Label.Parent = SliderFrame
+    
+    local Slider = Instance.new("TextButton")
+    Slider.Name = "Slider"
+    Slider.Size = UDim2.new(1, 0, 0, 25)
+    Slider.Position = UDim2.new(0, 0, 0, 25)
+    Slider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    Slider.BorderSizePixel = 0
+    Slider.Text = ""
+    Slider.Parent = SliderFrame
+    
+    local Fill = Instance.new("Frame")
+    Fill.Name = "Fill"
+    Fill.Size = UDim2.new((Default - Min) / (Max - Min), 0, 1, 0)
+    Fill.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
+    Fill.BorderSizePixel = 0
+    Fill.Parent = Slider
+    
+    local CurrentValue = Default
+    
+    local function UpdateFill()
+        local percent = (CurrentValue - Min) / (Max - Min)
+        Fill.Size = UDim2.new(percent, 0, 1, 0)
+        Label.Text = Name .. ": " .. tostring(CurrentValue)
+        if Callback then Callback(CurrentValue) end
+    end
+    
+    Slider.MouseButton1Down:Connect(function()
+        local connection
+        connection = UserInputService.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement then
+                local mousePos = UserInputService:GetMouseLocation()
+                local sliderPos = Slider.AbsolutePosition
+                local sliderSize = Slider.AbsoluteSize
+                local relativeX = math.clamp((mousePos.X - sliderPos.X) / sliderSize.X, 0, 1)
+                CurrentValue = math.floor(Min + (Max - Min) * relativeX + 0.5)
+                UpdateFill()
+            end
+        end)
+        
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                connection:Disconnect()
+            end
+        end)
+    end)
+    
+    UpdateFill()
+    return {GetValue = function() return CurrentValue end}
+end
+
+-- // ================= ПЕРЕМЕННЫЕ ================= //
 local FlySpeed = 1
 local RunSpeedValue = 24
 local WalkSpeedValue = 15
@@ -20,7 +159,53 @@ local ActiveSpeedBoost2 = false
 local ActiveJump = false
 local ActiveNoclip = false
 
--- // ================= МЕХАНИКА ПОЛЁТА (ПК) ================= // --
+-- // ================= СОЗДАНИЕ ЭЛЕМЕНТОВ GUI ================= //
+local YPosition = 0
+
+local FlySlider = CreateSlider("Fly Speed", YPosition, 0, 10, 1, function(v) FlySpeed = v end)
+YPosition += 65
+
+local FlyToggle = CreateButton("Fly (Press F)", YPosition, function(active)
+    ActiveFly = active
+    task.spawn(function()
+        if not FLYING and ActiveFly then
+            if UserInputService.TouchEnabled then MobileFly() else NOFLY() wait() sFLY() end
+        elseif FLYING and not ActiveFly then
+            if UserInputService.TouchEnabled then UnMobileFly() else NOFLY() end
+        end
+    end)
+end)
+YPosition += 40
+
+local RunSlider = CreateSlider("Run Speed", YPosition, 0, 100, 24, function(v) RunSpeedValue = v end)
+YPosition += 65
+
+local RunToggle = CreateButton("Active RunSpeed", YPosition, function(active) ActiveSpeedBoost = active end)
+YPosition += 40
+
+local WalkSlider = CreateSlider("Walk Speed", YPosition, 0, 50, 15, function(v) WalkSpeedValue = v end)
+YPosition += 65
+
+local WalkToggle = CreateButton("Active WalkSpeed", YPosition, function(active) ActiveSpeedBoost2 = active end)
+YPosition += 40
+
+local JumpSlider = CreateSlider("Jump Power", YPosition, 0, 200, 50, function(v) JumpPowerValue = v end)
+YPosition += 65
+
+local JumpToggle = CreateButton("Active JumpPower", YPosition, function(active) ActiveJump = active end)
+YPosition += 40
+
+local NoclipToggle = CreateButton("Noclip", YPosition, function(active)
+    ActiveNoclip = active
+    ApplyNoclip()
+end)
+YPosition += 40
+
+-- Обновляем размер контейнера
+Container.Size = UDim2.new(1, -20, 0, YPosition + 10)
+MainFrame.Size = UDim2.new(0, 250, 0, YPosition + 50)
+
+-- // ================= ФУНКЦИИ ПОЛЁТА ================= //
 local FLYING = false
 local QEfly = true
 local flyKeyDown, flyKeyUp
@@ -110,7 +295,7 @@ local function NOFLY()
     pcall(function() Camera.CameraType = Enum.CameraType.Custom end)
 end
 
--- // ================= МЕХАНИКА ПОЛЁТА (МОБИЛКИ) ================= // --
+-- Мобильный флай
 local velocityHandlerName = "BodyVelocity"
 local gyroHandlerName = "BodyGyro"
 local mfly1, mfly2
@@ -182,7 +367,7 @@ local function MobileFly()
     end)
 end
 
--- // ================= ОБРАБОТЧИК ДЛЯ КНОПКИ F (ПК) ================= // --
+-- Обработчик клавиши F
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     if input.KeyCode == Enum.KeyCode.F then
@@ -194,7 +379,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
     end
 end)
 
--- // ================= ФУНКЦИИ NOCLIP / SPEED / JUMP ================= // --
+-- // ================= NOCLIP И SPEED ================= //
 local function ApplyNoclip()
     if ActiveNoclip then
         if LocalPlayer.Character then
@@ -216,18 +401,15 @@ local function ApplyNoclip()
     end
 end
 
--- Автоматическое применение при изменении персонажа
 LocalPlayer.CharacterAdded:Connect(ApplyNoclip)
 
 RunService.RenderStepped:Connect(function()
     local Char = LocalPlayer.Character
     if not Char then return end
     
-    -- Speed Hack
     if ActiveSpeedBoost then Char:SetAttribute("RunSpeed", RunSpeedValue) end
     if ActiveSpeedBoost2 then Char:SetAttribute("WalkSpeed", WalkSpeedValue) end
     
-    -- Jump Hack
     if ActiveJump then
         local Humanoid = Char:FindFirstChildOfClass("Humanoid")
         if Humanoid then
@@ -237,44 +419,4 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- // ================= СОЗДАНИЕ GUI ================= // --
-local Window = library:CreateWindow({
-    Title = "Movement Cheats",
-    Theme = "Default",
-    Icon = 0,
-    Intro = false,
-    CustomSize = UDim2.new(0, 400, 0, 300)
-}, function(window) end)
-
-local MainTab = Window:CreateTab("Movement", 0)
-
--- Fly
-MainTab:AddSlider({Text = "Fly Speed", Min = 0, Max = 10, Default = 1, Increment = 0.1, Callback = function(v) FlySpeed = v end})
-MainTab:AddToggle({Text = "Activate Fly (Press F)", Default = false, Callback = function(v)
-    ActiveFly = v
-    task.spawn(function()
-        if not FLYING and ActiveFly then
-            if UserInputService.TouchEnabled then MobileFly() else NOFLY() wait() sFLY() end
-        elseif FLYING and not ActiveFly then
-            if UserInputService.TouchEnabled then UnMobileFly() else NOFLY() end
-        end
-    end)
-end})
-
--- Run Speed
-MainTab:AddSlider({Text = "Run Speed", Min = 0, Max = 100, Default = 24, Callback = function(v) RunSpeedValue = v end})
-MainTab:AddToggle({Text = "Active Run Speed", Default = false, Callback = function(v) ActiveSpeedBoost = v end})
-
--- Walk Speed
-MainTab:AddSlider({Text = "Walk Speed", Min = 0, Max = 50, Default = 15, Callback = function(v) WalkSpeedValue = v end})
-MainTab:AddToggle({Text = "Active Walk Speed", Default = false, Callback = function(v) ActiveSpeedBoost2 = v end})
-
--- Jump Power
-MainTab:AddSlider({Text = "Jump Power", Min = 0, Max = 200, Default = 50, Callback = function(v) JumpPowerValue = v end})
-MainTab:AddToggle({Text = "Active Jump Power", Default = false, Callback = function(v) ActiveJump = v end})
-
--- Noclip
-MainTab:AddToggle({Text = "Noclip", Default = false, Callback = function(v)
-    ActiveNoclip = v
-    ApplyNoclip()
-end})
+print("Custom Movement GUI Loaded!")
