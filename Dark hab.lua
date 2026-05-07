@@ -5,205 +5,278 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local IYMouse = LocalPlayer:GetMouse()
 
--- Создаём ScreenGui
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MovementGUI"
-ScreenGui.Parent = game:GetService("CoreGui") -- или PlayerGui
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
--- Основной фрейм
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 250, 0, 300)
-MainFrame.Position = UDim2.new(0, 20, 0.5, -150)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
--- Заголовок
-local Title = Instance.new("TextLabel")
-Title.Name = "Title"
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
-Title.BorderSizePixel = 0
-Title.Text = "SPEED HACK"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 16
-Title.Font = Enum.Font.GothamBold
-Title.Parent = MainFrame
-
--- Контейнер для кнопок
-local Container = Instance.new("Frame")
-Container.Name = "Container"
-Container.Size = UDim2.new(1, -20, 1, -40)
-Container.Position = UDim2.new(0, 10, 0, 35)
-Container.BackgroundTransparency = 1
-Container.Parent = MainFrame
-
--- // ================= СТИЛИ ДЛЯ КНОПОК ================= //
-local function CreateButton(Name, YPos, Callback)
-    local Button = Instance.new("TextButton")
-    Button.Name = Name
-    Button.Size = UDim2.new(1, 0, 0, 35)
-    Button.Position = UDim2.new(0, 0, 0, YPos)
-    Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    Button.BorderSizePixel = 0
-    Button.Text = Name
-    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Button.TextSize = 14
-    Button.Font = Enum.Font.GothamSemibold
-    Button.Parent = Container
+-- Пробуем разные варианты добавления GUI
+local function CreateGUI()
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "MovementGUI"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
-    local function UpdateVisual(isActive)
-        if isActive then
-            Button.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
-            Button.Text = Name .. " [ON]"
-        else
-            Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-            Button.Text = Name
-        end
-    end
-    
-    local Active = false
-    Button.MouseButton1Click:Connect(function()
-        Active = not Active
-        UpdateVisual(Active)
-        if Callback then Callback(Active) end
+    -- Пробуем добавить в PlayerGui (самый надёжный способ)
+    local success = pcall(function()
+        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
     end)
     
-    return {
-        UpdateVisual = UpdateVisual,
-        IsActive = function() return Active end
-    }
-end
-
-local function CreateSlider(Name, YPos, Min, Max, Default, Callback)
-    local SliderFrame = Instance.new("Frame")
-    SliderFrame.Name = Name .. "Frame"
-    SliderFrame.Size = UDim2.new(1, 0, 0, 60)
-    SliderFrame.Position = UDim2.new(0, 0, 0, YPos)
-    SliderFrame.BackgroundTransparency = 1
-    SliderFrame.Parent = Container
-    
-    local Label = Instance.new("TextLabel")
-    Label.Name = "Label"
-    Label.Size = UDim2.new(1, 0, 0, 20)
-    Label.BackgroundTransparency = 1
-    Label.Text = Name .. ": " .. tostring(Default)
-    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Label.TextSize = 12
-    Label.Font = Enum.Font.Gotham
-    Label.Parent = SliderFrame
-    
-    local Slider = Instance.new("TextButton")
-    Slider.Name = "Slider"
-    Slider.Size = UDim2.new(1, 0, 0, 25)
-    Slider.Position = UDim2.new(0, 0, 0, 25)
-    Slider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    Slider.BorderSizePixel = 0
-    Slider.Text = ""
-    Slider.Parent = SliderFrame
-    
-    local Fill = Instance.new("Frame")
-    Fill.Name = "Fill"
-    Fill.Size = UDim2.new((Default - Min) / (Max - Min), 0, 1, 0)
-    Fill.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
-    Fill.BorderSizePixel = 0
-    Fill.Parent = Slider
-    
-    local CurrentValue = Default
-    
-    local function UpdateFill()
-        local percent = (CurrentValue - Min) / (Max - Min)
-        Fill.Size = UDim2.new(percent, 0, 1, 0)
-        Label.Text = Name .. ": " .. tostring(CurrentValue)
-        if Callback then Callback(CurrentValue) end
+    -- Если не получилось, пробуем CoreGui
+    if not success then
+        pcall(function()
+            ScreenGui.Parent = game:GetService("CoreGui")
+        end)
     end
     
-    Slider.MouseButton1Down:Connect(function()
-        local connection
-        connection = UserInputService.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement then
+    -- Если и это не сработало, пробуем game
+    if not ScreenGui.Parent then
+        ScreenGui.Parent = game:GetService("CoreGui")
+    end
+    
+    -- Основной фрейм
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 280, 0, 420)
+    MainFrame.Position = UDim2.new(0.5, -140, 0.5, -210)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Visible = true
+    MainFrame.Parent = ScreenGui
+    
+    -- Рамка окна
+    local Border = Instance.new("UIStroke")
+    Border.Color = Color3.fromRGB(255, 100, 50)
+    Border.Thickness = 2
+    Border.Parent = MainFrame
+    
+    -- Заголовок
+    local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
+    Title.Size = UDim2.new(1, 0, 0, 35)
+    Title.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
+    Title.BorderSizePixel = 0
+    Title.Text = "SPEED HACK v2"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextSize = 16
+    Title.Font = Enum.Font.GothamBold
+    Title.Parent = MainFrame
+    
+    -- Кнопка закрытия
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Name = "Close"
+    CloseButton.Size = UDim2.new(0, 30, 0, 30)
+    CloseButton.Position = UDim2.new(1, -35, 0, 3)
+    CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    CloseButton.BorderSizePixel = 0
+    CloseButton.Text = "X"
+    CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseButton.TextSize = 18
+    CloseButton.Font = Enum.Font.GothamBold
+    CloseButton.Parent = MainFrame
+    
+    CloseButton.MouseButton1Click:Connect(function()
+        MainFrame.Visible = not MainFrame.Visible
+    end)
+    
+    -- Контейнер
+    local Container = Instance.new("ScrollingFrame")
+    Container.Name = "Container"
+    Container.Size = UDim2.new(1, -20, 1, -50)
+    Container.Position = UDim2.new(0, 10, 0, 40)
+    Container.BackgroundTransparency = 1
+    Container.BorderSizePixel = 0
+    Container.ScrollBarThickness = 5
+    Container.ScrollBarImageColor3 = Color3.fromRGB(255, 100, 50)
+    Container.CanvasSize = UDim2.new(0, 0, 0, 600)
+    Container.Parent = MainFrame
+    
+    -- // ================= ФУНКЦИИ СОЗДАНИЯ ЭЛЕМЕНТОВ ================= //
+    local function CreateButton(Name, YPos, Callback)
+        local Button = Instance.new("TextButton")
+        Button.Name = Name
+        Button.Size = UDim2.new(1, 0, 0, 35)
+        Button.Position = UDim2.new(0, 0, 0, YPos)
+        Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        Button.BorderSizePixel = 0
+        Button.Text = Name
+        Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Button.TextSize = 14
+        Button.Font = Enum.Font.GothamSemibold
+        Button.AutoButtonColor = false
+        Button.Parent = Container
+        
+        local Active = false
+        
+        local function UpdateVisual()
+            if Active then
+                Button.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+                Button.Text = "[ON] " .. Name
+            else
+                Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                Button.Text = Name
+            end
+        end
+        
+        Button.MouseButton1Click:Connect(function()
+            Active = not Active
+            UpdateVisual()
+            if Callback then Callback(Active) end
+        end)
+        
+        return {
+            SetActive = function(state)
+                Active = state
+                UpdateVisual()
+            end,
+            IsActive = function() return Active end
+        }
+    end
+    
+    local function CreateSlider(Name, YPos, Min, Max, Default, Callback)
+        local SliderFrame = Instance.new("Frame")
+        SliderFrame.Name = Name .. "Frame"
+        SliderFrame.Size = UDim2.new(1, 0, 0, 55)
+        SliderFrame.Position = UDim2.new(0, 0, 0, YPos)
+        SliderFrame.BackgroundTransparency = 1
+        SliderFrame.BorderSizePixel = 0
+        SliderFrame.Parent = Container
+        
+        local Label = Instance.new("TextLabel")
+        Label.Name = "Label"
+        Label.Size = UDim2.new(1, 0, 0, 18)
+        Label.BackgroundTransparency = 1
+        Label.Text = Name .. ": " .. tostring(Default)
+        Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Label.TextSize = 12
+        Label.Font = Enum.Font.Gotham
+        Label.Parent = SliderFrame
+        
+        local SliderBG = Instance.new("Frame")
+        SliderBG.Name = "SliderBG"
+        SliderBG.Size = UDim2.new(1, 0, 0, 25)
+        SliderBG.Position = UDim2.new(0, 0, 0, 22)
+        SliderBG.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        SliderBG.BorderSizePixel = 0
+        SliderBG.Parent = SliderFrame
+        
+        local Fill = Instance.new("Frame")
+        Fill.Name = "Fill"
+        Fill.Size = UDim2.new((Default - Min) / (Max - Min), 0, 1, 0)
+        Fill.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
+        Fill.BorderSizePixel = 0
+        Fill.Parent = SliderBG
+        
+        local SliderButton = Instance.new("TextButton")
+        SliderButton.Name = "SliderButton"
+        SliderButton.Size = UDim2.new(1, 0, 1, 0)
+        SliderButton.BackgroundTransparency = 1
+        SliderButton.Text = ""
+        SliderButton.Parent = SliderBG
+        
+        local CurrentValue = Default
+        
+        local function UpdateFill()
+            local percent = (CurrentValue - Min) / (Max - Min)
+            Fill.Size = UDim2.new(percent, 0, 1, 0)
+            Label.Text = Name .. ": " .. tostring(CurrentValue)
+            if Callback then Callback(CurrentValue) end
+        end
+        
+        -- Обработчик для перетаскивания
+        local dragging = false
+        local inputConnection
+        
+        SliderButton.MouseButton1Down:Connect(function()
+            dragging = true
+            local function UpdateFromMouse()
+                if not dragging then return end
                 local mousePos = UserInputService:GetMouseLocation()
-                local sliderPos = Slider.AbsolutePosition
-                local sliderSize = Slider.AbsoluteSize
+                local sliderPos = SliderBG.AbsolutePosition
+                local sliderSize = SliderBG.AbsoluteSize
                 local relativeX = math.clamp((mousePos.X - sliderPos.X) / sliderSize.X, 0, 1)
                 CurrentValue = math.floor(Min + (Max - Min) * relativeX + 0.5)
+                CurrentValue = math.clamp(CurrentValue, Min, Max)
                 UpdateFill()
             end
+            
+            UpdateFromMouse()
+            
+            inputConnection = UserInputService.InputChanged:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+                    UpdateFromMouse()
+                end
+            end)
         end)
         
         UserInputService.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                connection:Disconnect()
+                dragging = false
+                if inputConnection then
+                    inputConnection:Disconnect()
+                end
             end
         end)
-    end)
+        
+        UpdateFill()
+        return {GetValue = function() return CurrentValue end}
+    end
     
-    UpdateFill()
-    return {GetValue = function() return CurrentValue end}
-end
-
--- // ================= ПЕРЕМЕННЫЕ ================= //
-local FlySpeed = 1
-local RunSpeedValue = 24
-local WalkSpeedValue = 15
-local JumpPowerValue = 50
-
-local ActiveFly = false
-local ActiveSpeedBoost = false
-local ActiveSpeedBoost2 = false
-local ActiveJump = false
-local ActiveNoclip = false
-
--- // ================= СОЗДАНИЕ ЭЛЕМЕНТОВ GUI ================= //
-local YPosition = 0
-
-local FlySlider = CreateSlider("Fly Speed", YPosition, 0, 10, 1, function(v) FlySpeed = v end)
-YPosition += 65
-
-local FlyToggle = CreateButton("Fly (Press F)", YPosition, function(active)
-    ActiveFly = active
-    task.spawn(function()
+    -- // ================= ПЕРЕМЕННЫЕ ================= //
+    local FlySpeed = 1
+    local RunSpeedValue = 24
+    local WalkSpeedValue = 15
+    local JumpPowerValue = 50
+    
+    local ActiveFly = false
+    local ActiveSpeedBoost = false
+    local ActiveSpeedBoost2 = false
+    local ActiveJump = false
+    local ActiveNoclip = false
+    
+    -- // ================= СОЗДАНИЕ GUI ЭЛЕМЕНТОВ ================= //
+    local YPosition = 5
+    
+    CreateSlider("Fly Speed", YPosition, 0, 10, 1, function(v) FlySpeed = v end)
+    YPosition += 60
+    
+    CreateButton("Fly (Press F)", YPosition, function(active)
+        ActiveFly = active
         if not FLYING and ActiveFly then
             if UserInputService.TouchEnabled then MobileFly() else NOFLY() wait() sFLY() end
         elseif FLYING and not ActiveFly then
             if UserInputService.TouchEnabled then UnMobileFly() else NOFLY() end
         end
     end)
-end)
-YPosition += 40
-
-local RunSlider = CreateSlider("Run Speed", YPosition, 0, 100, 24, function(v) RunSpeedValue = v end)
-YPosition += 65
-
-local RunToggle = CreateButton("Active RunSpeed", YPosition, function(active) ActiveSpeedBoost = active end)
-YPosition += 40
-
-local WalkSlider = CreateSlider("Walk Speed", YPosition, 0, 50, 15, function(v) WalkSpeedValue = v end)
-YPosition += 65
-
-local WalkToggle = CreateButton("Active WalkSpeed", YPosition, function(active) ActiveSpeedBoost2 = active end)
-YPosition += 40
-
-local JumpSlider = CreateSlider("Jump Power", YPosition, 0, 200, 50, function(v) JumpPowerValue = v end)
-YPosition += 65
-
-local JumpToggle = CreateButton("Active JumpPower", YPosition, function(active) ActiveJump = active end)
-YPosition += 40
-
-local NoclipToggle = CreateButton("Noclip", YPosition, function(active)
-    ActiveNoclip = active
-    ApplyNoclip()
-end)
-YPosition += 40
-
--- Обновляем размер контейнера
-Container.Size = UDim2.new(1, -20, 0, YPosition + 10)
-MainFrame.Size = UDim2.new(0, 250, 0, YPosition + 50)
+    YPosition += 40
+    
+    CreateSlider("Run Speed", YPosition, 0, 100, 24, function(v) RunSpeedValue = v end)
+    YPosition += 60
+    
+    CreateButton("Active RunSpeed", YPosition, function(active) ActiveSpeedBoost = active end)
+    YPosition += 40
+    
+    CreateSlider("Walk Speed", YPosition, 0, 50, 15, function(v) WalkSpeedValue = v end)
+    YPosition += 60
+    
+    CreateButton("Active WalkSpeed", YPosition, function(active) ActiveSpeedBoost2 = active end)
+    YPosition += 40
+    
+    CreateSlider("Jump Power", YPosition, 0, 200, 50, function(v) JumpPowerValue = v end)
+    YPosition += 60
+    
+    CreateButton("Active JumpPower", YPosition, function(active) ActiveJump = active end)
+    YPosition += 40
+    
+    CreateButton("Noclip", YPosition, function(active)
+        ActiveNoclip = active
+        ApplyNoclip()
+    end)
+    YPosition += 40
+    
+    -- Обновляем размер канваса
+    Container.CanvasSize = UDim2.new(0, 0, 0, YPosition + 10)
+    
+    print("[Movement GUI] Successfully created!")
+    return ScreenGui
+end
 
 -- // ================= ФУНКЦИИ ПОЛЁТА ================= //
 local FLYING = false
@@ -307,8 +380,8 @@ local function UnMobileFly()
         root:FindFirstChild(velocityHandlerName):Destroy()
         root:FindFirstChild(gyroHandlerName):Destroy()
         LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid").PlatformStand = false
-        mfly1:Disconnect()
-        mfly2:Disconnect()
+        if mfly1 then mfly1:Disconnect() end
+        if mfly2 then mfly2:Disconnect() end
     end)
 end
 
@@ -385,7 +458,9 @@ local function ApplyNoclip()
         if LocalPlayer.Character then
             for _, Parts in pairs(LocalPlayer.Character:GetDescendants()) do
                 if Parts:IsA("BasePart") and Parts.CanCollide then
-                    if not Parts:GetAttribute("OldCollide") then Parts:SetAttribute("OldCollide", Parts.CanCollide) end
+                    if not Parts:GetAttribute("OldCollide") then 
+                        Parts:SetAttribute("OldCollide", Parts.CanCollide) 
+                    end
                     Parts.CanCollide = false
                 end
             end
@@ -419,4 +494,9 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-print("Custom Movement GUI Loaded!")
+-- // ================= СОЗДАЁМ GUI ================= //
+local GUI = nil
+LocalPlayer.CharacterAdded:Wait() -- Ждём загрузки персонажа
+GUI = CreateGUI()
+
+print("[Movement GUI] Script loaded and GUI created!")
