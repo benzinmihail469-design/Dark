@@ -1,29 +1,28 @@
--- Dark Fantasy GUI для Slime RNG (исправленная версия)
--- Работает без ошибки "attempt to call a nil value"
-
--- Проверяем, что функция game:HttpGet существует
-if not game.HttpGet then
-    game.HttpGet = game.GetService and game:GetService("HttpService").GetAsync
-end
-
--- Функция безопасной загрузки
-local function loadDarkGUI()
+-- Dark Fantasy GUI для Slime RNG (полностью автономный, без HTTP запросов)
+(function()
+    -- Проверка на выполнение
+    if shared and shared.DarkFantasyLoaded then
+        print("⚠️ GUI уже загружен")
+        return
+    end
+    
     local Players = game:GetService("Players")
     local player = Players.LocalPlayer
+    if not player then
+        warn("Игрок не загружен")
+        return
+    end
+    
     local playerGui = player:WaitForChild("PlayerGui")
     
-    -- Удаляем старую GUI если есть
+    -- Удаляем старую GUI
     local oldGui = playerGui:FindFirstChild("DarkFantasyGUI")
     if oldGui then oldGui:Destroy() end
     
-    -- === НАСТРОЙКИ ТЕЛЕПОРТА ===
+    -- === НАСТРОЙКИ ===
     local TELEPORT_OFFSET = Vector3.new(0, 2, 0)
     local DISTANCE_THRESHOLD = 3
     local PLAY_SOUND = true
-    local SOUND_ID = "rbxassetid://9120384036"
-    
-    -- === ИГНОР-ЛИСТ ЛУТА ===
-    local IGNORED_LOOT = {}
     
     -- === ПОИСК ПАПКИ С ЛУТОМ ===
     local LOOT_FOLDER = workspace:FindFirstChild("Loot")
@@ -40,17 +39,7 @@ local function loadDarkGUI()
     end
     
     if not LOOT_FOLDER then
-        warn("⚠️ Папка Loot не найдена! Авто-лут не будет работать.")
-    else
-        print("✅ Папка лута найдена:", LOOT_FOLDER.Name)
-    end
-    
-    -- === СОЗДАНИЕ ЗВУКА ===
-    local teleportSound = nil
-    if PLAY_SOUND then
-        teleportSound = Instance.new("Sound")
-        teleportSound.SoundId = SOUND_ID
-        teleportSound.Volume = 0.4
+        warn("⚠️ Папка Loot не найдена!")
     end
     
     -- === ЦВЕТА ===
@@ -62,18 +51,16 @@ local function loadDarkGUI()
         Text = Color3.fromRGB(240, 235, 255),
         TextDim = Color3.fromRGB(170, 160, 190),
         Button = Color3.fromRGB(38, 34, 48),
-        ButtonHover = Color3.fromRGB(55, 48, 70),
         Red = Color3.fromRGB(180, 60, 80),
         Green = Color3.fromRGB(70, 140, 100),
     }
     
-    -- === СОЗДАНИЕ ГЛАВНОГО GUI ===
+    -- === СОЗДАНИЕ GUI ===
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "DarkFantasyGUI"
     screenGui.ResetOnSpawn = false
     screenGui.Parent = playerGui
     
-    -- Задний фон
     local overlay = Instance.new("Frame")
     overlay.Size = UDim2.new(1, 0, 1, 0)
     overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -81,7 +68,6 @@ local function loadDarkGUI()
     overlay.Visible = false
     overlay.Parent = screenGui
     
-    -- Главное окно
     local mainFrame = Instance.new("Frame")
     mainFrame.Size = UDim2.new(0, 500, 0, 550)
     mainFrame.Position = UDim2.new(0.5, -250, 0.5, -275)
@@ -160,7 +146,7 @@ local function loadDarkGUI()
     tabContainer.BorderSizePixel = 0
     tabContainer.Parent = mainFrame
     
-    local tabs = {"MAIN", "PLAYER", "INFO", "DISCORD", "НАСТРОЙКИ"}
+    local tabs = {"MAIN", "PLAYER", "INFO", "НАСТРОЙКИ"}
     local currentTab = nil
     local tabContents = {}
     
@@ -195,7 +181,7 @@ local function loadDarkGUI()
         tabContents[tabName].Visible = true
     end
     
-    local tabButtons = {}
+    local tabButtonsTable = {}
     for i, tab in pairs(tabs) do
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(0, 100, 1, -10)
@@ -211,7 +197,7 @@ local function loadDarkGUI()
         
         btn.MouseButton1Click:Connect(function()
             switchTab(tab)
-            for _, b in pairs(tabButtons) do
+            for _, b in pairs(tabButtonsTable) do
                 b.BackgroundColor3 = C.Button
                 b.TextColor3 = C.TextDim
             end
@@ -219,7 +205,7 @@ local function loadDarkGUI()
             btn.TextColor3 = C.Text
         end)
         
-        tabButtons[tab] = btn
+        tabButtonsTable[tab] = btn
     end
     
     -- === MAIN ВКЛАДКА ===
@@ -252,29 +238,33 @@ local function loadDarkGUI()
     teleportBtn.Font = Enum.Font.GothamBold
     teleportBtn.Parent = mainTab
     
+    local radiusLabel = Instance.new("TextLabel")
+    radiusLabel.Size = UDim2.new(0, 250, 0, 25)
+    radiusLabel.BackgroundTransparency = 1
+    radiusLabel.Text = "⚡ Радиус телепорта: " .. DISTANCE_THRESHOLD
+    radiusLabel.TextColor3 = C.TextDim
+    radiusLabel.TextSize = 14
+    radiusLabel.Parent = mainTab
+    
+    local radiusPlus = Instance.new("TextButton")
+    radiusPlus.Size = UDim2.new(0, 80, 0, 30)
+    radiusPlus.BackgroundColor3 = C.Button
+    radiusPlus.Text = "+ УВЕЛИЧИТЬ"
+    radiusPlus.TextColor3 = C.TextDim
+    radiusPlus.TextSize = 12
+    radiusPlus.Parent = mainTab
+    
+    local radiusMinus = Instance.new("TextButton")
+    radiusMinus.Size = UDim2.new(0, 80, 0, 30)
+    radiusMinus.BackgroundColor3 = C.Button
+    radiusMinus.Text = "- УМЕНЬШИТЬ"
+    radiusMinus.TextColor3 = C.TextDim
+    radiusMinus.TextSize = 12
+    radiusMinus.Parent = mainTab
+    
     -- === ЛОГИКА АВТО-ЛУТА ===
     local autoLootEnabled = true
     local childAddedConnection = nil
-    
-    local function shouldIgnore(lootName)
-        for _, name in pairs(IGNORED_LOOT) do
-            if string.find(lootName, name) then
-                return true
-            end
-        end
-        return false
-    end
-    
-    local function playTeleportSound()
-        if not PLAY_SOUND then return end
-        if teleportSound then
-            local character = player.Character
-            if character then
-                teleportSound.Parent = character
-                teleportSound:Play()
-            end
-        end
-    end
     
     local function teleportToPart(targetPart)
         local character = player.Character
@@ -283,13 +273,16 @@ local function loadDarkGUI()
             local distance = (humanoidRootPart.Position - targetPart.Position).Magnitude
             if distance > DISTANCE_THRESHOLD then
                 humanoidRootPart.CFrame = CFrame.new(targetPart.Position + TELEPORT_OFFSET)
-                playTeleportSound()
+                print("✨ Телепорт к:", targetPart.Parent.Name)
             end
         end
     end
     
     local function teleportToNearestLoot()
-        if not LOOT_FOLDER then return end
+        if not LOOT_FOLDER then 
+            print("⚠️ Папка лута не найдена")
+            return 
+        end
         local nearest = nil
         local nearestDist = math.huge
         local character = player.Character
@@ -297,7 +290,7 @@ local function loadDarkGUI()
         if not hrp then return end
         
         for _, loot in pairs(LOOT_FOLDER:GetChildren()) do
-            if loot:IsA("Model") and not shouldIgnore(loot.Name) then
+            if loot:IsA("Model") then
                 local part = loot.PrimaryPart or loot:FindFirstChildWhichIsA("BasePart")
                 if part then
                     local dist = (hrp.Position - part.Position).Magnitude
@@ -311,12 +304,14 @@ local function loadDarkGUI()
         
         if nearest then
             teleportToPart(nearest)
+            print("✅ Телепорт к ближайшему луту")
+        else
+            print("❌ Лут не найден")
         end
     end
     
     local function processLoot(lootModel)
         if not autoLootEnabled then return end
-        if shouldIgnore(lootModel.Name) then return end
         task.wait(0.05)
         local targetPart = lootModel.PrimaryPart or lootModel:FindFirstChildWhichIsA("BasePart")
         if targetPart then
@@ -364,11 +359,21 @@ local function loadDarkGUI()
         teleportToNearestLoot()
     end)
     
+    radiusPlus.MouseButton1Click:Connect(function()
+        DISTANCE_THRESHOLD = math.min(50, DISTANCE_THRESHOLD + 1)
+        radiusLabel.Text = "⚡ Радиус телепорта: " .. DISTANCE_THRESHOLD
+    end)
+    
+    radiusMinus.MouseButton1Click:Connect(function()
+        DISTANCE_THRESHOLD = math.max(1, DISTANCE_THRESHOLD - 1)
+        radiusLabel.Text = "⚡ Радиус телепорта: " .. DISTANCE_THRESHOLD
+    end)
+    
     -- === PLAYER ВКЛАДКА ===
     local playerTab = tabContents["PLAYER"]
     
     local playerStats = Instance.new("TextLabel")
-    playerStats.Size = UDim2.new(0, 350, 0, 100)
+    playerStats.Size = UDim2.new(0, 350, 0, 120)
     playerStats.BackgroundColor3 = C.Button
     playerStats.Text = "Загрузка..."
     playerStats.TextColor3 = C.Text
@@ -387,14 +392,18 @@ local function loadDarkGUI()
     local function updatePlayerStats()
         local character = player.Character
         if not character then
-            playerStats.Text = "Персонаж не загружен"
+            playerStats.Text = "⏳ Персонаж не загружен..."
             return
         end
         local hrp = character:FindFirstChild("HumanoidRootPart")
         local pos = hrp and hrp.Position or Vector3.zero
+        local humanoid = character:FindFirstChild("Humanoid")
+        local health = humanoid and math.floor(humanoid.Health) or "?"
+        local maxHealth = humanoid and humanoid.MaxHealth or "?"
+        
         playerStats.Text = string.format(
-            "📊 СТАТИСТИКА ИГРОКА\n\n👤 Имя: %s\n📍 Позиция: %.1f, %.1f, %.1f",
-            player.Name, pos.X, pos.Y, pos.Z
+            "📊 СТАТИСТИКА ИГРОКА\n\n👤 Имя: %s\n📍 X: %.1f | Y: %.1f | Z: %.1f\n❤️ Здоровье: %s / %s",
+            player.Name, pos.X, pos.Y, pos.Z, tostring(health), tostring(maxHealth)
         )
     end
     
@@ -403,56 +412,35 @@ local function loadDarkGUI()
     end)
     updatePlayerStats()
     
+    -- Автообновление статистики
+    task.spawn(function()
+        while screenGui and screenGui.Parent do
+            task.wait(2)
+            if playerTab.Visible then
+                updatePlayerStats()
+            end
+        end
+    end)
+    
     -- === INFO ВКЛАДКА ===
     local infoTab = tabContents["INFO"]
     
     local infoText = Instance.new("TextLabel")
-    infoText.Size = UDim2.new(0, 400, 0, 200)
+    infoText.Size = UDim2.new(0, 400, 0, 250)
     infoText.BackgroundColor3 = C.Button
-    infoText.Text = "⚔️ SLIME RNG - Тёмный Фантези\n\n📦 Авто-телепорт к луту\n🔊 Звук при телепорте\n🚫 Игнор-лист лута\n\n🎮 Создано специально для Slime RNG"
+    infoText.Text = "⚔️ SLIME RNG - Тёмный Фантези\n\n📦 Авто-телепорт к луту\n📍 Телепорт к ближайшему луту\n🎚️ Настройка радиуса телепорта\n🎮 Кнопка открытия: ⚔️\n\n✨ Версия: 1.0\n📅 Обновлено: Сегодня"
     infoText.TextColor3 = C.TextDim
     infoText.TextSize = 14
     infoText.TextWrapped = true
     infoText.Parent = infoTab
     
-    -- === DISCORD ВКЛАДКА ===
-    local discordTab = tabContents["DISCORD"]
-    
-    local discordBtn = Instance.new("TextButton")
-    discordBtn.Size = UDim2.new(0, 300, 0, 50)
-    discordBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
-    discordBtn.Text = "💬 ПРИСОЕДИНИТЬСЯ К DISCORD"
-    discordBtn.TextColor3 = C.Text
-    discordBtn.TextSize = 16
-    discordBtn.Font = Enum.Font.GothamBold
-    discordBtn.Parent = discordTab
-    
-    local discordLink = Instance.new("TextLabel")
-    discordLink.Size = UDim2.new(0, 300, 0, 30)
-    discordLink.BackgroundTransparency = 1
-    discordLink.Text = "discord.gg/slime_rng"
-    discordLink.TextColor3 = C.Accent
-    discordLink.TextSize = 14
-    discordLink.Parent = discordTab
-    
-    discordBtn.MouseButton1Click:Connect(function()
-        if setclipboard then
-            setclipboard("discord.gg/slime_rng")
-        elseif toclipboard then
-            toclipboard("discord.gg/slime_rng")
-        end
-        discordBtn.Text = "✅ СКОПИРОВАНО!"
-        task.wait(1)
-        discordBtn.Text = "💬 ПРИСОЕДИНИТЬСЯ К DISCORD"
-    end)
-    
-    -- === НАСТРОЙКИ ВКЛАДКА ===
+    -- === НАСТРОЙКИ ===
     local settingsTab = tabContents["НАСТРОЙКИ"]
     
     local soundToggleBtn = Instance.new("TextButton")
     soundToggleBtn.Size = UDim2.new(0, 250, 0, 40)
     soundToggleBtn.BackgroundColor3 = C.Button
-    soundToggleBtn.Text = "🔊 ЗВУК: ВКЛЮЧЁН"
+    soundToggleBtn.Text = "🔊 ЗВУК: ВЫКЛ (функция)"
     soundToggleBtn.TextColor3 = C.TextDim
     soundToggleBtn.TextSize = 14
     soundToggleBtn.Parent = settingsTab
@@ -460,7 +448,7 @@ local function loadDarkGUI()
     local unloadBtn = Instance.new("TextButton")
     unloadBtn.Size = UDim2.new(0, 200, 0, 45)
     unloadBtn.BackgroundColor3 = C.Red
-    unloadBtn.Text = "❌ ВЫГРУЗИТЬ ЧИТ"
+    unloadBtn.Text = "❌ ВЫГРУЗИТЬ"
     unloadBtn.TextColor3 = C.Text
     unloadBtn.TextSize = 16
     unloadBtn.Font = Enum.Font.GothamBold
@@ -474,20 +462,19 @@ local function loadDarkGUI()
     versionLabel.TextSize = 12
     versionLabel.Parent = settingsTab
     
-    local soundEnabled = PLAY_SOUND
-    soundToggleBtn.MouseButton1Click:Connect(function()
-        soundEnabled = not soundEnabled
-        PLAY_SOUND = soundEnabled
-        soundToggleBtn.Text = soundEnabled and "🔊 ЗВУК: ВКЛЮЧЁН" or "🔇 ЗВУК: ВЫКЛЮЧЕН"
-    end)
-    
     unloadBtn.MouseButton1Click:Connect(function()
         screenGui:Destroy()
+        print("✅ GUI выгружен")
+    end)
+    
+    soundToggleBtn.MouseButton1Click:Connect(function()
+        print("🔊 Звук в разработке")
     end)
     
     -- === УПРАВЛЕНИЕ ОКНОМ ===
     local dragging = false
     local dragStart, frameStart
+    local UIS = game:GetService("UserInputService")
     
     titleBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -502,7 +489,6 @@ local function loadDarkGUI()
         end
     end)
     
-    local UIS = game:GetService("UserInputService")
     UIS.InputChanged:Connect(function(input)
         if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             local delta = input.Position - dragStart
@@ -541,19 +527,19 @@ local function loadDarkGUI()
         end
     end)
     
+    -- Анимация
+    mainFrame.BackgroundTransparency = 1
+    overlay.BackgroundTransparency = 1
+    game:GetService("TweenService"):Create(mainFrame, TweenInfo.new(0.3), {BackgroundTransparency = 0}):Play()
+    game:GetService("TweenService"):Create(overlay, TweenInfo.new(0.3), {BackgroundTransparency = 0.6}):Play()
+    
     -- Запуск
     switchTab("MAIN")
-    tabButtons["MAIN"].BackgroundColor3 = C.AccentDark
-    tabButtons["MAIN"].TextColor3 = C.Text
+    tabButtonsTable["MAIN"].BackgroundColor3 = C.AccentDark
+    tabButtonsTable["MAIN"].TextColor3 = C.Text
     enableAutoLoot()
     
-    print("✅ Dark Fantasy GUI загружен! Нажми кнопку ⚔️")
-end
-
--- Запускаем с защитой от ошибок
-local success, err = pcall(loadDarkGUI)
-if not success then
-    warn("Ошибка загрузки GUI: " .. tostring(err))
-    -- Альтернативный запуск
-    loadDarkGUI()
-end
+    if shared then shared.DarkFantasyLoaded = true end
+    
+    print("✅ Dark Fantasy GUI загружен! Нажми ⚔️ в левом нижнем углу")
+end)()
