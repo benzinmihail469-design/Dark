@@ -264,7 +264,7 @@ local function createTab(name)
     elseif name == "Discord" then
         -- Пустая вкладка Discord
         
-    elseif name == "Настройки" then
+    elseif name == "settings" then
         -- Пустая вкладка Настройки
     end
     
