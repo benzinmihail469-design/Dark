@@ -77,8 +77,8 @@ Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
 -- Заголовок текст
 local Title = Instance.new("TextLabel", TitleBar)
 Title.Name = "Title"
-Title.Text = "Dark Hub"
-Title.Size = UDim2.new(0, 110, 1, 0)
+Title.Text = "Темный Fantasy | Auto Loot"
+Title.Size = UDim2.new(0, 200, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
 Title.BackgroundTransparency = 1
 Title.TextColor3 = colors.gold
@@ -146,6 +146,97 @@ ContentContainer.BackgroundColor3 = Color3.fromRGB(10, 3, 15)
 ContentContainer.BackgroundTransparency = 0.5
 ContentContainer.BorderSizePixel = 0
 Instance.new("UICorner", ContentContainer).CornerRadius = UDim.new(0, 8)
+
+-- === АВТО-ЛУТ СКРИПТ ===
+local autoLootEnabled = false
+local childAddedConnection = nil
+local LOOT_FOLDER = nil
+
+-- Настройки авто-лута
+local TELEPORT_OFFSET = Vector3.new(0, 2, 0)
+local DISTANCE_THRESHOLD = 3
+
+-- Поиск папки с лутом
+local function findLootFolder()
+    LOOT_FOLDER = workspace:FindFirstChild("Loot")
+    if not LOOT_FOLDER then
+        LOOT_FOLDER = workspace:FindFirstChild("loot")
+    end
+    if not LOOT_FOLDER then
+        for _, child in pairs(workspace:GetChildren()) do
+            if child:FindFirstChild("Loot") then
+                LOOT_FOLDER = child.Loot
+                break
+            end
+        end
+    end
+    return LOOT_FOLDER
+end
+
+-- Телепорт к луту
+local function teleportToPart(targetPart)
+    local character = player.Character
+    local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
+    
+    if humanoidRootPart and targetPart and targetPart.Parent then
+        local distance = (humanoidRootPart.Position - targetPart.Position).Magnitude
+        if distance > DISTANCE_THRESHOLD then
+            humanoidRootPart.CFrame = CFrame.new(targetPart.Position + TELEPORT_OFFSET)
+        end
+    end
+end
+
+-- Обработка лута
+local function processLoot(lootModel)
+    if not autoLootEnabled then return end
+    task.wait(0.05)
+    
+    local targetPart = lootModel.PrimaryPart
+    if not targetPart then
+        targetPart = lootModel:FindFirstChildWhichIsA("BasePart")
+    end
+    
+    if targetPart then
+        teleportToPart(targetPart)
+    end
+end
+
+-- Новый лут появился
+local function onLootAdded(loot)
+    processLoot(loot)
+end
+
+-- Включение авто-лута
+local function enableAutoLoot()
+    if autoLootEnabled then return end
+    autoLootEnabled = true
+    
+    findLootFolder()
+    
+    if not LOOT_FOLDER then
+        warn("Папка Loot не найдена!")
+        autoLootEnabled = false
+        return
+    end
+    
+    childAddedConnection = LOOT_FOLDER.ChildAdded:Connect(onLootAdded)
+    
+    -- Обработка уже существующего лута
+    for _, loot in pairs(LOOT_FOLDER:GetChildren()) do
+        task.spawn(function() processLoot(loot) end)
+    end
+end
+
+-- Выключение авто-лута
+local function disableAutoLoot()
+    if not autoLootEnabled then return end
+    autoLootEnabled = false
+    
+    if childAddedConnection then
+        childAddedConnection:Disconnect()
+        childAddedConnection = nil
+    end
+end
 
 -- Функция создания Toggle кнопки
 local function createToggle(parent, name, default, callback)
@@ -247,11 +338,13 @@ local function createTab(name)
         scrollFrame.ScrollBarImageColor3 = colors.accent
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 100)
         
-        -- Кнопка Авто Лут
-        createToggle(scrollFrame, "📦 Auto Loot", false, function(val)
-            print("Auto Loot:", val)
+        -- Кнопка Авто Лут с подключенной логикой
+        createToggle(scrollFrame, "📦 Авто Лут", false, function(val)
+            print("Авто Лут:", val)
             if val then
-                -- Здесь можно добавить логику авто-лута
+                enableAutoLoot()
+            else
+                disableAutoLoot()
             end
         end)
         
@@ -264,7 +357,7 @@ local function createTab(name)
     elseif name == "Discord" then
         -- Пустая вкладка Discord
         
-    elseif name == "settings" then
+    elseif name == "Настройки" then
         -- Пустая вкладка Настройки
     end
     
@@ -308,7 +401,7 @@ local function toggleMinimize()
         Main.Size = UDim2.new(0, 520, 0, 360)
         Main.Position = currentPos
         Title.TextSize = 13
-        Title.Size = UDim2.new(0, 110, 1, 0)
+        Title.Size = UDim2.new(0, 200, 1, 0)
         Title.Position = UDim2.new(0, 12, 0, 0)
         Title.TextXAlignment = Enum.TextXAlignment.Left
         MinimizeBtn.Position = UDim2.new(1, -52, 0, 5)
@@ -321,7 +414,10 @@ local function toggleMinimize()
 end
 
 MinimizeBtn.MouseButton1Click:Connect(toggleMinimize)
-CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+CloseBtn.MouseButton1Click:Connect(function() 
+    disableAutoLoot()
+    ScreenGui:Destroy() 
+end)
 
 -- Создаём вкладки
 for _, name in ipairs(tabNames) do
@@ -377,4 +473,4 @@ TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
     Position = UDim2.new(0.5, -260, 0.5, -180)
 }):Play()
 
-print("Темный Fantasy GUI загружен! Вкладка Esp удалена, во вкладке Main добавлена кнопка Авто Лут.")
+print("Темный Fantasy GUI загружен! Авто-лут готов к работе.")
