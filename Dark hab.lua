@@ -77,7 +77,7 @@ Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
 -- Заголовок текст (английский)
 local Title = Instance.new("TextLabel", TitleBar)
 Title.Name = "Title"
-Title.Text = "Dark Fantasy | Auto Loot"
+Title.Text = "Dark Hub"
 Title.Size = UDim2.new(0, 200, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
 Title.BackgroundTransparency = 1
