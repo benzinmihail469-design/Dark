@@ -1,7 +1,6 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
@@ -157,13 +156,12 @@ local function setWalkSpeed(speed)
     end
 end
 
--- === АВТО-ЛУТ СКРИПТ (БЕЗ СПАМА) ===
+-- === АВТО-ЛУТ (ПРОСТОЙ И РАБОЧИЙ) ===
 local autoLootEnabled = false
-local processedLoot = {}
 local lootFolder = nil
 local childAddedConnection = nil
+local scanConnection = nil
 
--- Настройки
 local TELEPORT_OFFSET = Vector3.new(0, 2, 0)
 local DISTANCE_THRESHOLD = 500
 
@@ -177,64 +175,60 @@ local function findLootFolder()
 end
 
 -- Получить позицию лута
-local function getLootPosition(lootObject)
-    if lootObject:IsA("BasePart") then
-        return lootObject.Position
+local function getLootPosition(loot)
+    if loot:IsA("BasePart") then
+        return loot.Position
     end
-    
-    if lootObject:IsA("Model") then
-        if lootObject.PrimaryPart then
-            return lootObject.PrimaryPart.Position
+    if loot:IsA("Model") then
+        local part = loot.PrimaryPart
+        if not part then
+            part = loot:FindFirstChildWhichIsA("BasePart")
         end
-        local anyPart = lootObject:FindFirstChildWhichIsA("BasePart")
-        if anyPart then
-            return anyPart.Position
+        if part then
+            return part.Position
         end
     end
-    
     return nil
 end
 
--- Телепорт к луту
-local function teleportToLoot(lootObject)
-    local lootPos = getLootPosition(lootObject)
-    if not lootPos then return end
+-- ТЕЛЕПОРТ
+local function TeleportToLoot(loot)
+    if not autoLootEnabled then return end
+    if not loot or not loot.Parent then return end
     
-    local character = player.Character
-    if not character then return end
+    local pos = getLootPosition(loot)
+    if not pos then return end
     
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then return end
+    local char = player.Character
+    if not char then return end
     
-    local distance = (humanoidRootPart.Position - lootPos).Magnitude
-    if distance > DISTANCE_THRESHOLD then
-        pcall(function()
-            humanoidRootPart.CFrame = CFrame.new(lootPos + TELEPORT_OFFSET)
-        end)
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    local dist = (hrp.Position - pos).Magnitude
+    if dist > DISTANCE_THRESHOLD then
+        hrp.CFrame = CFrame.new(pos + TELEPORT_OFFSET)
     end
 end
 
--- Обработка одного лута
-local function processLoot(lootObject)
+-- Когда появляется новый лут
+local function onLootAdded(loot)
+    if autoLootEnabled then
+        TeleportToLoot(loot)
+    end
+end
+
+-- Сканирование папки (для существующего лута)
+local function scanLootFolder()
     if not autoLootEnabled then return end
-    if processedLoot[lootObject] then return end
+    if not lootFolder then return end
     
-    processedLoot[lootObject] = true
-    task.spawn(function()
-        teleportToLoot(lootObject)
-        task.wait(3)
-        processedLoot[lootObject] = nil
-    end)
+    for _, loot in pairs(lootFolder:GetChildren()) do
+        TeleportToLoot(loot)
+    end
 end
 
--- Когда добавляется новый лут
-local function onLootAdded(lootObject)
-    if not autoLootEnabled then return end
-    task.wait(0.05)
-    processLoot(lootObject)
-end
-
--- Включение авто-лута
+-- Включение
 local function enableAutoLoot()
     if autoLootEnabled then return end
     
@@ -245,20 +239,20 @@ local function enableAutoLoot()
     end
     
     autoLootEnabled = true
-    processedLoot = {}
     
-    if childAddedConnection then
-        childAddedConnection:Disconnect()
-    end
+    -- Подписываемся на новые луты
     childAddedConnection = lootFolder.ChildAdded:Connect(onLootAdded)
     
-    -- Обрабатываем существующий лут
-    for _, lootObject in pairs(lootFolder:GetChildren()) do
-        task.spawn(function() processLoot(lootObject) end)
-    end
+    -- Запускаем сканирование каждые 0.5 секунды
+    scanConnection = game:GetService("RunService").Heartbeat:Connect(function()
+        scanLootFolder()
+    end)
+    
+    -- Телепортируем к существующему луту
+    scanLootFolder()
 end
 
--- Выключение авто-лута
+-- Выключение
 local function disableAutoLoot()
     if not autoLootEnabled then return end
     autoLootEnabled = false
@@ -266,6 +260,11 @@ local function disableAutoLoot()
     if childAddedConnection then
         childAddedConnection:Disconnect()
         childAddedConnection = nil
+    end
+    
+    if scanConnection then
+        scanConnection:Disconnect()
+        scanConnection = nil
     end
 end
 
@@ -497,8 +496,8 @@ local function createTab(name)
         speedSlider.Position = UDim2.new(0, 0, 0, 120)
         
         local statusLabel = Instance.new("TextLabel", scrollFrame)
-        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot'"
-        statusLabel.Size = UDim2.new(1, -16, 0, 40)
+        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot'\n⚡ Teleports when distance > " .. DISTANCE_THRESHOLD
+        statusLabel.Size = UDim2.new(1, -16, 0, 60)
         statusLabel.Position = UDim2.new(0, 8, 0, 190)
         statusLabel.BackgroundTransparency = 1
         statusLabel.TextColor3 = colors.textDark
@@ -509,7 +508,7 @@ local function createTab(name)
         
     elseif name == "Info" then
         local infoText = Instance.new("TextLabel", tabContent)
-        infoText.Text = "Dark Fantasy GUI\nVersion 1.5\n\nAuto Loot - Teleports to loot\n\nHow it works:\n1. Finds folder named 'Loot'\n2. Watches for new models/parts\n3. Teleports player to loot"
+        infoText.Text = "Dark Fantasy GUI\nVersion 1.6\n\nAuto Loot - Teleports to loot\n\nHow it works:\n1. Finds folder named 'Loot'\n2. Teleports to models/parts in Loot folder\n3. Teleports only when distance > threshold"
         infoText.Size = UDim2.new(1, -16, 1, 0)
         infoText.Position = UDim2.new(0, 8, 0, 10)
         infoText.BackgroundTransparency = 1
