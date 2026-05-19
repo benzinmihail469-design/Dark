@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
@@ -156,47 +157,45 @@ local function setWalkSpeed(speed)
     end
 end
 
--- === АВТО-ЛУТ (ПРОСТОЙ И РАБОЧИЙ) ===
+-- === АВТО-ЛУТ (ПРОСТОЙ КАК ТОПОР) ===
 local autoLootEnabled = false
-local lootFolder = nil
-local childAddedConnection = nil
-local scanConnection = nil
+local currentTarget = nil
+local targetCooldown = 0
 
-local TELEPORT_OFFSET = Vector3.new(0, 2, 0)
 local DISTANCE_THRESHOLD = 500
+local TELEPORT_OFFSET = Vector3.new(0, 2, 0)
 
 -- Поиск папки Loot
 local function findLootFolder()
     local folder = workspace:FindFirstChild("Loot")
+    if not folder then folder = workspace:FindFirstChild("loot") end
     if not folder then
-        folder = workspace:FindFirstChild("loot")
+        for _, child in pairs(workspace:GetChildren()) do
+            if child:FindFirstChild("Loot") then folder = child.Loot break end
+            if child:FindFirstChild("loot") then folder = child.loot break end
+        end
     end
     return folder
 end
 
 -- Получить позицию лута
-local function getLootPosition(loot)
+local function getLootPos(loot)
     if loot:IsA("BasePart") then
         return loot.Position
-    end
-    if loot:IsA("Model") then
+    elseif loot:IsA("Model") then
         local part = loot.PrimaryPart
-        if not part then
-            part = loot:FindFirstChildWhichIsA("BasePart")
-        end
-        if part then
-            return part.Position
-        end
+        if not part then part = loot:FindFirstChildWhichIsA("BasePart") end
+        if part then return part.Position end
     end
     return nil
 end
 
 -- ТЕЛЕПОРТ
-local function TeleportToLoot(loot)
+local function DoTeleport(loot)
     if not autoLootEnabled then return end
     if not loot or not loot.Parent then return end
     
-    local pos = getLootPosition(loot)
+    local pos = getLootPos(loot)
     if not pos then return end
     
     local char = player.Character
@@ -211,61 +210,44 @@ local function TeleportToLoot(loot)
     end
 end
 
--- Когда появляется новый лут
-local function onLootAdded(loot)
+-- Обработчик нового лута
+local function OnNewLoot(loot)
     if autoLootEnabled then
-        TeleportToLoot(loot)
+        DoTeleport(loot)
     end
 end
 
--- Сканирование папки (для существующего лута)
-local function scanLootFolder()
+-- Сканирование
+local function ScanLoot()
     if not autoLootEnabled then return end
-    if not lootFolder then return end
     
-    for _, loot in pairs(lootFolder:GetChildren()) do
-        TeleportToLoot(loot)
+    local folder = findLootFolder()
+    if not folder then return end
+    
+    for _, loot in pairs(folder:GetChildren()) do
+        DoTeleport(loot)
     end
 end
 
 -- Включение
-local function enableAutoLoot()
+local function Enable()
     if autoLootEnabled then return end
     
-    lootFolder = findLootFolder()
-    if not lootFolder then
+    local folder = findLootFolder()
+    if not folder then
         warn("Loot folder not found!")
         return
     end
     
     autoLootEnabled = true
-    
-    -- Подписываемся на новые луты
-    childAddedConnection = lootFolder.ChildAdded:Connect(onLootAdded)
-    
-    -- Запускаем сканирование каждые 0.5 секунды
-    scanConnection = game:GetService("RunService").Heartbeat:Connect(function()
-        scanLootFolder()
-    end)
-    
-    -- Телепортируем к существующему луту
-    scanLootFolder()
+    folder.ChildAdded:Connect(OnNewLoot)
+    RunService.Heartbeat:Connect(ScanLoot)
+    ScanLoot()
 end
 
 -- Выключение
-local function disableAutoLoot()
-    if not autoLootEnabled then return end
+local function Disable()
     autoLootEnabled = false
-    
-    if childAddedConnection then
-        childAddedConnection:Disconnect()
-        childAddedConnection = nil
-    end
-    
-    if scanConnection then
-        scanConnection:Disconnect()
-        scanConnection = nil
-    end
 end
 
 -- === ФУНКЦИЯ СОЗДАНИЯ SLIDER ===
@@ -471,11 +453,7 @@ local function createTab(name)
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 280)
         
         createToggle(scrollFrame, "📦 Auto Loot", false, function(val)
-            if val then
-                enableAutoLoot()
-            else
-                disableAutoLoot()
-            end
+            if val then Enable() else Disable() end
         end)
         
         local distSlider = createSlider(scrollFrame, "Teleport Distance", 50, 1000, DISTANCE_THRESHOLD, function(newValue)
@@ -496,8 +474,8 @@ local function createTab(name)
         speedSlider.Position = UDim2.new(0, 0, 0, 120)
         
         local statusLabel = Instance.new("TextLabel", scrollFrame)
-        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot'\n⚡ Teleports when distance > " .. DISTANCE_THRESHOLD
-        statusLabel.Size = UDim2.new(1, -16, 0, 60)
+        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot'"
+        statusLabel.Size = UDim2.new(1, -16, 0, 40)
         statusLabel.Position = UDim2.new(0, 8, 0, 190)
         statusLabel.BackgroundTransparency = 1
         statusLabel.TextColor3 = colors.textDark
@@ -508,7 +486,7 @@ local function createTab(name)
         
     elseif name == "Info" then
         local infoText = Instance.new("TextLabel", tabContent)
-        infoText.Text = "Dark Fantasy GUI\nVersion 1.6\n\nAuto Loot - Teleports to loot\n\nHow it works:\n1. Finds folder named 'Loot'\n2. Teleports to models/parts in Loot folder\n3. Teleports only when distance > threshold"
+        infoText.Text = "Dark Fantasy GUI\nVersion 1.6\n\nAuto Loot - Teleports to loot\n\nHow it works:\n1. Finds folder named 'Loot'\n2. Teleports to models/parts in Loot folder"
         infoText.Size = UDim2.new(1, -16, 1, 0)
         infoText.Position = UDim2.new(0, 8, 0, 10)
         infoText.BackgroundTransparency = 1
@@ -532,7 +510,7 @@ local function createTab(name)
         Instance.new("UICorner", unloadBtn).CornerRadius = UDim.new(0, 6)
         
         unloadBtn.MouseButton1Click:Connect(function()
-            disableAutoLoot()
+            Disable()
             ScreenGui:Destroy()
         end)
         
@@ -603,7 +581,7 @@ end
 
 MinimizeBtn.MouseButton1Click:Connect(toggleMinimize)
 CloseBtn.MouseButton1Click:Connect(function() 
-    disableAutoLoot()
+    Disable()
     ScreenGui:Destroy() 
 end)
 
