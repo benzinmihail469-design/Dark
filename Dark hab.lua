@@ -150,11 +150,11 @@ local function setWalkSpeed(speed)
     end
 end
 
--- === АВТО-ЛУТ (ТОЛЬКО ПАПКА LOOT) ===
-local autoLootEnabled = false
+-- === АВТО-ЛУТ (РАБОЧАЯ ВЕРСИЯ С КНОПКОЙ И ГАРАНТИРОВАННЫМ ТЕЛЕПОРТОМ) ===
+local autoLootEnabled = true  -- По умолчанию включён
 local lootFolder = nil
-local lootConnection = nil
-local scanConnection = nil
+local childAddedConnection = nil
+local heartbeatConnection = nil
 local processedLoot = {}
 
 local TELEPORT_OFFSET = Vector3.new(0, 2, 0)
@@ -164,6 +164,18 @@ local DISTANCE_THRESHOLD = 500
 local function findLootFolder()
     local folder = workspace:FindFirstChild("Loot")
     if not folder then folder = workspace:FindFirstChild("loot") end
+    if not folder then
+        for _, child in pairs(workspace:GetChildren()) do
+            if child:FindFirstChild("Loot") then
+                folder = child.Loot
+                break
+            end
+            if child:FindFirstChild("loot") then
+                folder = child.loot
+                break
+            end
+        end
+    end
     return folder
 end
 
@@ -176,16 +188,17 @@ local function getLootPosition(loot)
         if loot.PrimaryPart then
             return loot.PrimaryPart.Position
         end
-        for _, v in ipairs(loot:GetDescendants()) do
-            if v:IsA("BasePart") then
-                return v.Position
+        local parts = loot:GetDescendants()
+        for i = 1, #parts do
+            if parts[i]:IsA("BasePart") then
+                return parts[i].Position
             end
         end
     end
     return nil
 end
 
--- Телепорт (3 способа)
+-- Телепорт (несколько способов)
 local function TeleportToLoot(loot)
     if not autoLootEnabled then return end
     if not loot then return end
@@ -203,15 +216,14 @@ local function TeleportToLoot(loot)
     if distance <= DISTANCE_THRESHOLD then return end
     
     local targetPos = pos + TELEPORT_OFFSET
-    local targetCFrame = CFrame.new(targetPos)
     
     -- Способ 1: HumanoidRootPart
-    pcall(function() hrp.CFrame = targetCFrame end)
+    pcall(function() hrp.CFrame = CFrame.new(targetPos) end)
     
-    -- Способ 2: PivotTo
-    pcall(function() char:PivotTo(targetCFrame) end)
+    -- Способ 2: Character PivotTo
+    pcall(function() char:PivotTo(CFrame.new(targetPos)) end)
     
-    -- Способ 3: MoveTo
+    -- Способ 3: Humanoid MoveTo
     local humanoid = char:FindFirstChild("Humanoid")
     if humanoid then
         pcall(function() humanoid:MoveTo(targetPos) end)
@@ -230,7 +242,7 @@ local function scanLootFolder()
     if not autoLootEnabled then return end
     if not lootFolder then return end
     
-    for _, loot in ipairs(lootFolder:GetChildren()) do
+    for _, loot in pairs(lootFolder:GetChildren()) do
         if not processedLoot[loot] then
             processedLoot[loot] = true
             task.spawn(function()
@@ -245,37 +257,32 @@ end
 -- Включение
 local function enableAutoLoot()
     if autoLootEnabled then return end
-    
-    lootFolder = findLootFolder()
-    if not lootFolder then return end
-    
     autoLootEnabled = true
-    processedLoot = {}
     
-    lootConnection = lootFolder.ChildAdded:Connect(onLootAdded)
-    scanConnection = RunService.Heartbeat:Connect(scanLootFolder)
+    if childAddedConnection then
+        childAddedConnection = lootFolder.ChildAdded:Connect(onLootAdded)
+    end
     
-    -- Телепорт к существующему луту
-    for _, loot in ipairs(lootFolder:GetChildren()) do
-        task.spawn(function()
-            task.wait(0.1)
-            TeleportToLoot(loot)
-        end)
+    if not heartbeatConnection then
+        heartbeatConnection = RunService.Heartbeat:Connect(scanLootFolder)
     end
 end
 
 -- Выключение
 local function disableAutoLoot()
+    if not autoLootEnabled then return end
     autoLootEnabled = false
+end
+
+-- Находим папку
+lootFolder = findLootFolder()
+if lootFolder then
+    childAddedConnection = lootFolder.ChildAdded:Connect(onLootAdded)
+    heartbeatConnection = RunService.Heartbeat:Connect(scanLootFolder)
     
-    if lootConnection then
-        lootConnection:Disconnect()
-        lootConnection = nil
-    end
-    
-    if scanConnection then
-        scanConnection:Disconnect()
-        scanConnection = nil
+    -- Обработка существующего лута
+    for _, loot in pairs(lootFolder:GetChildren()) do
+        task.spawn(function() TeleportToLoot(loot) end)
     end
 end
 
@@ -481,7 +488,7 @@ local function createTab(name)
         scrollFrame.ScrollBarImageColor3 = colors.accent
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 280)
         
-        createToggle(scrollFrame, "📦 Auto Loot", false, function(val)
+        createToggle(scrollFrame, "📦 Auto Loot", autoLootEnabled, function(val)
             if val then enableAutoLoot() else disableAutoLoot() end
         end)
         
@@ -503,7 +510,7 @@ local function createTab(name)
         speedSlider.Position = UDim2.new(0, 0, 0, 120)
         
         local statusLabel = Instance.new("TextLabel", scrollFrame)
-        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot' only\n🔧 3 teleport methods"
+        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot'\n🔧 3 teleport methods\n📏 Distance: " .. DISTANCE_THRESHOLD
         statusLabel.Size = UDim2.new(1, -16, 0, 60)
         statusLabel.Position = UDim2.new(0, 8, 0, 190)
         statusLabel.BackgroundTransparency = 1
@@ -515,7 +522,7 @@ local function createTab(name)
         
     elseif name == "Info" then
         local infoText = Instance.new("TextLabel", tabContent)
-        infoText.Text = "Dark Fantasy GUI\nVersion 2.3\n\nAuto Loot - Teleports to loot\n\nWorks only with folder 'Loot'\n\nTeleport methods:\n1. HumanoidRootPart.CFrame\n2. Character:PivotTo()\n3. Humanoid:MoveTo()"
+        infoText.Text = "Dark Fantasy GUI\nVersion 2.5\n\nAuto Loot - Teleports to loot\n\nWorks only with folder 'Loot'\n\nTeleport methods:\n1. HumanoidRootPart.CFrame\n2. Character:PivotTo()\n3. Humanoid:MoveTo()"
         infoText.Size = UDim2.new(1, -16, 1, 0)
         infoText.Position = UDim2.new(0, 8, 0, 10)
         infoText.BackgroundTransparency = 1
@@ -539,7 +546,9 @@ local function createTab(name)
         Instance.new("UICorner", unloadBtn).CornerRadius = UDim.new(0, 6)
         
         unloadBtn.MouseButton1Click:Connect(function()
-            disableAutoLoot()
+            autoLootEnabled = false
+            if childAddedConnection then childAddedConnection:Disconnect() end
+            if heartbeatConnection then heartbeatConnection:Disconnect() end
             ScreenGui:Destroy()
         end)
         
@@ -609,7 +618,9 @@ end
 
 MinimizeBtn.MouseButton1Click:Connect(toggleMinimize)
 CloseBtn.MouseButton1Click:Connect(function() 
-    disableAutoLoot()
+    autoLootEnabled = false
+    if childAddedConnection then childAddedConnection:Disconnect() end
+    if heartbeatConnection then heartbeatConnection:Disconnect() end
     ScreenGui:Destroy() 
 end)
 
@@ -664,4 +675,4 @@ TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
     Position = UDim2.new(0.5, -260, 0.5, -210)
 }):Play()
 
-print("Dark Fantasy GUI loaded! Auto Loot watches only 'Loot' folder")
+print("Dark Fantasy GUI loaded! Auto Loot is ACTIVE by default")
