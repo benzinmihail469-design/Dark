@@ -157,12 +157,11 @@ local function setWalkSpeed(speed)
     end
 end
 
--- === АВТО-ЛУТ СКРИПТ (ИСПРАВЛЕННЫЙ ТЕЛЕПОРТ) ===
+-- === АВТО-ЛУТ СКРИПТ (БЕЗ СПАМА) ===
 local autoLootEnabled = false
 local processedLoot = {}
 local lootFolder = nil
 local childAddedConnection = nil
-local heartbeatConnection = nil
 
 -- Настройки
 local TELEPORT_OFFSET = Vector3.new(0, 2, 0)
@@ -174,47 +173,22 @@ local function findLootFolder()
     if not folder then
         folder = workspace:FindFirstChild("loot")
     end
-    if not folder then
-        for _, child in pairs(workspace:GetChildren()) do
-            if child:FindFirstChild("Loot") then
-                folder = child.Loot
-                break
-            end
-            if child:FindFirstChild("loot") then
-                folder = child.loot
-                break
-            end
-        end
-    end
     return folder
 end
 
--- Получить позицию лута (улучшенная версия)
+-- Получить позицию лута
 local function getLootPosition(lootObject)
-    -- Если это BasePart, берём её позицию
     if lootObject:IsA("BasePart") then
         return lootObject.Position
     end
     
-    -- Если это модель
     if lootObject:IsA("Model") then
-        -- Пробуем PrimaryPart
         if lootObject.PrimaryPart then
             return lootObject.PrimaryPart.Position
         end
-        
-        -- Ищем любую BasePart внутри модели
         local anyPart = lootObject:FindFirstChildWhichIsA("BasePart")
         if anyPart then
             return anyPart.Position
-        end
-        
-        -- Ищем в глубину (для вложенных моделей)
-        local descendants = lootObject:GetDescendants()
-        for _, descendant in ipairs(descendants) do
-            if descendant:IsA("BasePart") then
-                return descendant.Position
-            end
         end
     end
     
@@ -223,44 +197,20 @@ end
 
 -- Телепорт к луту
 local function teleportToLoot(lootObject)
-    if not autoLootEnabled then return end
-    if not lootObject then return end
-    
     local lootPos = getLootPosition(lootObject)
-    if not lootPos then
-        print("⚠️ Cannot get position for:", lootObject.Name)
-        return
-    end
+    if not lootPos then return end
     
     local character = player.Character
-    if not character then
-        print("⚠️ Character not found")
-        return
-    end
+    if not character then return end
     
     local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then
-        print("⚠️ HumanoidRootPart not found")
-        return
-    end
+    if not humanoidRootPart then return end
     
     local distance = (humanoidRootPart.Position - lootPos).Magnitude
-    
-    -- Проверяем дистанцию
     if distance > DISTANCE_THRESHOLD then
-        print("📦 Teleporting to:", lootObject.Name, "Distance:", math.floor(distance))
-        
-        local success, err = pcall(function()
+        pcall(function()
             humanoidRootPart.CFrame = CFrame.new(lootPos + TELEPORT_OFFSET)
         end)
-        
-        if success then
-            print("✅ Teleported successfully to", lootObject.Name)
-        else
-            print("❌ Teleport failed:", err)
-        end
-    else
-        print("📦 Too close to", lootObject.Name, "Distance:", math.floor(distance))
     end
 end
 
@@ -270,80 +220,41 @@ local function processLoot(lootObject)
     if processedLoot[lootObject] then return end
     
     processedLoot[lootObject] = true
-    print("🔍 Processing loot:", lootObject.Name)
-    
     task.spawn(function()
         teleportToLoot(lootObject)
-        -- Удаляем из кэша через 5 секунд
-        task.wait(5)
+        task.wait(3)
         processedLoot[lootObject] = nil
     end)
-end
-
--- Обработка всех лута в папке
-local function processAllLootInFolder()
-    if not autoLootEnabled then return end
-    if not lootFolder then return end
-    
-    local children = lootFolder:GetChildren()
-    print("🔍 Scanning loot folder, found:", #children, "items")
-    
-    for _, lootObject in pairs(children) do
-        if not processedLoot[lootObject] then
-            processLoot(lootObject)
-        end
-    end
 end
 
 -- Когда добавляется новый лут
 local function onLootAdded(lootObject)
     if not autoLootEnabled then return end
-    print("✨ New loot detected:", lootObject.Name)
-    task.wait(0.1) -- Небольшая задержка для уверенности
+    task.wait(0.05)
     processLoot(lootObject)
 end
 
 -- Включение авто-лута
 local function enableAutoLoot()
     if autoLootEnabled then return end
-    autoLootEnabled = true
     
-    -- Находим папку Loot
     lootFolder = findLootFolder()
-    
     if not lootFolder then
-        warn("❌ Loot folder not found! Make sure there is a folder named 'Loot' in workspace")
-        autoLootEnabled = false
+        warn("Loot folder not found!")
         return
     end
     
-    print("✅ [Auto Loot] ENABLED - Watching folder:", lootFolder.Name)
-    print("✅ [Auto Loot] Distance threshold:", DISTANCE_THRESHOLD)
-    
-    -- Очищаем кэш
+    autoLootEnabled = true
     processedLoot = {}
     
-    -- Подключаем событие на появление нового лута
     if childAddedConnection then
         childAddedConnection:Disconnect()
     end
     childAddedConnection = lootFolder.ChildAdded:Connect(onLootAdded)
     
-    -- Запускаем Heartbeat для постоянной проверки
-    if heartbeatConnection then
-        heartbeatConnection:Disconnect()
-    end
-    heartbeatConnection = RunService.Heartbeat:Connect(function()
-        processAllLootInFolder()
-    end)
-    
-    -- Обрабатываем уже существующий лут
-    local existingLoot = lootFolder:GetChildren()
-    print("📦 Processing existing loot, count:", #existingLoot)
-    for _, lootObject in pairs(existingLoot) do
-        task.spawn(function()
-            processLoot(lootObject)
-        end)
+    -- Обрабатываем существующий лут
+    for _, lootObject in pairs(lootFolder:GetChildren()) do
+        task.spawn(function() processLoot(lootObject) end)
     end
 end
 
@@ -351,16 +262,10 @@ end
 local function disableAutoLoot()
     if not autoLootEnabled then return end
     autoLootEnabled = false
-    print("⭕ [Auto Loot] DISABLED")
     
     if childAddedConnection then
         childAddedConnection:Disconnect()
         childAddedConnection = nil
-    end
-    
-    if heartbeatConnection then
-        heartbeatConnection:Disconnect()
-        heartbeatConnection = nil
     end
 end
 
@@ -566,7 +471,6 @@ local function createTab(name)
         scrollFrame.ScrollBarImageColor3 = colors.accent
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 280)
         
-        -- Кнопка Авто Лут
         createToggle(scrollFrame, "📦 Auto Loot", false, function(val)
             if val then
                 enableAutoLoot()
@@ -575,16 +479,11 @@ local function createTab(name)
             end
         end)
         
-        -- Ползунок для дистанции
         local distSlider = createSlider(scrollFrame, "Teleport Distance", 50, 1000, DISTANCE_THRESHOLD, function(newValue)
             DISTANCE_THRESHOLD = math.floor(newValue)
-            if autoLootEnabled then
-                print("[Auto Loot] Distance changed to:", DISTANCE_THRESHOLD)
-            end
         end)
         distSlider.Position = UDim2.new(0, 0, 0, 40)
         
-        -- Разделитель
         local line = Instance.new("Frame", scrollFrame)
         line.Size = UDim2.new(1, -16, 0, 1)
         line.Position = UDim2.new(0, 8, 0, 105)
@@ -592,16 +491,14 @@ local function createTab(name)
         line.BackgroundTransparency = 0.7
         line.BorderSizePixel = 0
         
-        -- Слайдер для скорости
         local speedSlider = createSlider(scrollFrame, "Walk Speed", 16, 250, 16, function(newValue)
             setWalkSpeed(newValue)
         end)
         speedSlider.Position = UDim2.new(0, 0, 0, 120)
         
-        -- Статус
         local statusLabel = Instance.new("TextLabel", scrollFrame)
-        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot'\n🔄 Teleports to new models/parts in Loot folder"
-        statusLabel.Size = UDim2.new(1, -16, 0, 60)
+        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot'"
+        statusLabel.Size = UDim2.new(1, -16, 0, 40)
         statusLabel.Position = UDim2.new(0, 8, 0, 190)
         statusLabel.BackgroundTransparency = 1
         statusLabel.TextColor3 = colors.textDark
@@ -612,7 +509,7 @@ local function createTab(name)
         
     elseif name == "Info" then
         local infoText = Instance.new("TextLabel", tabContent)
-        infoText.Text = "Dark Fantasy GUI\nVersion 1.4\n\nAuto Loot - Teleports to loot\n\nHow it works:\n1. Finds folder named 'Loot'\n2. Watches for new models/parts\n3. Teleports player to loot\n\nUse 'Teleport Distance' to set\nteleport range (default: 500)"
+        infoText.Text = "Dark Fantasy GUI\nVersion 1.5\n\nAuto Loot - Teleports to loot\n\nHow it works:\n1. Finds folder named 'Loot'\n2. Watches for new models/parts\n3. Teleports player to loot"
         infoText.Size = UDim2.new(1, -16, 1, 0)
         infoText.Position = UDim2.new(0, 8, 0, 10)
         infoText.BackgroundTransparency = 1
@@ -765,4 +662,4 @@ TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
     Position = UDim2.new(0.5, -260, 0.5, -210)
 }):Play()
 
-print("Dark Fantasy GUI loaded! Auto Loot watches folder 'Loot'")
+print("Dark Fantasy GUI loaded!")
