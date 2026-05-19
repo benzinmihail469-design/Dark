@@ -157,51 +157,59 @@ local function setWalkSpeed(speed)
     end
 end
 
--- === АВТО-ЛУТ СКРИПТ (ПОЛНОСТЬЮ РАБОЧИЙ) ===
+-- === АВТО-ЛУТ СКРИПТ (БЕЗ РЕКУРСИИ) ===
 local autoLootEnabled = false
-local lootParts = {} -- Список уже обработанного лута
+local processedLoot = {}
 local heartbeatConnection = nil
 
 -- Настройки
 local TELEPORT_OFFSET = Vector3.new(0, 2, 0)
 local DISTANCE_THRESHOLD = 500
 
--- Поиск всех частей лута в игре
+-- Список ключевых слов для поиска лута
+local lootKeywords = {
+    "loot", "Loot", "LOOT",
+    "drop", "Drop", "DROP",
+    "coin", "Coin", "COIN",
+    "gem", "Gem", "GEM",
+    "item", "Item", "ITEM",
+    "pickup", "Pickup", "PICKUP",
+    "orb", "Orb", "ORB",
+    "soul", "Soul", "SOUL",
+    "chest", "Chest", "CHEST",
+    "reward", "Reward", "REWARD",
+    "bag", "Bag", "BAG",
+    "crystal", "Crystal", "CRYSTAL"
+}
+
+-- Проверка, является ли объект лутом
+local function isLootPart(part)
+    if not part:IsA("BasePart") then return false end
+    if part:IsDescendantOf(player.Character) then return false end
+    
+    local name = part.Name
+    for _, keyword in ipairs(lootKeywords) do
+        if string.find(name, keyword) then
+            return true
+        end
+    end
+    return false
+end
+
+-- Получение всех частей лута (без рекурсии, через GetDescendants)
 local function getAllLootParts()
     local lootList = {}
     
-    -- Ищем по ключевым словам в названии
-    local keywords = {"loot", "Loot", "LOOT", "drop", "Drop", "coin", "Coin", "gem", "Gem", "reward", "Reward", "chest", "Chest", "item", "Item", "pickup", "Pickup", "orb", "Orb", "soul", "Soul"}
+    -- Используем GetDescendants для быстрого поиска
+    local descendants = workspace:GetDescendants()
     
-    local function searchParts(container)
-        for _, child in pairs(container:GetChildren()) do
-            -- Проверяем по названию
-            local nameLower = child.Name:lower()
-            local shouldAdd = false
-            
-            for _, keyword in ipairs(keywords) do
-                if nameLower:find(keyword:lower()) then
-                    shouldAdd = true
-                    break
-                end
-            end
-            
-            -- Если это часть с лутом
-            if shouldAdd and child:IsA("BasePart") and child ~= player.Character then
-                table.insert(lootList, child)
-            end
-            
-            -- Если это модель, ищем внутри
-            if child:IsA("Model") then
-                local parts = searchParts(child)
-                for _, part in ipairs(parts) do
-                    table.insert(lootList, part)
-                end
-            end
+    for i = 1, #descendants do
+        local obj = descendants[i]
+        if isLootPart(obj) then
+            table.insert(lootList, obj)
         end
     end
     
-    searchParts(workspace)
     return lootList
 end
 
@@ -211,36 +219,38 @@ local function teleportToLoot(part)
     if not part or not part.Parent then return end
     
     local character = player.Character
-    local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
+    if not character then return end
     
-    if humanoidRootPart and part:IsA("BasePart") then
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return end
+    
+    if part:IsA("BasePart") then
         local distance = (humanoidRootPart.Position - part.Position).Magnitude
         if distance > DISTANCE_THRESHOLD then
-            local success, err = pcall(function()
+            local success = pcall(function()
                 humanoidRootPart.CFrame = CFrame.new(part.Position + TELEPORT_OFFSET)
             end)
             if success then
-                print("Teleported to loot:", part.Name, "Distance:", math.floor(distance))
+                print("Teleported to:", part.Name, "Distance:", math.floor(distance))
             end
         end
     end
 end
 
--- Обработка всех частей лута
+-- Обработка лута
 local function processAllLoot()
     if not autoLootEnabled then return end
     
     local currentLoot = getAllLootParts()
     
     for _, lootPart in ipairs(currentLoot) do
-        -- Проверяем, не обрабатывали ли уже этот лут
-        if not lootParts[lootPart] then
-            lootParts[lootPart] = true
+        if not processedLoot[lootPart] then
+            processedLoot[lootPart] = true
             task.spawn(function()
                 teleportToLoot(lootPart)
-                -- Через 2 секунды забываем о луте (если он ещё существует)
-                task.wait(2)
-                lootParts[lootPart] = nil
+                -- Удаляем из кэша через 3 секунды
+                task.wait(3)
+                processedLoot[lootPart] = nil
             end)
         end
     end
@@ -250,9 +260,12 @@ end
 local function enableAutoLoot()
     if autoLootEnabled then return end
     autoLootEnabled = true
-    print("Auto Loot ENABLED - Distance threshold:", DISTANCE_THRESHOLD)
+    print("[Auto Loot] ENABLED - Distance:", DISTANCE_THRESHOLD)
     
-    -- Запускаем постоянную проверку
+    -- Очищаем кэш
+    processedLoot = {}
+    
+    -- Запускаем Heartbeat
     if heartbeatConnection then
         heartbeatConnection:Disconnect()
     end
@@ -266,7 +279,7 @@ end
 local function disableAutoLoot()
     if not autoLootEnabled then return end
     autoLootEnabled = false
-    print("Auto Loot DISABLED")
+    print("[Auto Loot] DISABLED")
     
     if heartbeatConnection then
         heartbeatConnection:Disconnect()
@@ -458,7 +471,7 @@ end
 -- Вкладки
 local tabs = {}
 local tabButtons = {}
-local tabNames = {"Main", "Player", "Info", "Discord", "Settings"}
+local tabNames = {"Main", "Info", "Settings"}
 local isMinimized = false
 
 local function createTab(name)
@@ -478,7 +491,6 @@ local function createTab(name)
         
         -- Кнопка Авто Лут
         createToggle(scrollFrame, "📦 Auto Loot", false, function(val)
-            print("Auto Loot:", val)
             if val then
                 enableAutoLoot()
             else
@@ -489,7 +501,6 @@ local function createTab(name)
         -- Ползунок для дистанции
         local distSlider = createSlider(scrollFrame, "Teleport Distance", 50, 1000, DISTANCE_THRESHOLD, function(newValue)
             DISTANCE_THRESHOLD = math.floor(newValue)
-            print("Distance set to:", DISTANCE_THRESHOLD)
         end)
         distSlider.Position = UDim2.new(0, 0, 0, 40)
         
@@ -504,13 +515,12 @@ local function createTab(name)
         -- Слайдер для скорости
         local speedSlider = createSlider(scrollFrame, "Walk Speed", 16, 250, 16, function(newValue)
             setWalkSpeed(newValue)
-            print("Walk Speed set to:", newValue)
         end)
         speedSlider.Position = UDim2.new(0, 0, 0, 120)
         
         -- Статус
         local statusLabel = Instance.new("TextLabel", scrollFrame)
-        statusLabel.Text = "✅ Auto Loot is ready\n📦 Searches for: loot, drop, coin, gem, item, pickup, orb, soul, chest"
+        statusLabel.Text = "✅ Auto Loot Ready\nTeleports to: loot, drop, coin, gem, item, pickup, orb, soul, chest"
         statusLabel.Size = UDim2.new(1, -16, 0, 50)
         statusLabel.Position = UDim2.new(0, 8, 0, 190)
         statusLabel.BackgroundTransparency = 1
@@ -522,7 +532,7 @@ local function createTab(name)
         
     elseif name == "Info" then
         local infoText = Instance.new("TextLabel", tabContent)
-        infoText.Text = "Dark Fantasy GUI\nVersion 1.0\n\nAuto Loot - Teleports to any loot\nWalk Speed - Changes player speed\n\nLoot detection works by name:\nloot, drop, coin, gem, item,\npickup, orb, soul, chest"
+        infoText.Text = "Dark Fantasy GUI\nVersion 1.1\n\nAuto Loot - Teleports to loot\nWalk Speed - Changes speed\n\nDetection by name:\nloot, drop, coin, gem,\nitem, pickup, orb, soul, chest"
         infoText.Size = UDim2.new(1, -16, 1, 0)
         infoText.Position = UDim2.new(0, 8, 0, 10)
         infoText.BackgroundTransparency = 1
@@ -675,4 +685,4 @@ TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
     Position = UDim2.new(0.5, -260, 0.5, -210)
 }):Play()
 
-print("Dark Fantasy GUI loaded! Auto Loot is FULLY WORKING.")
+print("Dark Fantasy GUI loaded! Auto Loot is WORKING (no recursion)")
