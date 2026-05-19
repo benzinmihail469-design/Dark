@@ -1,10 +1,18 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
--- Цветовая палитра
+-- Создаём ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "DarkFantasy_GUI"
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Цветовая палитра Dark Fantasy
 local colors = {
     bg = Color3.fromRGB(15, 5, 20),
     titleBg = Color3.fromRGB(25, 10, 35),
@@ -24,13 +32,6 @@ local colors = {
     buttonHover = Color3.fromRGB(70, 30, 110),
 }
 
--- ScreenGui
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "DarkFantasy_GUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = player:WaitForChild("PlayerGui")
-
 -- Основной фрейм
 local Main = Instance.new("Frame")
 Main.Name = "MainFrame"
@@ -41,32 +42,40 @@ Main.BorderSizePixel = 0
 Main.ClipsDescendants = true
 Main.Parent = ScreenGui
 
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
-local stroke = Instance.new("UIStroke", Main)
-stroke.Color = colors.stroke
-stroke.Thickness = 1.5
-stroke.Transparency = 0.4
+local corner = Instance.new("UICorner", Main)
+corner.CornerRadius = UDim.new(0, 12)
 
--- Акцентная линия
+local Stroke = Instance.new("UIStroke", Main)
+Stroke.Color = colors.stroke
+Stroke.Transparency = 0.4
+Stroke.Thickness = 1.5
+
 local AccentLine = Instance.new("Frame", Main)
+AccentLine.Name = "AccentLine"
 AccentLine.Size = UDim2.new(1, 0, 0, 2)
 AccentLine.BackgroundColor3 = colors.accent
+AccentLine.BorderSizePixel = 0
 Instance.new("UICorner", AccentLine).CornerRadius = UDim.new(0, 12)
-local grad = Instance.new("UIGradient", AccentLine)
-grad.Color = ColorSequence.new{
+
+local Gradient = Instance.new("UIGradient", AccentLine)
+Gradient.Color = ColorSequence.new{
     ColorSequenceKeypoint.new(0, Color3.fromRGB(120, 30, 180)),
     ColorSequenceKeypoint.new(0.5, Color3.fromRGB(220, 80, 255)),
     ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 30, 180))
 }
 
--- TitleBar
+-- Заголовок
 local TitleBar = Instance.new("Frame", Main)
+TitleBar.Name = "TitleBar"
 TitleBar.Size = UDim2.new(1, 0, 0, 30)
+TitleBar.Position = UDim2.new(0, 0, 0, 2)
 TitleBar.BackgroundColor3 = colors.titleBg
 TitleBar.BackgroundTransparency = 0.3
+TitleBar.BorderSizePixel = 0
 Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
 
 local Title = Instance.new("TextLabel", TitleBar)
+Title.Name = "Title"
 Title.Text = "Dark Fantasy | Auto Loot"
 Title.Size = UDim2.new(0, 200, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
@@ -76,382 +85,583 @@ Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 13
 Title.TextXAlignment = Enum.TextXAlignment.Left
 
--- Кнопки
-local MinimizeBtn = Instance.new("TextButton", TitleBar)
+local MinimizeBtn = Instance.new("TextButton", Main)
 MinimizeBtn.Text = "—"
 MinimizeBtn.Size = UDim2.new(0, 24, 0, 24)
-MinimizeBtn.Position = UDim2.new(1, -52, 0.5, -12)
+MinimizeBtn.Position = UDim2.new(1, -52, 0, 5)
 MinimizeBtn.BackgroundColor3 = Color3.fromRGB(40, 15, 60)
 MinimizeBtn.TextColor3 = colors.gold
 MinimizeBtn.Font = Enum.Font.GothamBold
 MinimizeBtn.TextSize = 14
+MinimizeBtn.BorderSizePixel = 0
+MinimizeBtn.ZIndex = 10
 Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 6)
+MinimizeBtn.AutoButtonColor = false
 
-local CloseBtn = Instance.new("TextButton", TitleBar)
+local CloseBtn = Instance.new("TextButton", Main)
 CloseBtn.Text = "×"
 CloseBtn.Size = UDim2.new(0, 24, 0, 24)
-CloseBtn.Position = UDim2.new(1, -26, 0.5, -12)
+CloseBtn.Position = UDim2.new(1, -26, 0, 5)
 CloseBtn.BackgroundColor3 = colors.close
-CloseBtn.TextColor3 = Color3.new(1,1,1)
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.TextSize = 16
+CloseBtn.BorderSizePixel = 0
+CloseBtn.ZIndex = 10
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+CloseBtn.AutoButtonColor = false
 
--- Контент
 local CollapsibleContent = Instance.new("Frame", Main)
+CollapsibleContent.Name = "CollapsibleContent"
 CollapsibleContent.Size = UDim2.new(1, 0, 1, -32)
 CollapsibleContent.Position = UDim2.new(0, 0, 0, 32)
 CollapsibleContent.BackgroundTransparency = 1
+CollapsibleContent.BorderSizePixel = 0
 
 local TabButtonsFrame = Instance.new("Frame", CollapsibleContent)
-TabButtonsFrame.Size = UDim2.new(1, 0, 0, 30)
+TabButtonsFrame.Name = "TabButtons"
+TabButtonsFrame.Size = UDim2.new(1, 0, 0, 26)
+TabButtonsFrame.Position = UDim2.new(0, 0, 0, 0)
 TabButtonsFrame.BackgroundColor3 = colors.tabBg
 TabButtonsFrame.BackgroundTransparency = 0.3
+TabButtonsFrame.BorderSizePixel = 0
 
-local list = Instance.new("UIListLayout", TabButtonsFrame)
-list.FillDirection = Enum.FillDirection.Horizontal
-list.HorizontalAlignment = Enum.HorizontalAlignment.Center
-list.Padding = UDim.new(0, 4)
+local layout = Instance.new("UIListLayout", TabButtonsFrame)
+layout.FillDirection = Enum.FillDirection.Horizontal
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+layout.VerticalAlignment = Enum.VerticalAlignment.Center
+layout.Padding = UDim.new(0, 2)
 
 local ContentContainer = Instance.new("Frame", CollapsibleContent)
-ContentContainer.Size = UDim2.new(1, -16, 1, -36)
-ContentContainer.Position = UDim2.new(0, 8, 0, 32)
+ContentContainer.Name = "ContentContainer"
+ContentContainer.Size = UDim2.new(1, -16, 1, -32)
+ContentContainer.Position = UDim2.new(0, 8, 0, 30)
 ContentContainer.BackgroundColor3 = Color3.fromRGB(10, 3, 15)
 ContentContainer.BackgroundTransparency = 0.5
+ContentContainer.BorderSizePixel = 0
 Instance.new("UICorner", ContentContainer).CornerRadius = UDim.new(0, 8)
 
--- === Переменные AutoLoot ===
-local autoLootEnabled = false
-local lootConnection = nil
-local DISTANCE_THRESHOLD = 500
-local TELEPORT_OFFSET = Vector3.new(0, 3, 0)
-
-local function findLootFolder()
-    local possibleNames = {"Loot", "loot", "LOOT", "Drops", "DropsFolder"}
-    for _, name in ipairs(possibleNames) do
-        local folder = workspace:FindFirstChild(name, true)
-        if folder then return folder end
+-- === ФУНКЦИЯ ДЛЯ СКОРОСТИ ===
+local function setWalkSpeed(speed)
+    local character = player.Character
+    local humanoid = character and character:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = speed
     end
-    return nil
 end
 
-local function getObjectPosition(obj)
-    if not obj then return nil end
-    if obj:IsA("BasePart") then return obj.Position end
-    if obj:IsA("Model") then
-        if obj.PrimaryPart then return obj.PrimaryPart.Position end
-        for _, v in obj:GetDescendants() do
-            if v:IsA("BasePart") then return v.Position end
+-- === АВТО-ЛУТ (ТОЛЬКО ПАПКА LOOT) ===
+local autoLootEnabled = false
+local lootFolder = nil
+local lootConnection = nil
+local scanConnection = nil
+local processedLoot = {}
+
+local TELEPORT_OFFSET = Vector3.new(0, 2, 0)
+local DISTANCE_THRESHOLD = 500
+
+-- Поиск папки Loot
+local function findLootFolder()
+    local folder = workspace:FindFirstChild("Loot")
+    if not folder then folder = workspace:FindFirstChild("loot") end
+    return folder
+end
+
+-- Получить позицию лута
+local function getLootPosition(loot)
+    if loot:IsA("BasePart") then
+        return loot.Position
+    end
+    if loot:IsA("Model") then
+        if loot.PrimaryPart then
+            return loot.PrimaryPart.Position
+        end
+        for _, v in ipairs(loot:GetDescendants()) do
+            if v:IsA("BasePart") then
+                return v.Position
+            end
         end
     end
     return nil
 end
 
+-- Телепорт (3 способа)
 local function TeleportToLoot(loot)
     if not autoLootEnabled then return end
+    if not loot then return end
+    
     local char = player.Character
     if not char then return end
+    
+    local pos = getLootPosition(loot)
+    if not pos then return end
+    
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
-
-    local pos = getObjectPosition(loot)
-    if not pos then return end
-
-    if (hrp.Position - pos).Magnitude > DISTANCE_THRESHOLD then
-        char:PivotTo(CFrame.new(pos + TELEPORT_OFFSET))
+    
+    local distance = (hrp.Position - pos).Magnitude
+    if distance <= DISTANCE_THRESHOLD then return end
+    
+    local targetPos = pos + TELEPORT_OFFSET
+    local targetCFrame = CFrame.new(targetPos)
+    
+    -- Способ 1: HumanoidRootPart
+    pcall(function() hrp.CFrame = targetCFrame end)
+    
+    -- Способ 2: PivotTo
+    pcall(function() char:PivotTo(targetCFrame) end)
+    
+    -- Способ 3: MoveTo
+    local humanoid = char:FindFirstChild("Humanoid")
+    if humanoid then
+        pcall(function() humanoid:MoveTo(targetPos) end)
     end
 end
 
+-- Новый лут
 local function onLootAdded(loot)
+    if not autoLootEnabled then return end
     task.wait(0.1)
     TeleportToLoot(loot)
 end
 
-local function enableAutoLoot()
-    if autoLootEnabled then return end
-    local folder = findLootFolder()
-    if not folder then
-        warn("❌ Loot folder not found!")
-        return
+-- Сканирование папки
+local function scanLootFolder()
+    if not autoLootEnabled then return end
+    if not lootFolder then return end
+    
+    for _, loot in ipairs(lootFolder:GetChildren()) do
+        if not processedLoot[loot] then
+            processedLoot[loot] = true
+            task.spawn(function()
+                TeleportToLoot(loot)
+                task.wait(2)
+                processedLoot[loot] = nil
+            end)
+        end
     end
-
-    autoLootEnabled = true
-
-    -- Телепорт к существующему лута
-    for _, loot in ipairs(folder:GetChildren()) do
-        task.spawn(TeleportToLoot, loot)
-    end
-
-    lootConnection = folder.ChildAdded:Connect(onLootAdded)
-    print("✅ Auto Loot Enabled | Folder:", folder.Name)
 end
 
+-- Включение
+local function enableAutoLoot()
+    if autoLootEnabled then return end
+    
+    lootFolder = findLootFolder()
+    if not lootFolder then return end
+    
+    autoLootEnabled = true
+    processedLoot = {}
+    
+    lootConnection = lootFolder.ChildAdded:Connect(onLootAdded)
+    scanConnection = RunService.Heartbeat:Connect(scanLootFolder)
+    
+    -- Телепорт к существующему луту
+    for _, loot in ipairs(lootFolder:GetChildren()) do
+        task.spawn(function()
+            task.wait(0.1)
+            TeleportToLoot(loot)
+        end)
+    end
+end
+
+-- Выключение
 local function disableAutoLoot()
     autoLootEnabled = false
+    
     if lootConnection then
         lootConnection:Disconnect()
         lootConnection = nil
     end
+    
+    if scanConnection then
+        scanConnection:Disconnect()
+        scanConnection = nil
+    end
 end
 
--- === UI Компоненты ===
-local draggingSlider = false
-
+-- === СОЗДАНИЕ SLIDER ===
 local function createSlider(parent, name, min, max, default, callback)
-    local container = Instance.new("Frame")
+    local container = Instance.new("Frame", parent)
     container.Size = UDim2.new(1, 0, 0, 55)
     container.BackgroundTransparency = 1
-    container.Parent = parent
-
+    container.BorderSizePixel = 0
+    
     local label = Instance.new("TextLabel", container)
-    label.Size = UDim2.new(1, -100, 0, 20)
+    label.Text = name .. ": " .. tostring(default)
+    label.Size = UDim2.new(1, -16, 0, 20)
     label.Position = UDim2.new(0, 8, 0, 0)
     label.BackgroundTransparency = 1
-    label.Text = name .. ": " .. default
     label.TextColor3 = colors.text
     label.Font = Enum.Font.GothamBold
     label.TextSize = 11
     label.TextXAlignment = Enum.TextXAlignment.Left
-
+    
     local valueLabel = Instance.new("TextLabel", container)
-    valueLabel.Size = UDim2.new(0, 50, 0, 20)
-    valueLabel.Position = UDim2.new(1, -58, 0, 0)
-    valueLabel.BackgroundTransparency = 1
     valueLabel.Text = tostring(default)
+    valueLabel.Size = UDim2.new(0, 40, 0, 20)
+    valueLabel.Position = UDim2.new(1, -48, 0, 0)
+    valueLabel.BackgroundTransparency = 1
     valueLabel.TextColor3 = colors.gold
     valueLabel.Font = Enum.Font.GothamBold
     valueLabel.TextSize = 11
     valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-
+    
     local sliderFrame = Instance.new("Frame", container)
-    sliderFrame.Size = UDim2.new(1, -16, 0, 6)
-    sliderFrame.Position = UDim2.new(0, 8, 0, 28)
+    sliderFrame.Size = UDim2.new(1, -16, 0, 4)
+    sliderFrame.Position = UDim2.new(0, 8, 0, 25)
     sliderFrame.BackgroundColor3 = colors.toggleOff
-    Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 3)
-
+    sliderFrame.BorderSizePixel = 0
+    Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 2)
+    
     local fill = Instance.new("Frame", sliderFrame)
     fill.Size = UDim2.new(0, 0, 1, 0)
     fill.BackgroundColor3 = colors.accent
-    Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 3)
-
+    fill.BorderSizePixel = 0
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 2)
+    
     local knob = Instance.new("TextButton", sliderFrame)
-    knob.Size = UDim2.new(0, 16, 0, 16)
-    knob.Position = UDim2.new(0, -8, 0, -5)
+    knob.Size = UDim2.new(0, 14, 0, 14)
+    knob.Position = UDim2.new(0, -7, 0, -5)
     knob.BackgroundColor3 = colors.gold
     knob.Text = ""
-    Instance.new("UICorner", knob).CornerRadius = UDim.new(0, 8)
-
+    knob.BorderSizePixel = 0
+    knob.AutoButtonColor = false
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(0, 7)
+    
     local value = default
-
-    local function update(newValue)
+    local sliderWidth = 0
+    
+    local function updateSlider(newValue)
         value = math.clamp(newValue, min, max)
         local percent = (value - min) / (max - min)
         fill.Size = UDim2.new(percent, 0, 1, 0)
-        knob.Position = UDim2.new(percent, -8, 0, -5)
+        knob.Position = UDim2.new(percent, -7, 0, -5)
         label.Text = name .. ": " .. math.floor(value)
-        valueLabel.Text = math.floor(value)
+        valueLabel.Text = tostring(math.floor(value))
         if callback then callback(value) end
     end
-
-    knob.MouseButton1Down:Connect(function() draggingSlider = true end)
-
+    
+    local function updateWidth()
+        sliderWidth = sliderFrame.AbsoluteSize.X
+        if sliderWidth > 0 then
+            local percent = (value - min) / (max - min)
+            fill.Size = UDim2.new(percent, 0, 1, 0)
+            knob.Position = UDim2.new(percent, -7, 0, -5)
+        end
+    end
+    
+    sliderFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateWidth)
+    task.wait(0.1)
+    updateWidth()
+    updateSlider(default)
+    
+    local dragging = false
+    knob.MouseButton1Down:Connect(function()
+        dragging = true
+    end)
+    
     UserInputService.InputChanged:Connect(function(input)
-        if not draggingSlider then return end
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            local mouseX = input.Position.X
-            local sliderX = sliderFrame.AbsolutePosition.X
-            local sliderW = sliderFrame.AbsoluteSize.X
-            local percent = math.clamp((mouseX - sliderX) / sliderW, 0, 1)
-            update(min + (max - min) * percent)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local mousePos = input.Position.X
+            local sliderPos = sliderFrame.AbsolutePosition.X
+            if sliderWidth > 0 then
+                local newPercent = math.clamp((mousePos - sliderPos) / sliderWidth, 0, 1)
+                local newValue = min + (max - min) * newPercent
+                updateSlider(newValue)
+            end
         end
     end)
-
+    
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingSlider = false
+            dragging = false
         end
     end)
-
-    update(default)
+    
     return container
 end
 
+-- Функция создания Toggle
 local function createToggle(parent, name, default, callback)
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, 0, 0, 40)
+    local container = Instance.new("Frame", parent)
+    container.Size = UDim2.new(1, 0, 0, 35)
     container.BackgroundTransparency = 1
-    container.Parent = parent
-
+    container.BorderSizePixel = 0
+    
     local button = Instance.new("TextButton", container)
-    button.Size = UDim2.new(1, -70, 0, 30)
-    button.Position = UDim2.new(0, 8, 0, 5)
+    button.Text = name
+    button.Size = UDim2.new(1, -60, 0, 28)
+    button.Position = UDim2.new(0, 8, 0, 3)
     button.BackgroundColor3 = Color3.fromRGB(30, 12, 45)
-    button.Text = "   " .. name
     button.TextColor3 = colors.text
     button.Font = Enum.Font.GothamBold
     button.TextSize = 11
     button.TextXAlignment = Enum.TextXAlignment.Left
-    Instance.new("UICorner", button).CornerRadius = UDim.new(0, 6)
-
+    button.BorderSizePixel = 0
+    button.AutoButtonColor = false
+    button.ZIndex = 5
+    Instance.new("UICorner", button).CornerRadius = UDim.new(0, 5)
+    
     local toggleFrame = Instance.new("Frame", container)
-    toggleFrame.Size = UDim2.new(0, 46, 0, 22)
-    toggleFrame.Position = UDim2.new(1, -54, 0, 9)
+    toggleFrame.Size = UDim2.new(0, 40, 0, 20)
+    toggleFrame.Position = UDim2.new(1, -48, 0, 7)
     toggleFrame.BackgroundColor3 = colors.toggleOff
-    Instance.new("UICorner", toggleFrame).CornerRadius = UDim.new(0, 11)
-
-    local circle = Instance.new("Frame", toggleFrame)
-    circle.Size = UDim2.new(0, 18, 0, 18)
-    circle.Position = UDim2.new(0, 2, 0, 2)
-    circle.BackgroundColor3 = colors.toggleCircle
-    Instance.new("UICorner", circle).CornerRadius = UDim.new(0, 9)
-
-    local enabled = default
-
-    local function update()
-        if enabled then
+    toggleFrame.BorderSizePixel = 0
+    toggleFrame.ZIndex = 6
+    Instance.new("UICorner", toggleFrame).CornerRadius = UDim.new(0, 10)
+    
+    local toggleCircle = Instance.new("Frame", toggleFrame)
+    toggleCircle.Size = UDim2.new(0, 16, 0, 16)
+    toggleCircle.Position = UDim2.new(0, 2, 0, 2)
+    toggleCircle.BackgroundColor3 = Color3.fromRGB(100, 80, 120)
+    toggleCircle.BorderSizePixel = 0
+    toggleCircle.ZIndex = 7
+    Instance.new("UICorner", toggleCircle).CornerRadius = UDim.new(0, 8)
+    
+    local isOn = default
+    
+    local function updateToggle()
+        if isOn then
             toggleFrame.BackgroundColor3 = colors.toggleOn
-            TweenService:Create(circle, TweenInfo.new(0.2), {Position = UDim2.new(1, -20, 0, 2)}):Play()
+            toggleCircle.BackgroundColor3 = colors.toggleCircle
+            TweenService:Create(toggleCircle, TweenInfo.new(0.15), {
+                Position = UDim2.new(1, -18, 0, 2)
+            }):Play()
         else
             toggleFrame.BackgroundColor3 = colors.toggleOff
-            TweenService:Create(circle, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0, 2)}):Play()
+            toggleCircle.BackgroundColor3 = Color3.fromRGB(100, 80, 120)
+            TweenService:Create(toggleCircle, TweenInfo.new(0.15), {
+                Position = UDim2.new(0, 2, 0, 2)
+            }):Play()
         end
     end
-
+    
+    updateToggle()
+    
     button.MouseButton1Click:Connect(function()
-        enabled = not enabled
-        update()
-        callback(enabled)
+        isOn = not isOn
+        updateToggle()
+        if callback then callback(isOn) end
     end)
-
-    update()
+    
+    local toggleButton = Instance.new("TextButton", toggleFrame)
+    toggleButton.Size = UDim2.new(1, 0, 1, 0)
+    toggleButton.BackgroundTransparency = 1
+    toggleButton.Text = ""
+    toggleButton.BorderSizePixel = 0
+    toggleButton.ZIndex = 8
+    
+    toggleButton.MouseButton1Click:Connect(function()
+        isOn = not isOn
+        updateToggle()
+        if callback then callback(isOn) end
+    end)
+    
+    return container
 end
 
 -- Вкладки
 local tabs = {}
 local tabButtons = {}
+local tabNames = {"Main", "Info", "Settings"}
+local isMinimized = false
 
 local function createTab(name)
-    local tab = Instance.new("Frame")
-    tab.Size = UDim2.new(1, 0, 1, 0)
-    tab.BackgroundTransparency = 1
-    tab.Visible = false
-    tab.Parent = ContentContainer
-
+    local tabContent = Instance.new("Frame", ContentContainer)
+    tabContent.Name = name
+    tabContent.Size = UDim2.new(1, 0, 1, 0)
+    tabContent.BackgroundTransparency = 1
+    tabContent.Visible = false
+    
     if name == "Main" then
-        local scroll = Instance.new("ScrollingFrame", tab)
-        scroll.Size = UDim2.new(1, 0, 1, 0)
-        scroll.BackgroundTransparency = 1
-        scroll.ScrollBarThickness = 4
-        scroll.ScrollBarImageColor3 = colors.accent
-        scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-
-        local uiList = Instance.new("UIListLayout", scroll)
-        uiList.Padding = UDim.new(0, 8)
-        uiList.SortOrder = Enum.SortOrder.LayoutOrder
-
-        createToggle(scroll, "📦 Auto Loot", false, function(val)
+        local scrollFrame = Instance.new("ScrollingFrame", tabContent)
+        scrollFrame.Size = UDim2.new(1, 0, 1, 0)
+        scrollFrame.BackgroundTransparency = 1
+        scrollFrame.ScrollBarThickness = 2
+        scrollFrame.ScrollBarImageColor3 = colors.accent
+        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 280)
+        
+        createToggle(scrollFrame, "📦 Auto Loot", false, function(val)
             if val then enableAutoLoot() else disableAutoLoot() end
         end)
-
-        createSlider(scroll, "Дистанция телепорта", 100, 2000, DISTANCE_THRESHOLD, function(v)
-            DISTANCE_THRESHOLD = v
+        
+        local distSlider = createSlider(scrollFrame, "Teleport Distance", 50, 1000, DISTANCE_THRESHOLD, function(newValue)
+            DISTANCE_THRESHOLD = math.floor(newValue)
         end)
-
-        createSlider(scroll, "Скорость ходьбы", 16, 250, 16, function(v)
-            local hum = player.Character and player.Character:FindFirstChild("Humanoid")
-            if hum then hum.WalkSpeed = v end
+        distSlider.Position = UDim2.new(0, 0, 0, 40)
+        
+        local line = Instance.new("Frame", scrollFrame)
+        line.Size = UDim2.new(1, -16, 0, 1)
+        line.Position = UDim2.new(0, 8, 0, 105)
+        line.BackgroundColor3 = colors.stroke
+        line.BackgroundTransparency = 0.7
+        line.BorderSizePixel = 0
+        
+        local speedSlider = createSlider(scrollFrame, "Walk Speed", 16, 250, 16, function(newValue)
+            setWalkSpeed(newValue)
         end)
-
+        speedSlider.Position = UDim2.new(0, 0, 0, 120)
+        
+        local statusLabel = Instance.new("TextLabel", scrollFrame)
+        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot' only\n🔧 3 teleport methods"
+        statusLabel.Size = UDim2.new(1, -16, 0, 60)
+        statusLabel.Position = UDim2.new(0, 8, 0, 190)
+        statusLabel.BackgroundTransparency = 1
+        statusLabel.TextColor3 = colors.textDark
+        statusLabel.Font = Enum.Font.Gotham
+        statusLabel.TextSize = 9
+        statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+        statusLabel.TextYAlignment = Enum.TextYAlignment.Top
+        
     elseif name == "Info" then
-        local lbl = Instance.new("TextLabel", tab)
-        lbl.Size = UDim2.new(1, -20, 1, -20)
-        lbl.Position = UDim2.new(0, 10, 0, 10)
-        lbl.BackgroundTransparency = 1
-        lbl.TextWrapped = true
-        lbl.TextColor3 = colors.text
-        lbl.Font = Enum.Font.Gotham
-        lbl.TextSize = 12
-        lbl.Text = "Dark Fantasy GUI v2.1\n\n• Авто-лут с PivotTo\n• Регулируемая дистанция\n• Улучшенный поиск папки Loot"
+        local infoText = Instance.new("TextLabel", tabContent)
+        infoText.Text = "Dark Fantasy GUI\nVersion 2.3\n\nAuto Loot - Teleports to loot\n\nWorks only with folder 'Loot'\n\nTeleport methods:\n1. HumanoidRootPart.CFrame\n2. Character:PivotTo()\n3. Humanoid:MoveTo()"
+        infoText.Size = UDim2.new(1, -16, 1, 0)
+        infoText.Position = UDim2.new(0, 8, 0, 10)
+        infoText.BackgroundTransparency = 1
+        infoText.TextColor3 = colors.text
+        infoText.Font = Enum.Font.Gotham
+        infoText.TextSize = 11
+        infoText.TextWrapped = true
+        infoText.TextXAlignment = Enum.TextXAlignment.Left
+        infoText.TextYAlignment = Enum.TextYAlignment.Top
+        
+    elseif name == "Settings" then
+        local unloadBtn = Instance.new("TextButton", tabContent)
+        unloadBtn.Text = "Unload Script"
+        unloadBtn.Size = UDim2.new(0, 150, 0, 35)
+        unloadBtn.Position = UDim2.new(0.5, -75, 0.5, -17)
+        unloadBtn.BackgroundColor3 = colors.buttonBg
+        unloadBtn.TextColor3 = colors.text
+        unloadBtn.Font = Enum.Font.GothamBold
+        unloadBtn.TextSize = 12
+        unloadBtn.BorderSizePixel = 0
+        Instance.new("UICorner", unloadBtn).CornerRadius = UDim.new(0, 6)
+        
+        unloadBtn.MouseButton1Click:Connect(function()
+            disableAutoLoot()
+            ScreenGui:Destroy()
+        end)
+        
+        unloadBtn.MouseEnter:Connect(function()
+            TweenService:Create(unloadBtn, TweenInfo.new(0.2), {
+                BackgroundColor3 = colors.buttonHover
+            }):Play()
+        end)
+        
+        unloadBtn.MouseLeave:Connect(function()
+            TweenService:Create(unloadBtn, TweenInfo.new(0.2), {
+                BackgroundColor3 = colors.buttonBg
+            }):Play()
+        end)
     end
-
-    return tab
+    
+    return tabContent
 end
 
-local function switchTab(name)
-    for n, t in pairs(tabs) do
-        t.Visible = (n == name)
+local function switchTab(tabName)
+    for name, content in pairs(tabs) do
+        content.Visible = (name == tabName)
     end
-    for n, b in pairs(tabButtons) do
-        if n == name then
-            b.BackgroundColor3 = colors.tabActive
-            b.TextColor3 = colors.gold
+    for name, button in pairs(tabButtons) do
+        if name == tabName then
+            button.BackgroundColor3 = colors.tabActive
+            button.TextColor3 = colors.gold
         else
-            b.BackgroundColor3 = colors.tabInactive
-            b.TextColor3 = colors.textDark
+            button.BackgroundColor3 = colors.tabInactive
+            button.TextColor3 = colors.textDark
         end
     end
 end
 
--- Создание вкладок
-for _, name in ipairs({"Main", "Info", "Settings"}) do
-    local btn = Instance.new("TextButton", TabButtonsFrame)
-    btn.Size = UDim2.new(0, 90, 1, 0)
-    btn.BackgroundColor3 = colors.tabInactive
-    btn.Text = name
-    btn.TextColor3 = colors.textDark
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 10
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
+local function toggleMinimize()
+    isMinimized = not isMinimized
+    local currentPos = Main.Position
+    
+    if isMinimized then
+        Main.Size = UDim2.new(0, 220, 0, 32)
+        Main.Position = currentPos
+        Title.TextSize = 11
+        Title.Size = UDim2.new(1, -56, 1, 0)
+        Title.Position = UDim2.new(0, 28, 0, 0)
+        Title.TextXAlignment = Enum.TextXAlignment.Center
+        MinimizeBtn.Position = UDim2.new(1, -52, 0, 4)
+        MinimizeBtn.Text = "+"
+        MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 20, 80)
+        CloseBtn.Position = UDim2.new(1, -26, 0, 4)
+        CollapsibleContent.Visible = false
+        AccentLine.Visible = false
+    else
+        Main.Size = UDim2.new(0, 520, 0, 420)
+        Main.Position = currentPos
+        Title.TextSize = 13
+        Title.Size = UDim2.new(0, 200, 1, 0)
+        Title.Position = UDim2.new(0, 12, 0, 0)
+        Title.TextXAlignment = Enum.TextXAlignment.Left
+        MinimizeBtn.Position = UDim2.new(1, -52, 0, 5)
+        MinimizeBtn.Text = "—"
+        MinimizeBtn.BackgroundColor3 = Color3.fromRGB(40, 15, 60)
+        CloseBtn.Position = UDim2.new(1, -26, 0, 5)
+        CollapsibleContent.Visible = true
+        AccentLine.Visible = true
+    end
+end
 
+MinimizeBtn.MouseButton1Click:Connect(toggleMinimize)
+CloseBtn.MouseButton1Click:Connect(function() 
+    disableAutoLoot()
+    ScreenGui:Destroy() 
+end)
+
+for _, name in ipairs(tabNames) do
+    local tabButton = Instance.new("TextButton", TabButtonsFrame)
+    tabButton.Name = name
+    tabButton.Text = name
+    tabButton.Size = UDim2.new(0, 80, 1, 0)
+    tabButton.BackgroundColor3 = colors.tabInactive
+    tabButton.TextColor3 = colors.textDark
+    tabButton.Font = Enum.Font.GothamBlack
+    tabButton.TextSize = 9
+    tabButton.BorderSizePixel = 0
+    tabButton.AutoButtonColor = false
+    Instance.new("UICorner", tabButton).CornerRadius = UDim.new(0, 5)
+    
     tabs[name] = createTab(name)
-    tabButtons[name] = btn
-
-    btn.MouseButton1Click:Connect(function() switchTab(name) end)
+    tabButtons[name] = tabButton
+    
+    tabButton.MouseButton1Click:Connect(function() switchTab(name) end)
 end
 
 switchTab("Main")
 
--- Минимизация
-local minimized = false
-MinimizeBtn.MouseButton1Click:Connect(function()
-    minimized = not minimized
-    if minimized then
-        Main.Size = UDim2.new(0, 240, 0, 32)
-        MinimizeBtn.Text = "+"
-        CollapsibleContent.Visible = false
-    else
-        Main.Size = UDim2.new(0, 520, 0, 420)
-        MinimizeBtn.Text = "—"
-        CollapsibleContent.Visible = true
-    end
-end)
+local UIS = game:GetService("UserInputService")
+local frame = TitleBar
+local dragging, dragStart, startPos
 
-CloseBtn.MouseButton1Click:Connect(function()
-    disableAutoLoot()
-    ScreenGui:Destroy()
-end)
-
--- Dragging
-local dragging, dragInput, startPos
-TitleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
+        dragStart = input.Position
         startPos = Main.Position
-        dragInput = input
     end
 end)
 
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and input == dragInput then
-        local delta = input.Position - dragInput.Position
-        Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = false
     end
 end)
 
-print("✅ Dark Fantasy GUI успешно загружен!")
+UIS.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+Main.Position = UDim2.new(0.5, -260, 0.8, 0)
+TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
+    Position = UDim2.new(0.5, -260, 0.5, -210)
+}):Play()
+
+print("Dark Fantasy GUI loaded! Auto Loot watches only 'Loot' folder")
