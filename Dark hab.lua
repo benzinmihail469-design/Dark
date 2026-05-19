@@ -339,8 +339,8 @@ local function createTab(name)
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 100)
         
         -- Кнопка Авто Лут с подключенной логикой
-        createToggle(scrollFrame, "📦 Авто Лут", false, function(val)
-            print("Авто Лут:", val)
+        createToggle(scrollFrame, "📦 Auto Loot", false, function(val)
+            print("Auto Loot:", val)
             if val then
                 enableAutoLoot()
             else
@@ -357,7 +357,7 @@ local function createTab(name)
     elseif name == "Discord" then
         -- Пустая вкладка Discord
         
-    elseif name == "Настройки" then
+    elseif name == "settings" then
         -- Пустая вкладка Настройки
     end
     
