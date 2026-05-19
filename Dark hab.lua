@@ -74,10 +74,10 @@ TitleBar.BackgroundTransparency = 0.3
 TitleBar.BorderSizePixel = 0
 Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
 
--- Заголовок текст (английский)
+-- Заголовок текст
 local Title = Instance.new("TextLabel", TitleBar)
 Title.Name = "Title"
-Title.Text = "Dark Hub"
+Title.Text = "Dark Fantasy | Auto Loot"
 Title.Size = UDim2.new(0, 200, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
 Title.BackgroundTransparency = 1
@@ -152,11 +152,11 @@ local autoLootEnabled = false
 local childAddedConnection = nil
 local LOOT_FOLDER = nil
 
--- Auto loot settings
+-- Настройки авто-лута (дистанция 500)
 local TELEPORT_OFFSET = Vector3.new(0, 2, 0)
-local DISTANCE_THRESHOLD = 3
+local DISTANCE_THRESHOLD = 500  -- Изменено с 3 на 500
 
--- Find loot folder
+-- Поиск папки с лутом
 local function findLootFolder()
     LOOT_FOLDER = workspace:FindFirstChild("Loot")
     if not LOOT_FOLDER then
@@ -173,7 +173,7 @@ local function findLootFolder()
     return LOOT_FOLDER
 end
 
--- Teleport to loot
+-- Телепорт к луту
 local function teleportToPart(targetPart)
     local character = player.Character
     local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
@@ -186,7 +186,7 @@ local function teleportToPart(targetPart)
     end
 end
 
--- Process loot
+-- Обработка лута
 local function processLoot(lootModel)
     if not autoLootEnabled then return end
     task.wait(0.05)
@@ -201,12 +201,12 @@ local function processLoot(lootModel)
     end
 end
 
--- New loot appeared
+-- Новый лут появился
 local function onLootAdded(loot)
     processLoot(loot)
 end
 
--- Enable auto loot
+-- Включение авто-лута
 local function enableAutoLoot()
     if autoLootEnabled then return end
     autoLootEnabled = true
@@ -221,13 +221,13 @@ local function enableAutoLoot()
     
     childAddedConnection = LOOT_FOLDER.ChildAdded:Connect(onLootAdded)
     
-    -- Process existing loot
+    -- Обработка уже существующего лута
     for _, loot in pairs(LOOT_FOLDER:GetChildren()) do
         task.spawn(function() processLoot(loot) end)
     end
 end
 
--- Disable auto loot
+-- Выключение авто-лута
 local function disableAutoLoot()
     if not autoLootEnabled then return end
     autoLootEnabled = false
@@ -238,7 +238,84 @@ local function disableAutoLoot()
     end
 end
 
--- Toggle button function
+-- Функция создания Slider (ползунок)
+local function createSlider(parent, name, min, max, default, callback)
+    local container = Instance.new("Frame", parent)
+    container.Size = UDim2.new(1, 0, 0, 50)
+    container.BackgroundTransparency = 1
+    container.BorderSizePixel = 0
+    
+    local label = Instance.new("TextLabel", container)
+    label.Text = name .. ": " .. tostring(default)
+    label.Size = UDim2.new(1, -16, 0, 20)
+    label.Position = UDim2.new(0, 8, 0, 0)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = colors.text
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 10
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local sliderFrame = Instance.new("Frame", container)
+    sliderFrame.Size = UDim2.new(1, -16, 0, 4)
+    sliderFrame.Position = UDim2.new(0, 8, 0, 22)
+    sliderFrame.BackgroundColor3 = colors.toggleOff
+    sliderFrame.BorderSizePixel = 0
+    Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 2)
+    
+    local fill = Instance.new("Frame", sliderFrame)
+    fill.Size = UDim2.new(0, 0, 1, 0)
+    fill.BackgroundColor3 = colors.accent
+    fill.BorderSizePixel = 0
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 2)
+    
+    local knob = Instance.new("TextButton", sliderFrame)
+    knob.Size = UDim2.new(0, 12, 0, 12)
+    knob.Position = UDim2.new(0, -6, 0, -4)
+    knob.BackgroundColor3 = colors.gold
+    knob.Text = ""
+    knob.BorderSizePixel = 0
+    knob.AutoButtonColor = false
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(0, 6)
+    
+    local value = default
+    local sliderWidth = sliderFrame.AbsoluteSize.X
+    
+    local function updateSlider(newValue)
+        value = math.clamp(newValue, min, max)
+        local percent = (value - min) / (max - min)
+        fill.Size = UDim2.new(percent, 0, 1, 0)
+        knob.Position = UDim2.new(percent, -6, 0, -4)
+        label.Text = name .. ": " .. math.floor(value)
+        if callback then callback(value) end
+    end
+    
+    updateSlider(default)
+    
+    local dragging = false
+    knob.MouseButton1Down:Connect(function()
+        dragging = true
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local mousePos = input.Position.X
+            local sliderPos = sliderFrame.AbsolutePosition.X
+            local newPercent = math.clamp((mousePos - sliderPos) / sliderWidth, 0, 1)
+            local newValue = min + (max - min) * newPercent
+            updateSlider(newValue)
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    
+    return container
+end
+
+-- Функция создания Toggle кнопки
 local function createToggle(parent, name, default, callback)
     local container = Instance.new("Frame", parent)
     container.Size = UDim2.new(1, 0, 0, 30)
@@ -317,7 +394,7 @@ local function createToggle(parent, name, default, callback)
     return container
 end
 
--- Tabs (Esp removed)
+-- Вкладки (Esp удалена)
 local tabs = {}
 local tabButtons = {}
 local tabNames = {"Main", "Player", "Info", "Discord", "Settings"}
@@ -336,9 +413,9 @@ local function createTab(name)
         scrollFrame.BackgroundTransparency = 1
         scrollFrame.ScrollBarThickness = 2
         scrollFrame.ScrollBarImageColor3 = colors.accent
-        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 100)
+        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 180)
         
-        -- Auto Loot toggle button
+        -- Кнопка Авто Лут
         createToggle(scrollFrame, "📦 Auto Loot", false, function(val)
             print("Auto Loot:", val)
             if val then
@@ -347,6 +424,24 @@ local function createTab(name)
                 disableAutoLoot()
             end
         end)
+        
+        -- Ползунок для дистанции
+        local sliderContainer = createSlider(scrollFrame, "Teleport Distance", 50, 1000, DISTANCE_THRESHOLD, function(newValue)
+            DISTANCE_THRESHOLD = math.floor(newValue)
+            print("Distance set to:", DISTANCE_THRESHOLD)
+        end)
+        sliderContainer.Position = UDim2.new(0, 0, 0, 35)
+        
+        -- Текст с пояснением
+        local infoLabel = Instance.new("TextLabel", scrollFrame)
+        infoLabel.Text = "Teleports to loot when distance > " .. DISTANCE_THRESHOLD
+        infoLabel.Size = UDim2.new(1, -16, 0, 20)
+        infoLabel.Position = UDim2.new(0, 8, 0, 90)
+        infoLabel.BackgroundTransparency = 1
+        infoLabel.TextColor3 = colors.textDark
+        infoLabel.Font = Enum.Font.Gotham
+        infoLabel.TextSize = 9
+        infoLabel.TextXAlignment = Enum.TextXAlignment.Left
         
     elseif name == "Player" then
         -- Empty Player tab
@@ -379,7 +474,7 @@ local function switchTab(tabName)
     end
 end
 
--- Minimize
+-- Сворачивание
 local function toggleMinimize()
     isMinimized = not isMinimized
     local currentPos = Main.Position
@@ -419,7 +514,7 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy() 
 end)
 
--- Create tabs
+-- Создаём вкладки
 for _, name in ipairs(tabNames) do
     local tabButton = Instance.new("TextButton", TabButtonsFrame)
     tabButton.Name = name
@@ -441,7 +536,7 @@ end
 
 switchTab("Main")
 
--- Dragging
+-- Перетаскивание
 local UIS = game:GetService("UserInputService")
 local frame = TitleBar
 local dragging, dragStart, startPos
@@ -467,10 +562,10 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
--- Animation
+-- Анимация появления
 Main.Position = UDim2.new(0.5, -260, 0.8, 0)
 TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
     Position = UDim2.new(0.5, -260, 0.5, -180)
 }):Play()
 
-print("Dark Fantasy GUI loaded! Auto Loot is ready.")
+print("Dark Fantasy GUI loaded! Auto Loot is ready. Distance threshold: 500")
