@@ -157,97 +157,190 @@ local function setWalkSpeed(speed)
     end
 end
 
--- === АВТО-ЛУТ (ПРОСТОЙ КАК ТОПОР) ===
+-- === АВТО-ЛУТ С ЛОГИРОВАНИЕМ ===
 local autoLootEnabled = false
-local currentTarget = nil
-local targetCooldown = 0
+local processedLoot = {}
+local lootFolder = nil
+local childAddedConnection = nil
+local heartbeatConnection = nil
 
-local DISTANCE_THRESHOLD = 500
 local TELEPORT_OFFSET = Vector3.new(0, 2, 0)
+local DISTANCE_THRESHOLD = 500
+
+print("[AUTO-LOOT] Скрипт загружен, ищу папку Loot...")
 
 -- Поиск папки Loot
 local function findLootFolder()
+    -- Ищем папку Loot или loot
     local folder = workspace:FindFirstChild("Loot")
-    if not folder then folder = workspace:FindFirstChild("loot") end
-    if not folder then
-        for _, child in pairs(workspace:GetChildren()) do
-            if child:FindFirstChild("Loot") then folder = child.Loot break end
-            if child:FindFirstChild("loot") then folder = child.loot break end
+    if folder then
+        print("[AUTO-LOOT] Найдена папка: Loot")
+        return folder
+    end
+    
+    folder = workspace:FindFirstChild("loot")
+    if folder then
+        print("[AUTO-LOOT] Найдена папка: loot")
+        return folder
+    end
+    
+    -- Ищем в глубине
+    for _, child in pairs(workspace:GetChildren()) do
+        if child:FindFirstChild("Loot") then
+            print("[AUTO-LOOT] Найдена папка: " .. child.Name .. ".Loot")
+            return child.Loot
+        end
+        if child:FindFirstChild("loot") then
+            print("[AUTO-LOOT] Найдена папка: " .. child.Name .. ".loot")
+            return child.loot
         end
     end
-    return folder
+    
+    print("[AUTO-LOOT] ПАПКА LOOT НЕ НАЙДЕНА!")
+    return nil
 end
 
 -- Получить позицию лута
-local function getLootPos(loot)
+local function getLootPosition(loot)
     if loot:IsA("BasePart") then
         return loot.Position
-    elseif loot:IsA("Model") then
-        local part = loot.PrimaryPart
-        if not part then part = loot:FindFirstChildWhichIsA("BasePart") end
-        if part then return part.Position end
     end
+    
+    if loot:IsA("Model") then
+        local part = loot.PrimaryPart
+        if not part then
+            part = loot:FindFirstChildWhichIsA("BasePart")
+        end
+        if part then
+            return part.Position
+        end
+    end
+    
     return nil
 end
 
 -- ТЕЛЕПОРТ
-local function DoTeleport(loot)
-    if not autoLootEnabled then return end
-    if not loot or not loot.Parent then return end
+local function TeleportToLoot(loot)
+    if not autoLootEnabled then return false end
+    if not loot or not loot.Parent then return false end
     
-    local pos = getLootPos(loot)
-    if not pos then return end
+    local pos = getLootPosition(loot)
+    if not pos then
+        print("[AUTO-LOOT] ❌ Не могу получить позицию для: " .. loot.Name)
+        return false
+    end
     
-    local char = player.Character
-    if not char then return end
+    local character = player.Character
+    if not character then
+        print("[AUTO-LOOT] ❌ Персонаж не найден")
+        return false
+    end
     
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then
+        print("[AUTO-LOOT] ❌ HumanoidRootPart не найден")
+        return false
+    end
     
-    local dist = (hrp.Position - pos).Magnitude
-    if dist > DISTANCE_THRESHOLD then
+    local distance = (hrp.Position - pos).Magnitude
+    
+    if distance > DISTANCE_THRESHOLD then
+        print("[AUTO-LOOT] 🚀 ТЕЛЕПОРТ к: " .. loot.Name .. " (Дистанция: " .. math.floor(distance) .. ")")
         hrp.CFrame = CFrame.new(pos + TELEPORT_OFFSET)
+        return true
+    else
+        print("[AUTO-LOOT] ⏭️ Пропущен: " .. loot.Name .. " (Слишком близко, дистанция: " .. math.floor(distance) .. ")")
+        return false
     end
 end
 
--- Обработчик нового лута
+-- Обработка нового лута
 local function OnNewLoot(loot)
-    if autoLootEnabled then
-        DoTeleport(loot)
-    end
-end
-
--- Сканирование
-local function ScanLoot()
     if not autoLootEnabled then return end
     
-    local folder = findLootFolder()
-    if not folder then return end
+    print("[AUTO-LOOT] ✨ ОБНАРУЖЕН НОВЫЙ ЛУТ: " .. loot.Name .. " (Тип: " .. loot.ClassName .. ")")
     
-    for _, loot in pairs(folder:GetChildren()) do
-        DoTeleport(loot)
+    -- Небольшая задержка для уверенности
+    task.wait(0.1)
+    TeleportToLoot(loot)
+end
+
+-- Сканирование всей папки
+local function ScanAllLoot()
+    if not autoLootEnabled then return end
+    
+    lootFolder = findLootFolder()
+    if not lootFolder then return end
+    
+    local children = lootFolder:GetChildren()
+    if #children > 0 then
+        print("[AUTO-LOOT] 🔍 Сканирование папки... Найдено объектов: " .. #children)
+    end
+    
+    for _, loot in pairs(children) do
+        -- Проверяем, не обрабатывали ли уже этот лут
+        if not processedLoot[loot] then
+            processedLoot[loot] = true
+            print("[AUTO-LOOT] 📦 Найден лут в папке: " .. loot.Name)
+            TeleportToLoot(loot)
+        end
     end
 end
 
--- Включение
-local function Enable()
-    if autoLootEnabled then return end
+-- Включение авто-лута
+local function EnableAutoLoot()
+    if autoLootEnabled then 
+        print("[AUTO-LOOT] Уже включён")
+        return 
+    end
     
-    local folder = findLootFolder()
-    if not folder then
-        warn("Loot folder not found!")
+    lootFolder = findLootFolder()
+    if not lootFolder then
+        print("[AUTO-LOOT] ❌ ОШИБКА: Папка Loot не найдена! Телепорт не будет работать.")
         return
     end
     
     autoLootEnabled = true
-    folder.ChildAdded:Connect(OnNewLoot)
-    RunService.Heartbeat:Connect(ScanLoot)
-    ScanLoot()
+    processedLoot = {}
+    
+    print("[AUTO-LOOT] ========================================")
+    print("[AUTO-LOOT] ✅ АВТО-ЛУТ ВКЛЮЧЁН")
+    print("[AUTO-LOOT] 📁 Папка: " .. lootFolder.Name)
+    print("[AUTO-LOOT] 📏 Дистанция телепорта: " .. DISTANCE_THRESHOLD)
+    print("[AUTO-LOOT] ========================================")
+    
+    -- Подписываемся на новые объекты в папке
+    childAddedConnection = lootFolder.ChildAdded:Connect(OnNewLoot)
+    
+    -- Запускаем постоянное сканирование
+    heartbeatConnection = RunService.Heartbeat:Connect(function()
+        ScanAllLoot()
+    end)
+    
+    -- Первое сканирование
+    ScanAllLoot()
 end
 
--- Выключение
-local function Disable()
+-- Выключение авто-лута
+local function DisableAutoLoot()
+    if not autoLootEnabled then 
+        print("[AUTO-LOOT] Уже выключён")
+        return 
+    end
+    
     autoLootEnabled = false
+    
+    if childAddedConnection then
+        childAddedConnection:Disconnect()
+        childAddedConnection = nil
+    end
+    
+    if heartbeatConnection then
+        heartbeatConnection:Disconnect()
+        heartbeatConnection = nil
+    end
+    
+    print("[AUTO-LOOT] ⭕ АВТО-ЛУТ ВЫКЛЮЧЁН")
 end
 
 -- === ФУНКЦИЯ СОЗДАНИЯ SLIDER ===
@@ -453,11 +546,16 @@ local function createTab(name)
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 280)
         
         createToggle(scrollFrame, "📦 Auto Loot", false, function(val)
-            if val then Enable() else Disable() end
+            if val then 
+                EnableAutoLoot()
+            else 
+                DisableAutoLoot()
+            end
         end)
         
         local distSlider = createSlider(scrollFrame, "Teleport Distance", 50, 1000, DISTANCE_THRESHOLD, function(newValue)
             DISTANCE_THRESHOLD = math.floor(newValue)
+            print("[AUTO-LOOT] Дистанция телепорта изменена на: " .. DISTANCE_THRESHOLD)
         end)
         distSlider.Position = UDim2.new(0, 0, 0, 40)
         
@@ -474,8 +572,8 @@ local function createTab(name)
         speedSlider.Position = UDim2.new(0, 0, 0, 120)
         
         local statusLabel = Instance.new("TextLabel", scrollFrame)
-        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot'"
-        statusLabel.Size = UDim2.new(1, -16, 0, 40)
+        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot'\n📝 Смотри консоль для отладки"
+        statusLabel.Size = UDim2.new(1, -16, 0, 60)
         statusLabel.Position = UDim2.new(0, 8, 0, 190)
         statusLabel.BackgroundTransparency = 1
         statusLabel.TextColor3 = colors.textDark
@@ -486,7 +584,7 @@ local function createTab(name)
         
     elseif name == "Info" then
         local infoText = Instance.new("TextLabel", tabContent)
-        infoText.Text = "Dark Fantasy GUI\nVersion 1.6\n\nAuto Loot - Teleports to loot\n\nHow it works:\n1. Finds folder named 'Loot'\n2. Teleports to models/parts in Loot folder"
+        infoText.Text = "Dark Fantasy GUI\nVersion 1.7\n\nAuto Loot - Teleports to loot\n\nКак это работает:\n1. Ищет папку 'Loot' в workspace\n2. Отслеживает новые объекты в папке\n3. Телепортирует игрока к луту\n\nВключи Auto Loot и смотри консоль!"
         infoText.Size = UDim2.new(1, -16, 1, 0)
         infoText.Position = UDim2.new(0, 8, 0, 10)
         infoText.BackgroundTransparency = 1
@@ -510,7 +608,7 @@ local function createTab(name)
         Instance.new("UICorner", unloadBtn).CornerRadius = UDim.new(0, 6)
         
         unloadBtn.MouseButton1Click:Connect(function()
-            Disable()
+            DisableAutoLoot()
             ScreenGui:Destroy()
         end)
         
@@ -581,7 +679,7 @@ end
 
 MinimizeBtn.MouseButton1Click:Connect(toggleMinimize)
 CloseBtn.MouseButton1Click:Connect(function() 
-    Disable()
+    DisableAutoLoot()
     ScreenGui:Destroy() 
 end)
 
@@ -639,4 +737,4 @@ TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
     Position = UDim2.new(0.5, -260, 0.5, -210)
 }):Play()
 
-print("Dark Fantasy GUI loaded!")
+print("[AUTO-LOOT] GUI загружен! Включите Auto Loot в меню.")
