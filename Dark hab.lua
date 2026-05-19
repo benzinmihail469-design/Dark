@@ -74,10 +74,10 @@ TitleBar.BackgroundTransparency = 0.3
 TitleBar.BorderSizePixel = 0
 Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
 
--- Заголовок текст
+-- Заголовок текст (английский)
 local Title = Instance.new("TextLabel", TitleBar)
 Title.Name = "Title"
-Title.Text = "Темный Fantasy | Auto Loot"
+Title.Text = "Dark Fantasy | Auto Loot"
 Title.Size = UDim2.new(0, 200, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
 Title.BackgroundTransparency = 1
@@ -147,16 +147,16 @@ ContentContainer.BackgroundTransparency = 0.5
 ContentContainer.BorderSizePixel = 0
 Instance.new("UICorner", ContentContainer).CornerRadius = UDim.new(0, 8)
 
--- === АВТО-ЛУТ СКРИПТ ===
+-- === AUTO LOOT SCRIPT ===
 local autoLootEnabled = false
 local childAddedConnection = nil
 local LOOT_FOLDER = nil
 
--- Настройки авто-лута
+-- Auto loot settings
 local TELEPORT_OFFSET = Vector3.new(0, 2, 0)
 local DISTANCE_THRESHOLD = 3
 
--- Поиск папки с лутом
+-- Find loot folder
 local function findLootFolder()
     LOOT_FOLDER = workspace:FindFirstChild("Loot")
     if not LOOT_FOLDER then
@@ -173,7 +173,7 @@ local function findLootFolder()
     return LOOT_FOLDER
 end
 
--- Телепорт к луту
+-- Teleport to loot
 local function teleportToPart(targetPart)
     local character = player.Character
     local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
@@ -186,7 +186,7 @@ local function teleportToPart(targetPart)
     end
 end
 
--- Обработка лута
+-- Process loot
 local function processLoot(lootModel)
     if not autoLootEnabled then return end
     task.wait(0.05)
@@ -201,12 +201,12 @@ local function processLoot(lootModel)
     end
 end
 
--- Новый лут появился
+-- New loot appeared
 local function onLootAdded(loot)
     processLoot(loot)
 end
 
--- Включение авто-лута
+-- Enable auto loot
 local function enableAutoLoot()
     if autoLootEnabled then return end
     autoLootEnabled = true
@@ -214,20 +214,20 @@ local function enableAutoLoot()
     findLootFolder()
     
     if not LOOT_FOLDER then
-        warn("Папка Loot не найдена!")
+        warn("Loot folder not found!")
         autoLootEnabled = false
         return
     end
     
     childAddedConnection = LOOT_FOLDER.ChildAdded:Connect(onLootAdded)
     
-    -- Обработка уже существующего лута
+    -- Process existing loot
     for _, loot in pairs(LOOT_FOLDER:GetChildren()) do
         task.spawn(function() processLoot(loot) end)
     end
 end
 
--- Выключение авто-лута
+-- Disable auto loot
 local function disableAutoLoot()
     if not autoLootEnabled then return end
     autoLootEnabled = false
@@ -238,7 +238,7 @@ local function disableAutoLoot()
     end
 end
 
--- Функция создания Toggle кнопки
+-- Toggle button function
 local function createToggle(parent, name, default, callback)
     local container = Instance.new("Frame", parent)
     container.Size = UDim2.new(1, 0, 0, 30)
@@ -317,10 +317,10 @@ local function createToggle(parent, name, default, callback)
     return container
 end
 
--- Вкладки (Esp удалена)
+-- Tabs (Esp removed)
 local tabs = {}
 local tabButtons = {}
-local tabNames = {"Main", "Player", "Info", "Discord", "Настройки"}
+local tabNames = {"Main", "Player", "Info", "Discord", "Settings"}
 local isMinimized = false
 
 local function createTab(name)
@@ -338,7 +338,7 @@ local function createTab(name)
         scrollFrame.ScrollBarImageColor3 = colors.accent
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 100)
         
-        -- Кнопка Авто Лут с подключенной логикой
+        -- Auto Loot toggle button
         createToggle(scrollFrame, "📦 Auto Loot", false, function(val)
             print("Auto Loot:", val)
             if val then
@@ -349,16 +349,16 @@ local function createTab(name)
         end)
         
     elseif name == "Player" then
-        -- Пустая вкладка Player
+        -- Empty Player tab
         
     elseif name == "Info" then
-        -- Пустая вкладка Info
+        -- Empty Info tab
         
     elseif name == "Discord" then
-        -- Пустая вкладка Discord
+        -- Empty Discord tab
         
-    elseif name == "settings" then
-        -- Пустая вкладка Настройки
+    elseif name == "Settings" then
+        -- Empty Settings tab
     end
     
     return tabContent
@@ -379,7 +379,7 @@ local function switchTab(tabName)
     end
 end
 
--- Сворачивание
+-- Minimize
 local function toggleMinimize()
     isMinimized = not isMinimized
     local currentPos = Main.Position
@@ -419,7 +419,7 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy() 
 end)
 
--- Создаём вкладки
+-- Create tabs
 for _, name in ipairs(tabNames) do
     local tabButton = Instance.new("TextButton", TabButtonsFrame)
     tabButton.Name = name
@@ -441,7 +441,7 @@ end
 
 switchTab("Main")
 
--- Перетаскивание
+-- Dragging
 local UIS = game:GetService("UserInputService")
 local frame = TitleBar
 local dragging, dragStart, startPos
@@ -467,10 +467,10 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
--- Анимация появления
+-- Animation
 Main.Position = UDim2.new(0.5, -260, 0.8, 0)
 TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
     Position = UDim2.new(0.5, -260, 0.5, -180)
 }):Play()
 
-print("Темный Fantasy GUI загружен! Авто-лут готов к работе.")
+print("Dark Fantasy GUI loaded! Auto Loot is ready.")
