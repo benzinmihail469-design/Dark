@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local VirtualInput = game:GetService("VirtualInputManager")
 
 local player = Players.LocalPlayer
@@ -144,28 +145,10 @@ Instance.new("UICorner", ContentContainer).CornerRadius = UDim.new(0, 8)
 -- === ОПРЕДЕЛЕНИЕ УСТРОЙСТВА ===
 local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled and not UserInputService.MouseEnabled
 
--- === ФУНКЦИЯ АВТОМАТИЧЕСКОГО НАЖАТИЯ КНОПКИ ===
-local function pressKey(key)
-    pcall(function()
-        if isMobile then
-            -- Для телефона: имитация касания
-            VirtualInput:SendTouchEvent(0.5, 0.5, 0, true, Enum.UserInputState.Begin, Enum.TouchType.Direct)
-            task.wait(0.05)
-            VirtualInput:SendTouchEvent(0.5, 0.5, 0, true, Enum.UserInputState.End, Enum.TouchType.Direct)
-        else
-            -- Для ПК: имитация нажатия клавиши
-            VirtualInput:SendKeyEvent(true, key, false, game)
-            task.wait(0.05)
-            VirtualInput:SendKeyEvent(false, key, false, game)
-        end
-    end)
-end
-
 -- === АВТО-ЛУТ ===
 local autoLootEnabled = true
 local lootFolder = nil
 local childAddedConnection = nil
-local pressConnection = nil
 
 local TELEPORT_OFFSET = Vector3.new(0, 2, 0)
 
@@ -224,45 +207,36 @@ local function onLootAdded(loot)
     processLoot(loot)
 end
 
--- Автоматическое нажатие кнопки (для взаимодействия с лутом)
-local function autoPress()
+-- === АВТОМАТИЧЕСКОЕ НАЖАТИЕ ЧЕРЕЗ PROXIMITY PROMPT ===
+local function autoTriggerPrompt(prompt)
     if not autoLootEnabled then return end
     
     local character = player.Character
     if not character then return end
     
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
     
-    -- Проверяем, есть ли лут рядом (на расстоянии менее 5)
-    local nearbyLoot = false
-    if lootFolder then
-        for _, loot in pairs(lootFolder:GetChildren()) do
-            local pos = nil
-            if loot:IsA("BasePart") then
-                pos = loot.Position
-            elseif loot:IsA("Model") then
-                local part = loot.PrimaryPart or loot:FindFirstChildWhichIsA("BasePart")
-                if part then pos = part.Position end
-            end
-            
-            if pos then
-                local dist = (hrp.Position - pos).Magnitude
-                if dist < 5 then
-                    nearbyLoot = true
-                    break
-                end
-            end
+    local promptParent = prompt.Parent
+    if promptParent and promptParent:IsA("BasePart") then
+        local distance = (rootPart.Position - promptParent.Position).Magnitude
+        
+        if distance <= prompt.MaxActivationDistance then
+            -- Нажимаем кнопку
+            prompt:InputHoldBegin()
+            task.wait(prompt.HoldDuration)
+            prompt:InputHoldEnd()
         end
-    end
-    
-    -- Если лут рядом - нажимаем кнопку
-    if nearbyLoot then
-        pressKey(Enum.KeyCode.E)  -- E для ПК
     end
 end
 
--- Включение
+-- Отслеживаем появление кнопок ProximityPrompt
+local promptConnection = nil
+local function setupProximityPrompt()
+    promptConnection = ProximityPromptService.PromptShown:Connect(autoTriggerPrompt)
+end
+
+-- === ВКЛЮЧЕНИЕ/ВЫКЛЮЧЕНИЕ ===
 local function enableAutoLoot()
     if autoLootEnabled then return end
     autoLootEnabled = true
@@ -270,13 +244,8 @@ local function enableAutoLoot()
     if lootFolder then
         childAddedConnection = lootFolder.ChildAdded:Connect(onLootAdded)
     end
-    
-    if not pressConnection then
-        pressConnection = game:GetService("RunService").Heartbeat:Connect(autoPress)
-    end
 end
 
--- Выключение
 local function disableAutoLoot()
     if not autoLootEnabled then return end
     autoLootEnabled = false
@@ -287,18 +256,18 @@ lootFolder = findLootFolder()
 
 if lootFolder then
     childAddedConnection = lootFolder.ChildAdded:Connect(onLootAdded)
-    pressConnection = game:GetService("RunService").Heartbeat:Connect(autoPress)
     
-    -- Обработка существующего лута
     for _, loot in pairs(lootFolder:GetChildren()) do
         task.spawn(function()
             processLoot(loot)
         end)
     end
-    print("[Auto Loot] Включён | Устройство: " .. (isMobile and "Телефон" or "ПК"))
-else
-    warn("[Auto Loot] Папка Loot не найдена!")
 end
+
+-- Запускаем отслеживание ProximityPrompt
+setupProximityPrompt()
+
+print("[Auto Loot] Включён | Устройство: " .. (isMobile and "Телефон" or "ПК"))
 
 -- === СОЗДАНИЕ TOGGLE ===
 local function createToggle(parent, name, default, callback)
@@ -405,8 +374,8 @@ local function createTab(name)
         end)
         
         local statusLabel = Instance.new("TextLabel", scrollFrame)
-        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot'\n📱 " .. (isMobile and "Телефон режим" or "ПК режим")
-        statusLabel.Size = UDim2.new(1, -16, 0, 60)
+        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot'\n🔘 Auto-press ProximityPrompt\n📱 " .. (isMobile and "Телефон режим" or "ПК режим")
+        statusLabel.Size = UDim2.new(1, -16, 0, 80)
         statusLabel.Position = UDim2.new(0, 8, 0, 50)
         statusLabel.BackgroundTransparency = 1
         statusLabel.TextColor3 = colors.textDark
@@ -417,7 +386,7 @@ local function createTab(name)
         
     elseif name == "Info" then
         local infoText = Instance.new("TextLabel", tabContent)
-        infoText.Text = "Dark Fantasy GUI\nVersion 3.0\n\nAuto Loot\n\n- Телепорт к луту\n- Автонажатие кнопки (E/касание)\n- Работает на ПК и телефоне"
+        infoText.Text = "Dark Fantasy GUI\nVersion 3.1\n\nAuto Loot\n\n- Телепорт к луту (папка Loot)\n- Автонажатие ProximityPrompt\n- Работает на ПК и телефоне"
         infoText.Size = UDim2.new(1, -16, 1, 0)
         infoText.Position = UDim2.new(0, 8, 0, 10)
         infoText.BackgroundTransparency = 1
@@ -443,7 +412,7 @@ local function createTab(name)
         unloadBtn.MouseButton1Click:Connect(function()
             autoLootEnabled = false
             if childAddedConnection then childAddedConnection:Disconnect() end
-            if pressConnection then pressConnection:Disconnect() end
+            if promptConnection then promptConnection:Disconnect() end
             ScreenGui:Destroy()
         end)
         
@@ -515,7 +484,7 @@ MinimizeBtn.MouseButton1Click:Connect(toggleMinimize)
 CloseBtn.MouseButton1Click:Connect(function() 
     autoLootEnabled = false
     if childAddedConnection then childAddedConnection:Disconnect() end
-    if pressConnection then pressConnection:Disconnect() end
+    if promptConnection then promptConnection:Disconnect() end
     ScreenGui:Destroy() 
 end)
 
@@ -570,4 +539,4 @@ TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
     Position = UDim2.new(0.5, -260, 0.5, -180)
 }):Play()
 
-print("[Auto Loot] GUI загружен | Режим: " .. (isMobile and "Телефон" or "ПК"))
+print("[Auto Loot] GUI загружен | Режим: " .. (isMobile and "Телефон" or "ПК") .. " | ProximityPrompt автонажатие")
