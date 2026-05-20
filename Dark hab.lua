@@ -3,6 +3,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local VirtualInput = game:GetService("VirtualInputManager")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
@@ -36,8 +37,8 @@ local colors = {
 -- Основной фрейм
 local Main = Instance.new("Frame")
 Main.Name = "MainFrame"
-Main.Size = UDim2.new(0, 520, 0, 360)
-Main.Position = UDim2.new(0.5, -260, 0.5, -180)
+Main.Size = UDim2.new(0, 520, 0, 400)
+Main.Position = UDim2.new(0.5, -260, 0.5, -200)
 Main.BackgroundColor3 = colors.bg
 Main.BorderSizePixel = 0
 Main.ClipsDescendants = true
@@ -77,8 +78,8 @@ Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
 
 local Title = Instance.new("TextLabel", TitleBar)
 Title.Name = "Title"
-Title.Text = "Dark Fantasy | Auto Loot"
-Title.Size = UDim2.new(0, 200, 1, 0)
+Title.Text = "Dark Fantasy | Auto Loot + Equip Best"
+Title.Size = UDim2.new(0, 280, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
 Title.BackgroundTransparency = 1
 Title.TextColor3 = colors.gold
@@ -147,8 +148,11 @@ local isMobile = UserInputService.TouchEnabled and not UserInputService.Keyboard
 
 -- === АВТО-ЛУТ ===
 local autoLootEnabled = true
+local equipBestEnabled = true
 local lootFolder = nil
 local childAddedConnection = nil
+local equipBestButton = nil
+local equipBestConnection = nil
 
 local TELEPORT_OFFSET = Vector3.new(0, 2, 0)
 
@@ -222,7 +226,6 @@ local function autoTriggerPrompt(prompt)
         local distance = (rootPart.Position - promptParent.Position).Magnitude
         
         if distance <= prompt.MaxActivationDistance then
-            -- Нажимаем кнопку
             prompt:InputHoldBegin()
             task.wait(prompt.HoldDuration)
             prompt:InputHoldEnd()
@@ -230,25 +233,60 @@ local function autoTriggerPrompt(prompt)
     end
 end
 
--- Отслеживаем появление кнопок ProximityPrompt
-local promptConnection = nil
-local function setupProximityPrompt()
-    promptConnection = ProximityPromptService.PromptShown:Connect(autoTriggerPrompt)
+-- === ФУНКЦИЯ EQUIP BEST ===
+local function findEquipBestButton()
+    local playerGui = player:FindFirstChild("PlayerGui")
+    if not playerGui then return nil end
+    
+    local inventory = playerGui:FindFirstChild("Inventory")
+    if not inventory then return nil end
+    
+    local pageInventoryContent = inventory:FindFirstChild("PageInventoryContent")
+    if not pageInventoryContent then return nil end
+    
+    local slimesPage = pageInventoryContent:FindFirstChild("SlimesPage")
+    if not slimesPage then return nil end
+    
+    local equipBestButton = slimesPage:FindFirstChild("EquipBestButton")
+    return equipBestButton
+end
+
+-- Автоматическое нажатие Equip Best
+local function autoEquipBest()
+    if not equipBestEnabled then return end
+    
+    local button = findEquipBestButton()
+    if button and button:IsA("TextButton") then
+        button:Click()
+    end
+end
+
+-- Запускаем Equip Best каждые 2 секунды
+local function startEquipBest()
+    equipBestConnection = RunService.Heartbeat:Connect(function()
+        autoEquipBest()
+    end)
 end
 
 -- === ВКЛЮЧЕНИЕ/ВЫКЛЮЧЕНИЕ ===
 local function enableAutoLoot()
     if autoLootEnabled then return end
     autoLootEnabled = true
-    
-    if lootFolder then
-        childAddedConnection = lootFolder.ChildAdded:Connect(onLootAdded)
-    end
 end
 
 local function disableAutoLoot()
     if not autoLootEnabled then return end
     autoLootEnabled = false
+end
+
+local function enableEquipBest()
+    if equipBestEnabled then return end
+    equipBestEnabled = true
+end
+
+local function disableEquipBest()
+    if not equipBestEnabled then return end
+    equipBestEnabled = false
 end
 
 -- Находим папку и запускаем
@@ -265,9 +303,13 @@ if lootFolder then
 end
 
 -- Запускаем отслеживание ProximityPrompt
-setupProximityPrompt()
+ProximityPromptService.PromptShown:Connect(autoTriggerPrompt)
+
+-- Запускаем Equip Best
+startEquipBest()
 
 print("[Auto Loot] Включён | Устройство: " .. (isMobile and "Телефон" or "ПК"))
+print("[Equip Best] Включён | Кнопка найдена: " .. tostring(findEquipBestButton() ~= nil))
 
 -- === СОЗДАНИЕ TOGGLE ===
 local function createToggle(parent, name, default, callback)
@@ -367,16 +409,21 @@ local function createTab(name)
         scrollFrame.BackgroundTransparency = 1
         scrollFrame.ScrollBarThickness = 2
         scrollFrame.ScrollBarImageColor3 = colors.accent
-        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 100)
+        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 180)
         
         createToggle(scrollFrame, "📦 Auto Loot", autoLootEnabled, function(val)
             if val then enableAutoLoot() else disableAutoLoot() end
         end)
         
+        createToggle(scrollFrame, "⚔️ Equip Best", equipBestEnabled, function(val)
+            if val then enableEquipBest() else disableEquipBest() end
+        end)
+        
         local statusLabel = Instance.new("TextLabel", scrollFrame)
-        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot'\n🔘 Auto-press ProximityPrompt\n📱 " .. (isMobile and "Телефон режим" or "ПК режим")
-        statusLabel.Size = UDim2.new(1, -16, 0, 80)
-        statusLabel.Position = UDim2.new(0, 8, 0, 50)
+        local buttonExists = findEquipBestButton() ~= nil
+        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot'\n🔘 Auto-press ProximityPrompt\n⚔️ Equip Best: " .. (buttonExists and "Доступна" or "Не найдена") .. "\n📱 " .. (isMobile and "Телефон режим" or "ПК режим")
+        statusLabel.Size = UDim2.new(1, -16, 0, 100)
+        statusLabel.Position = UDim2.new(0, 8, 0, 80)
         statusLabel.BackgroundTransparency = 1
         statusLabel.TextColor3 = colors.textDark
         statusLabel.Font = Enum.Font.Gotham
@@ -386,7 +433,7 @@ local function createTab(name)
         
     elseif name == "Info" then
         local infoText = Instance.new("TextLabel", tabContent)
-        infoText.Text = "Dark Fantasy GUI\nVersion 3.1\n\nAuto Loot\n\n- Телепорт к луту (папка Loot)\n- Автонажатие ProximityPrompt\n- Работает на ПК и телефоне"
+        infoText.Text = "Dark Fantasy GUI\nVersion 3.2\n\nAuto Loot:\n- Телепорт к луту (папка Loot)\n- Автонажатие ProximityPrompt\n\nEquip Best:\n- Автонажатие кнопки EquipBestButton\n- Путь: PlayerGui → Inventory → PageInventoryContent → SlimesPage → EquipBestButton"
         infoText.Size = UDim2.new(1, -16, 1, 0)
         infoText.Position = UDim2.new(0, 8, 0, 10)
         infoText.BackgroundTransparency = 1
@@ -411,8 +458,9 @@ local function createTab(name)
         
         unloadBtn.MouseButton1Click:Connect(function()
             autoLootEnabled = false
+            equipBestEnabled = false
             if childAddedConnection then childAddedConnection:Disconnect() end
-            if promptConnection then promptConnection:Disconnect() end
+            if equipBestConnection then equipBestConnection:Disconnect() end
             ScreenGui:Destroy()
         end)
         
@@ -465,10 +513,10 @@ local function toggleMinimize()
         CollapsibleContent.Visible = false
         AccentLine.Visible = false
     else
-        Main.Size = UDim2.new(0, 520, 0, 360)
+        Main.Size = UDim2.new(0, 520, 0, 400)
         Main.Position = currentPos
         Title.TextSize = 13
-        Title.Size = UDim2.new(0, 200, 1, 0)
+        Title.Size = UDim2.new(0, 280, 1, 0)
         Title.Position = UDim2.new(0, 12, 0, 0)
         Title.TextXAlignment = Enum.TextXAlignment.Left
         MinimizeBtn.Position = UDim2.new(1, -52, 0, 5)
@@ -483,8 +531,9 @@ end
 MinimizeBtn.MouseButton1Click:Connect(toggleMinimize)
 CloseBtn.MouseButton1Click:Connect(function() 
     autoLootEnabled = false
+    equipBestEnabled = false
     if childAddedConnection then childAddedConnection:Disconnect() end
-    if promptConnection then promptConnection:Disconnect() end
+    if equipBestConnection then equipBestConnection:Disconnect() end
     ScreenGui:Destroy() 
 end)
 
@@ -536,7 +585,7 @@ end)
 
 Main.Position = UDim2.new(0.5, -260, 0.8, 0)
 TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
-    Position = UDim2.new(0.5, -260, 0.5, -180)
+    Position = UDim2.new(0.5, -260, 0.5, -200)
 }):Play()
 
-print("[Auto Loot] GUI загружен | Режим: " .. (isMobile and "Телефон" or "ПК") .. " | ProximityPrompt автонажатие")
+print("[Auto Loot] GUI загружен | Режим: " .. (isMobile and "Телефон" or "ПК"))
