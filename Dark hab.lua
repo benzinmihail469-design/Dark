@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local VirtualInput = game:GetService("VirtualInputManager")
 
 local player = Players.LocalPlayer
 
@@ -34,8 +35,8 @@ local colors = {
 -- Основной фрейм
 local Main = Instance.new("Frame")
 Main.Name = "MainFrame"
-Main.Size = UDim2.new(0, 520, 0, 420)
-Main.Position = UDim2.new(0.5, -260, 0.5, -210)
+Main.Size = UDim2.new(0, 520, 0, 360)
+Main.Position = UDim2.new(0.5, -260, 0.5, -180)
 Main.BackgroundColor3 = colors.bg
 Main.BorderSizePixel = 0
 Main.ClipsDescendants = true
@@ -140,22 +141,33 @@ ContentContainer.BackgroundTransparency = 0.5
 ContentContainer.BorderSizePixel = 0
 Instance.new("UICorner", ContentContainer).CornerRadius = UDim.new(0, 8)
 
--- === ФУНКЦИЯ ДЛЯ СКОРОСТИ ===
-local function setWalkSpeed(speed)
-    local character = player.Character
-    local humanoid = character and character:FindFirstChild("Humanoid")
-    if humanoid then
-        humanoid.WalkSpeed = speed
-    end
+-- === ОПРЕДЕЛЕНИЕ УСТРОЙСТВА ===
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled and not UserInputService.MouseEnabled
+
+-- === ФУНКЦИЯ АВТОМАТИЧЕСКОГО НАЖАТИЯ КНОПКИ ===
+local function pressKey(key)
+    pcall(function()
+        if isMobile then
+            -- Для телефона: имитация касания
+            VirtualInput:SendTouchEvent(0.5, 0.5, 0, true, Enum.UserInputState.Begin, Enum.TouchType.Direct)
+            task.wait(0.05)
+            VirtualInput:SendTouchEvent(0.5, 0.5, 0, true, Enum.UserInputState.End, Enum.TouchType.Direct)
+        else
+            -- Для ПК: имитация нажатия клавиши
+            VirtualInput:SendKeyEvent(true, key, false, game)
+            task.wait(0.05)
+            VirtualInput:SendKeyEvent(false, key, false, game)
+        end
+    end)
 end
 
--- === АВТО-ЛУТ (РАБОЧАЯ ВЕРСИЯ) ===
+-- === АВТО-ЛУТ ===
 local autoLootEnabled = true
 local lootFolder = nil
 local childAddedConnection = nil
+local pressConnection = nil
 
 local TELEPORT_OFFSET = Vector3.new(0, 2, 0)
-local DISTANCE_THRESHOLD = 3  -- Маленькая дистанция как в твоём рабочем скрипте
 
 -- Поиск папки Loot
 local function findLootFolder()
@@ -176,7 +188,7 @@ local function findLootFolder()
     return folder
 end
 
--- Телепорт к части (без проверки дистанции)
+-- Телепорт к луту
 local function teleportToPart(targetPart)
     if not autoLootEnabled then return end
     
@@ -188,7 +200,6 @@ local function teleportToPart(targetPart)
     
     if not targetPart or not targetPart.Parent then return end
     
-    -- Просто телепортируем без проверки дистанции
     humanoidRootPart.CFrame = CFrame.new(targetPart.Position + TELEPORT_OFFSET)
 end
 
@@ -213,13 +224,55 @@ local function onLootAdded(loot)
     processLoot(loot)
 end
 
+-- Автоматическое нажатие кнопки (для взаимодействия с лутом)
+local function autoPress()
+    if not autoLootEnabled then return end
+    
+    local character = player.Character
+    if not character then return end
+    
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    -- Проверяем, есть ли лут рядом (на расстоянии менее 5)
+    local nearbyLoot = false
+    if lootFolder then
+        for _, loot in pairs(lootFolder:GetChildren()) do
+            local pos = nil
+            if loot:IsA("BasePart") then
+                pos = loot.Position
+            elseif loot:IsA("Model") then
+                local part = loot.PrimaryPart or loot:FindFirstChildWhichIsA("BasePart")
+                if part then pos = part.Position end
+            end
+            
+            if pos then
+                local dist = (hrp.Position - pos).Magnitude
+                if dist < 5 then
+                    nearbyLoot = true
+                    break
+                end
+            end
+        end
+    end
+    
+    -- Если лут рядом - нажимаем кнопку
+    if nearbyLoot then
+        pressKey(Enum.KeyCode.E)  -- E для ПК
+    end
+end
+
 -- Включение
 local function enableAutoLoot()
     if autoLootEnabled then return end
     autoLootEnabled = true
     
-    if lootFolder and childAddedConnection then
+    if lootFolder then
         childAddedConnection = lootFolder.ChildAdded:Connect(onLootAdded)
+    end
+    
+    if not pressConnection then
+        pressConnection = game:GetService("RunService").Heartbeat:Connect(autoPress)
     end
 end
 
@@ -234,6 +287,7 @@ lootFolder = findLootFolder()
 
 if lootFolder then
     childAddedConnection = lootFolder.ChildAdded:Connect(onLootAdded)
+    pressConnection = game:GetService("RunService").Heartbeat:Connect(autoPress)
     
     -- Обработка существующего лута
     for _, loot in pairs(lootFolder:GetChildren()) do
@@ -241,111 +295,12 @@ if lootFolder then
             processLoot(loot)
         end)
     end
+    print("[Auto Loot] Включён | Устройство: " .. (isMobile and "Телефон" or "ПК"))
+else
+    warn("[Auto Loot] Папка Loot не найдена!")
 end
 
--- === СОЗДАНИЕ SLIDER ===
-local function createSlider(parent, name, min, max, default, callback)
-    local container = Instance.new("Frame", parent)
-    container.Size = UDim2.new(1, 0, 0, 55)
-    container.BackgroundTransparency = 1
-    container.BorderSizePixel = 0
-    
-    local label = Instance.new("TextLabel", container)
-    label.Text = name .. ": " .. tostring(default)
-    label.Size = UDim2.new(1, -16, 0, 20)
-    label.Position = UDim2.new(0, 8, 0, 0)
-    label.BackgroundTransparency = 1
-    label.TextColor3 = colors.text
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 11
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    
-    local valueLabel = Instance.new("TextLabel", container)
-    valueLabel.Text = tostring(default)
-    valueLabel.Size = UDim2.new(0, 40, 0, 20)
-    valueLabel.Position = UDim2.new(1, -48, 0, 0)
-    valueLabel.BackgroundTransparency = 1
-    valueLabel.TextColor3 = colors.gold
-    valueLabel.Font = Enum.Font.GothamBold
-    valueLabel.TextSize = 11
-    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-    
-    local sliderFrame = Instance.new("Frame", container)
-    sliderFrame.Size = UDim2.new(1, -16, 0, 4)
-    sliderFrame.Position = UDim2.new(0, 8, 0, 25)
-    sliderFrame.BackgroundColor3 = colors.toggleOff
-    sliderFrame.BorderSizePixel = 0
-    Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 2)
-    
-    local fill = Instance.new("Frame", sliderFrame)
-    fill.Size = UDim2.new(0, 0, 1, 0)
-    fill.BackgroundColor3 = colors.accent
-    fill.BorderSizePixel = 0
-    Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 2)
-    
-    local knob = Instance.new("TextButton", sliderFrame)
-    knob.Size = UDim2.new(0, 14, 0, 14)
-    knob.Position = UDim2.new(0, -7, 0, -5)
-    knob.BackgroundColor3 = colors.gold
-    knob.Text = ""
-    knob.BorderSizePixel = 0
-    knob.AutoButtonColor = false
-    Instance.new("UICorner", knob).CornerRadius = UDim.new(0, 7)
-    
-    local value = default
-    local sliderWidth = 0
-    
-    local function updateSlider(newValue)
-        value = math.clamp(newValue, min, max)
-        local percent = (value - min) / (max - min)
-        fill.Size = UDim2.new(percent, 0, 1, 0)
-        knob.Position = UDim2.new(percent, -7, 0, -5)
-        label.Text = name .. ": " .. math.floor(value)
-        valueLabel.Text = tostring(math.floor(value))
-        if callback then callback(value) end
-    end
-    
-    local function updateWidth()
-        sliderWidth = sliderFrame.AbsoluteSize.X
-        if sliderWidth > 0 then
-            local percent = (value - min) / (max - min)
-            fill.Size = UDim2.new(percent, 0, 1, 0)
-            knob.Position = UDim2.new(percent, -7, 0, -5)
-        end
-    end
-    
-    sliderFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateWidth)
-    task.wait(0.1)
-    updateWidth()
-    updateSlider(default)
-    
-    local dragging = false
-    knob.MouseButton1Down:Connect(function()
-        dragging = true
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local mousePos = input.Position.X
-            local sliderPos = sliderFrame.AbsolutePosition.X
-            if sliderWidth > 0 then
-                local newPercent = math.clamp((mousePos - sliderPos) / sliderWidth, 0, 1)
-                local newValue = min + (max - min) * newPercent
-                updateSlider(newValue)
-            end
-        end
-    end)
-    
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-    
-    return container
-end
-
--- Функция создания Toggle
+-- === СОЗДАНИЕ TOGGLE ===
 local function createToggle(parent, name, default, callback)
     local container = Instance.new("Frame", parent)
     container.Size = UDim2.new(1, 0, 0, 35)
@@ -443,28 +398,16 @@ local function createTab(name)
         scrollFrame.BackgroundTransparency = 1
         scrollFrame.ScrollBarThickness = 2
         scrollFrame.ScrollBarImageColor3 = colors.accent
-        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 280)
+        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 100)
         
         createToggle(scrollFrame, "📦 Auto Loot", autoLootEnabled, function(val)
             if val then enableAutoLoot() else disableAutoLoot() end
         end)
         
-        local line = Instance.new("Frame", scrollFrame)
-        line.Size = UDim2.new(1, -16, 0, 1)
-        line.Position = UDim2.new(0, 8, 0, 45)
-        line.BackgroundColor3 = colors.stroke
-        line.BackgroundTransparency = 0.7
-        line.BorderSizePixel = 0
-        
-        local speedSlider = createSlider(scrollFrame, "Walk Speed", 16, 250, 16, function(newValue)
-            setWalkSpeed(newValue)
-        end)
-        speedSlider.Position = UDim2.new(0, 0, 0, 60)
-        
         local statusLabel = Instance.new("TextLabel", scrollFrame)
-        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot'\n⚡ Teleports instantly"
+        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot'\n📱 " .. (isMobile and "Телефон режим" or "ПК режим")
         statusLabel.Size = UDim2.new(1, -16, 0, 60)
-        statusLabel.Position = UDim2.new(0, 8, 0, 130)
+        statusLabel.Position = UDim2.new(0, 8, 0, 50)
         statusLabel.BackgroundTransparency = 1
         statusLabel.TextColor3 = colors.textDark
         statusLabel.Font = Enum.Font.Gotham
@@ -474,7 +417,7 @@ local function createTab(name)
         
     elseif name == "Info" then
         local infoText = Instance.new("TextLabel", tabContent)
-        infoText.Text = "Dark Fantasy GUI\nVersion 2.7\n\nAuto Loot - Teleports to loot\n\nTeleports instantly when loot appears\nNo distance check"
+        infoText.Text = "Dark Fantasy GUI\nVersion 3.0\n\nAuto Loot\n\n- Телепорт к луту\n- Автонажатие кнопки (E/касание)\n- Работает на ПК и телефоне"
         infoText.Size = UDim2.new(1, -16, 1, 0)
         infoText.Position = UDim2.new(0, 8, 0, 10)
         infoText.BackgroundTransparency = 1
@@ -498,8 +441,9 @@ local function createTab(name)
         Instance.new("UICorner", unloadBtn).CornerRadius = UDim.new(0, 6)
         
         unloadBtn.MouseButton1Click:Connect(function()
-            disableAutoLoot()
+            autoLootEnabled = false
             if childAddedConnection then childAddedConnection:Disconnect() end
+            if pressConnection then pressConnection:Disconnect() end
             ScreenGui:Destroy()
         end)
         
@@ -552,7 +496,7 @@ local function toggleMinimize()
         CollapsibleContent.Visible = false
         AccentLine.Visible = false
     else
-        Main.Size = UDim2.new(0, 520, 0, 420)
+        Main.Size = UDim2.new(0, 520, 0, 360)
         Main.Position = currentPos
         Title.TextSize = 13
         Title.Size = UDim2.new(0, 200, 1, 0)
@@ -569,8 +513,9 @@ end
 
 MinimizeBtn.MouseButton1Click:Connect(toggleMinimize)
 CloseBtn.MouseButton1Click:Connect(function() 
-    disableAutoLoot()
+    autoLootEnabled = false
     if childAddedConnection then childAddedConnection:Disconnect() end
+    if pressConnection then pressConnection:Disconnect() end
     ScreenGui:Destroy() 
 end)
 
@@ -622,7 +567,7 @@ end)
 
 Main.Position = UDim2.new(0.5, -260, 0.8, 0)
 TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
-    Position = UDim2.new(0.5, -260, 0.5, -210)
+    Position = UDim2.new(0.5, -260, 0.5, -180)
 }):Play()
 
-print("Dark Fantasy GUI loaded! Auto Loot teleports instantly")
+print("[Auto Loot] GUI загружен | Режим: " .. (isMobile and "Телефон" or "ПК"))
