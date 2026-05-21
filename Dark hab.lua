@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
@@ -15,6 +16,7 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "DarkFantasy_GUI"
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true -- Исправляет отступы на мобильных устройствах
 
 -- Цвета
 local colors = {
@@ -45,6 +47,7 @@ Main.BackgroundColor3 = colors.bg
 Main.BorderSizePixel = 0
 Main.Parent = ScreenGui
 Main.ClipsDescendants = true
+Main.Active = true -- Для drag на мобильных устройствах
 
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0,12)
 
@@ -86,6 +89,7 @@ MinimizeBtn.TextColor3 = colors.gold
 MinimizeBtn.Font = Enum.Font.GothamBold
 MinimizeBtn.TextSize = 14
 MinimizeBtn.BorderSizePixel = 0
+MinimizeBtn.AutoButtonColor = false
 
 Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0,6)
 
@@ -98,6 +102,7 @@ CloseBtn.TextColor3 = Color3.new(1,1,1)
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.TextSize = 16
 CloseBtn.BorderSizePixel = 0
+CloseBtn.AutoButtonColor = false
 
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0,6)
 
@@ -128,84 +133,125 @@ local equipBestEnabled = true
 local minimized = false
 local TELEPORT_OFFSET = Vector3.new(0,2,0)
 
--- Loot folder
+-- Функция для поиска папки с лутом
 local function findLootFolder()
-	local folder = workspace:FindFirstChild("Loot")
-
-	if not folder then
-		folder = workspace:FindFirstChild("loot")
-	end
-
-	return folder
+	return workspace:FindFirstChild("Loot") or workspace:FindFirstChild("loot")
 end
 
-local lootFolder = findLootFolder()
+-- Проверка существования и валидности лута
+local function isValidLoot(loot)
+	if not loot or not loot.Parent then return false end
+	
+	-- Проверяем, что объект существует и видим
+	local primaryPart = loot.PrimaryPart or loot:FindFirstChildWhichIsA("BasePart")
+	if not primaryPart then return false end
+	
+	return true
+end
 
--- Teleport
+-- Безопасная телепортация с проверкой
 local function teleportToPart(part)
 	local character = player.Character
 	if not character then return end
-
+	
+	local humanoid = character:FindFirstChild("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then return end
+	
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if not root then return end
-
+	
+	-- Проверка расстояния, чтобы не телепортироваться слишком часто к одному и тому же
+	local distance = (root.Position - part.Position).Magnitude
+	if distance < 5 then return end
+	
 	root.CFrame = CFrame.new(part.Position + TELEPORT_OFFSET)
+	task.wait(0.1) -- Небольшая задержка после телепортации
 end
 
--- Process loot
+-- Обработка лута
 local function processLoot(loot)
 	if not autoLootEnabled then return end
-
+	
 	local target = loot.PrimaryPart or loot:FindFirstChildWhichIsA("BasePart")
-
-	if target then
+	if target and target:IsA("BasePart") then
 		teleportToPart(target)
 	end
 end
 
--- Prompt
+-- Auto Prompt с проверкой
+local promptConnection = nil
+
 local function autoTriggerPrompt(prompt)
 	if not autoLootEnabled then return end
-
-	pcall(function()
-		fireproximityprompt(prompt)
-	end)
+	if not prompt or not prompt:IsA("ProximityPrompt") then return end
+	
+	-- Проверка, что игрок рядом с промптом
+	local character = player.Character
+	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+	
+	if rootPart and prompt.Parent then
+		local promptPart = prompt.Parent:FindFirstChildWhichIsA("BasePart")
+		if promptPart then
+			local distance = (rootPart.Position - promptPart.Position).Magnitude
+			if distance <= prompt.MaxActivationDistance then
+				pcall(function()
+					fireproximityprompt(prompt)
+				end)
+			end
+		end
+	end
 end
 
-ProximityPromptService.PromptShown:Connect(autoTriggerPrompt)
+if ProximityPromptService then
+	promptConnection = ProximityPromptService.PromptShown:Connect(autoTriggerPrompt)
+end
 
--- Equip Best
+-- Equip Best с улучшенным поиском
 local function findEquipBestButton()
 	local gui = player:FindFirstChild("PlayerGui")
-	if not gui then return end
-
-	local inventory = gui:FindFirstChild("Inventory")
-	if not inventory then return end
-
-	local content = inventory:FindFirstChild("PageInventoryContent")
-	if not content then return end
-
-	local page = content:FindFirstChild("SlimesPage")
-	if not page then return end
-
-	return page:FindFirstChild("EquipBestButton")
+	if not gui then return nil end
+	
+	-- Рекурсивный поиск кнопки
+	local function searchButton(container)
+		for _, child in pairs(container:GetChildren()) do
+			if child:IsA("TextButton") and child.Name and string.find(child.Name:lower(), "equip") and string.find(child.Name:lower(), "best") then
+				return child
+			end
+			if child:IsA("Frame") or child:IsA("ScrollingFrame") then
+				local found = searchButton(child)
+				if found then return found end
+			end
+		end
+		return nil
+	end
+	
+	return searchButton(gui)
 end
 
 local function autoEquipBest()
 	if not equipBestEnabled then return end
-
+	
 	local button = findEquipBestButton()
-
-	if button and button:IsA("TextButton") and button.Visible then
+	
+	if button and button:IsA("TextButton") and button.Visible and button.Active then
 		pcall(function()
+			-- Пытаемся нажать кнопку разными способами
+			if button:FindFirstChild("UICorner") then
+				button:CaptureMouse()
+				button:ReleaseMouse()
+			end
+			
 			for _, connection in pairs(getconnections(button.MouseButton1Click)) do
 				connection:Fire()
 			end
+			
+			-- Альтернативный метод
+			button:Click()
 		end)
 	end
 end
 
--- Toggle creator
+-- Toggle creator с улучшенной анимацией
 local function createToggle(text, default, callback)
 	local container = Instance.new("Frame", Scroll)
 	container.Size = UDim2.new(1,-10,0,35)
@@ -221,6 +267,7 @@ local function createToggle(text, default, callback)
 	button.TextSize = 11
 	button.TextXAlignment = Enum.TextXAlignment.Left
 	button.BorderSizePixel = 0
+	button.AutoButtonColor = false
 
 	Instance.new("UICorner", button).CornerRadius = UDim.new(0,5)
 
@@ -248,38 +295,37 @@ local function createToggle(text, default, callback)
 
 	local enabled = default
 
-	local function update()
+	local update
+	update = function()
 		if enabled then
 			toggleFrame.BackgroundColor3 = colors.toggleOn
-
-			TweenService:Create(toggleCircle,TweenInfo.new(0.15),{
+			local tween = TweenService:Create(toggleCircle, TweenInfo.new(0.15), {
 				Position = UDim2.new(1,-18,0,2)
-			}):Play()
+			})
+			tween:Play()
 		else
 			toggleFrame.BackgroundColor3 = colors.toggleOff
-
-			TweenService:Create(toggleCircle,TweenInfo.new(0.15),{
+			local tween = TweenService:Create(toggleCircle, TweenInfo.new(0.15), {
 				Position = UDim2.new(0,2,0,2)
-			}):Play()
+			})
+			tween:Play()
 		end
 	end
 
 	local function toggle()
 		enabled = not enabled
 		update()
-
 		if callback then
 			callback(enabled)
 		end
 	end
 
 	update()
-
 	button.MouseButton1Click:Connect(toggle)
 	clickArea.MouseButton1Click:Connect(toggle)
 end
 
--- Toggles
+-- Создание UI элементов
 createToggle("📦 Auto Loot", true, function(v)
 	autoLootEnabled = v
 end)
@@ -288,7 +334,7 @@ createToggle("⚔️ Equip Best", true, function(v)
 	equipBestEnabled = v
 end)
 
--- Info
+-- Info с обновляемой информацией
 local Info = Instance.new("TextLabel", Scroll)
 Info.Size = UDim2.new(1,-10,0,120)
 Info.BackgroundTransparency = 1
@@ -298,12 +344,7 @@ Info.TextSize = 10
 Info.TextWrapped = true
 Info.TextXAlignment = Enum.TextXAlignment.Left
 Info.TextYAlignment = Enum.TextYAlignment.Top
-Info.Text =
-	"Dark Fantasy GUI\n\n" ..
-	"📦 Auto Loot\n" ..
-	"⚔️ Equip Best every 1 second\n" ..
-	"🔘 Auto Prompt\n\n" ..
-	(isMobile and "📱 Mobile Mode" or "🖥️ PC Mode")
+Info.Text = "Dark Fantasy GUI\n\n📦 Auto Loot\n⚔️ Equip Best (каждую секунду)\n🔘 Auto Prompt\n\n" .. (isMobile and "📱 Mobile Mode" or "🖥️ PC Mode")
 
 -- Unload button
 local Unload = Instance.new("TextButton", Scroll)
@@ -314,53 +355,58 @@ Unload.TextColor3 = colors.text
 Unload.Font = Enum.Font.GothamBold
 Unload.TextSize = 12
 Unload.BorderSizePixel = 0
+Unload.AutoButtonColor = false
 
 Instance.new("UICorner", Unload).CornerRadius = UDim.new(0,6)
 
 Unload.MouseButton1Click:Connect(function()
+	if promptConnection then
+		promptConnection:Disconnect()
+	end
 	ScreenGui:Destroy()
 end)
 
 -- Minimize
 local function toggleMinimize()
 	minimized = not minimized
-
+	
 	if minimized then
 		Content.Visible = false
 		AccentLine.Visible = false
-
-		TweenService:Create(Main,TweenInfo.new(0.2),{
+		
+		local tween = TweenService:Create(Main, TweenInfo.new(0.2), {
 			Size = UDim2.new(0,220,0,32)
-		}):Play()
-
+		})
+		tween:Play()
 		MinimizeBtn.Text = "+"
 	else
 		Content.Visible = true
 		AccentLine.Visible = true
-
-		TweenService:Create(Main,TweenInfo.new(0.2),{
+		
+		local tween = TweenService:Create(Main, TweenInfo.new(0.2), {
 			Size = UDim2.new(0,520,0,420)
-		}):Play()
-
+		})
+		tween:Play()
 		MinimizeBtn.Text = "—"
 	end
 end
 
 MinimizeBtn.MouseButton1Click:Connect(toggleMinimize)
-
 CloseBtn.MouseButton1Click:Connect(function()
+	if promptConnection then
+		promptConnection:Disconnect()
+	end
 	ScreenGui:Destroy()
 end)
 
--- Drag
+-- Drag system с улучшениями
 local dragging = false
 local dragStart
 local startPos
+local dragConnection = nil
 
 TitleBar.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1
-	or input.UserInputType == Enum.UserInputType.Touch then
-
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 		dragging = true
 		dragStart = input.Position
 		startPos = Main.Position
@@ -368,17 +414,15 @@ TitleBar.InputBegan:Connect(function(input)
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1
-	or input.UserInputType == Enum.UserInputType.Touch then
-
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 		dragging = false
 	end
 end)
 
-UserInputService.InputChanged:Connect(function(input)
-	if dragging then
+dragConnection = UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 		local delta = input.Position - dragStart
-
+		
 		Main.Position = UDim2.new(
 			startPos.X.Scale,
 			startPos.X.Offset + delta.X,
@@ -388,38 +432,49 @@ UserInputService.InputChanged:Connect(function(input)
 	end
 end)
 
--- Auto Loot Loop
-if lootFolder then
-	task.spawn(function()
-		while true do
-			if autoLootEnabled then
-				for _, loot in pairs(lootFolder:GetChildren()) do
+-- Auto Loot Loop с оптимизацией
+local lootLoopConnection = nil
+
+lootLoopConnection = RunService.Heartbeat:Connect(function()
+	if autoLootEnabled then
+		local lootFolder = findLootFolder()
+		if lootFolder then
+			local children = lootFolder:GetChildren()
+			for _, loot in pairs(children) do
+				if isValidLoot(loot) then
 					processLoot(loot)
-					task.wait(0.15)
+					task.wait(0.1) -- Небольшая задержка между телепортациями
 				end
 			end
-
-			task.wait(0.5)
 		end
-	end)
-end
-
--- Equip Best Loop (1 секунда)
-task.spawn(function()
-	while true do
-		if equipBestEnabled then
-			autoEquipBest()
-		end
-
-		task.wait(1)
 	end
 end)
 
--- Анимация
+-- Equip Best Loop с оптимизацией
+local equipLoopConnection = nil
+
+equipLoopConnection = RunService.Heartbeat:Connect(function()
+	if equipBestEnabled then
+		autoEquipBest()
+	end
+end)
+
+-- Cleanup function
+ScreenGui.AncestryChanged:Connect(function()
+	if not ScreenGui.Parent then
+		if promptConnection then promptConnection:Disconnect() end
+		if lootLoopConnection then lootLoopConnection:Disconnect() end
+		if equipLoopConnection then equipLoopConnection:Disconnect() end
+		if dragConnection then dragConnection:Disconnect() end
+	end
+end)
+
+-- Анимация появления
 Main.Position = UDim2.new(0.5,-260,0.8,0)
 
-TweenService:Create(Main,TweenInfo.new(0.4,Enum.EasingStyle.Quad),{
+local appearTween = TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
 	Position = UDim2.new(0.5,-260,0.5,-210)
-}):Play()
+})
+appearTween:Play()
 
-print("Dark Fantasy GUI Loaded")
+print("Dark Fantasy GUI Loaded Successfully!")
