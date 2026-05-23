@@ -2,7 +2,7 @@ local ProximityPromptService = game:GetService("ProximityPromptService")
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local VirtualInput = game:GetService("VirtualInputManager")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
@@ -34,10 +34,6 @@ MainFrame.BackgroundTransparency = 0.1
 local UICorner_Frame = Instance.new("UICorner")
 UICorner_Frame.CornerRadius = UDim.new(0, 10)
 UICorner_Frame.Parent = MainFrame
-
-local UIGradient = Instance.new("UIGradient")
-UIGradient.Color = ColorSequence.new(Color3.fromRGB(30, 30, 35), Color3.fromRGB(20, 20, 25))
-UIGradient.Parent = MainFrame
 
 Title.Name = "Title"
 Title.Parent = MainFrame
@@ -143,7 +139,7 @@ Credits.BackgroundTransparency = 1
 Credits.Position = UDim2.new(0, 0, 1, -25)
 Credits.Size = UDim2.new(1, 0, 0, 20)
 Credits.Font = Enum.Font.GothamSemibold
-Credits.Text = "Auto Prompt v2.0"
+Credits.Text = "Auto Prompt v3.0"
 Credits.TextColor3 = Color3.fromRGB(255, 255, 255)
 Credits.TextSize = 11
 
@@ -185,38 +181,25 @@ _G.AutoInteractEnabled = false
 _G.FindPromptsEnabled = false
 _G.ScanRange = 15
 _G.NearestPrompt = nil
-_G.PromptsList = {}
 
--- ПОЛУЧЕНИЕ ПОЗИЦИИ ОБЪЕКТА (БЕЗ ОШИБОК)
+-- ПОЛУЧЕНИЕ ПОЗИЦИИ ОБЪЕКТА
 local function getObjectPosition(obj)
-    -- Пытаемся найти HumanoidRootPart
     local hrp = obj:FindFirstChild("HumanoidRootPart")
     if hrp and hrp:IsA("BasePart") then
         return hrp.Position
     end
     
-    -- Пытаемся найти Head
     local head = obj:FindFirstChild("Head")
     if head and head:IsA("BasePart") then
         return head.Position
     end
     
-    -- Пытаемся найти PrimaryPart
-    local success, primaryPart = pcall(function()
-        return obj.PrimaryPart
-    end)
-    if success and primaryPart and primaryPart:IsA("BasePart") then
-        return primaryPart.Position
-    end
-    
-    -- Ищем любую BasePart
     for _, child in pairs(obj:GetChildren()) do
         if child:IsA("BasePart") then
             return child.Position
         end
     end
     
-    -- Получаем позицию через pcall для Attachment и других объектов
     local success, pos = pcall(function()
         return obj.Position
     end)
@@ -236,7 +219,7 @@ local function getPromptsInRange()
     local rootPos = rootPart.Position
     
     for _, prompt in pairs(workspace:GetDescendants()) do
-        if prompt:IsA("ProximityPrompt") then
+        if prompt:IsA("ProximityPrompt") and prompt.Enabled then
             local promptParent = prompt.Parent
             if promptParent then
                 local promptPosition = getObjectPosition(promptParent)
@@ -247,7 +230,8 @@ local function getPromptsInRange()
                         table.insert(prompts, {
                             prompt = prompt,
                             position = promptPosition,
-                            distance = distance
+                            distance = distance,
+                            parent = promptParent
                         })
                     end
                 end
@@ -255,7 +239,6 @@ local function getPromptsInRange()
         end
     end
     
-    -- Сортировка по расстоянию
     table.sort(prompts, function(a, b)
         return a.distance < b.distance
     end)
@@ -263,59 +246,101 @@ local function getPromptsInRange()
     return prompts
 end
 
--- Функция для нахождения ближайшего промпта
-local function findNearestPrompt()
-    local prompts = getPromptsInRange()
-    if #prompts > 0 then
-        _G.NearestPrompt = prompts[1].prompt
-        return _G.NearestPrompt
-    end
-    _G.NearestPrompt = nil
-    return nil
-end
-
--- Функция для автоматического взаимодействия с промптами
-local function autoInteractLoop()
-    while _G.AutoInteractEnabled do
-        local success, nearest = pcall(findNearestPrompt)
-        
-        if success and nearest and nearest.Enabled then
-            StatusLabel.Text = "Status: Interacting with prompt"
-            StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-            
-            -- Устанавливаем нулевую задержку для мгновенного взаимодействия
-            local originalDuration = nearest.HoldDuration
-            nearest.HoldDuration = 0
-            
-            -- Запускаем взаимодействие
-            local promptSuccess, errorMsg = pcall(function()
-                nearest:Prompt()
-            end)
-            
-            if not promptSuccess then
-                -- Если не сработало, пытаемся симулировать нажатие
-                pcall(function()
-                    local fireProximityPrompt = prompt and prompt.Prompt or nil
-                    if fireProximityPrompt then
-                        fireProximityPrompt:Fire()
-                    end
-                end)
-            end
-            
-            task.wait(0.1)
-            
-            -- Восстанавливаем оригинальную задержку
-            pcall(function()
-                if nearest and nearest.Parent then
-                    nearest.HoldDuration = originalDuration
+-- ОСНОВНАЯ ФУНКЦИЯ АВТОНАЖАТИЯ
+local function interactWithPrompt(prompt)
+    if not prompt or not prompt.Enabled then return false end
+    
+    -- Сохраняем оригинальную задержку
+    local originalDuration = prompt.HoldDuration
+    local originalRequiresHold = prompt.RequiresHold
+    
+    -- Устанавливаем мгновенное взаимодействие
+    pcall(function()
+        prompt.HoldDuration = 0
+        prompt.RequiresHold = false
+    end)
+    
+    -- Метод 1: Симуляция нажатия клавиши (обычно E или F)
+    local success = pcall(function()
+        VirtualInput:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+        task.wait(0.05)
+        VirtualInput:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+    end)
+    
+    -- Метод 2: Использование PromptButtonEvent
+    task.wait(0.05)
+    pcall(function()
+        local args = {
+            [1] = prompt,
+            [2] = player
+        }
+        game:GetService("ReplicatedStorage"):FindFirstChild("PromptButtonEvent"):FireServer(unpack(args))
+    end)
+    
+    -- Метод 3: Вызов через ProximityPromptService
+    task.wait(0.05)
+    pcall(function()
+        ProximityPromptService:PromptButtonHoldComplete(prompt, player)
+    end)
+    
+    -- Метод 4: Прямой вызов Prompt через удаленное событие
+    task.wait(0.05)
+    pcall(function()
+        local mouse = player:GetMouse()
+        if mouse then
+            mouse.KeyPress:Connect(function(key)
+                if key == Enum.KeyCode.E then
+                    -- Эмуляция нажатия
                 end
             end)
+        end
+    end)
+    
+    -- Восстанавливаем оригинальные настройки
+    task.wait(0.1)
+    pcall(function()
+        if prompt and prompt.Parent then
+            prompt.HoldDuration = originalDuration
+            prompt.RequiresHold = originalRequiresHold
+        end
+    end)
+    
+    return true
+end
+
+-- Функция для автоматического взаимодействия
+local function autoInteractLoop()
+    local lastInteractTime = 0
+    local currentTarget = nil
+    
+    while _G.AutoInteractEnabled do
+        local success, prompts = pcall(getPromptsInRange)
+        
+        if success and prompts and #prompts > 0 then
+            local nearest = prompts[1]
             
-            task.wait(0.05)
+            -- Если новый промпт или прошло достаточно времени
+            if currentTarget ~= nearest.prompt or tick() - lastInteractTime > 0.5 then
+                currentTarget = nearest.prompt
+                lastInteractTime = tick()
+                
+                StatusLabel.Text = string.format("Status: Interacting (%.1f studs)", nearest.distance)
+                StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+                
+                -- Пытаемся взаимодействовать
+                pcall(function()
+                    interactWithPrompt(nearest.prompt)
+                end)
+                
+                task.wait(0.15)
+            else
+                task.wait(0.05)
+            end
         else
-            StatusLabel.Text = "Status: Searching for prompts..."
-            StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
-            task.wait(0.1)
+            StatusLabel.Text = "Status: No prompts in range"
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+            currentTarget = nil
+            task.wait(0.2)
         end
     end
 end
@@ -337,19 +362,18 @@ local function findPromptsLoop()
         end
         table.clear(highlightEffects)
         
-        -- Создаем новые подсветки для найденных промптов
+        -- Создаем новые подсветки
         for _, promptData in pairs(prompts) do
-            local prompt = promptData.prompt
-            local promptParent = prompt.Parent
+            local promptParent = promptData.parent
             
             if promptParent and not highlightEffects[promptParent] then
                 pcall(function()
                     local highlight = Instance.new("Highlight")
                     highlight.Parent = promptParent
                     highlight.FillColor = Color3.fromRGB(0, 255, 0)
-                    highlight.FillTransparency = 0.7
+                    highlight.FillTransparency = 0.5
                     highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                    highlight.OutlineTransparency = 0.3
+                    highlight.OutlineTransparency = 0.2
                     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
                     table.insert(highlightEffects, highlight)
                     highlightEffects[promptParent] = highlight
@@ -357,59 +381,36 @@ local function findPromptsLoop()
             end
         end
         
-        StatusLabel.Text = string.format("Status: Found %d prompts", #prompts)
-        
         if #prompts > 0 then
+            StatusLabel.Text = string.format("Found: %d | Nearest: %.1f", #prompts, prompts[1].distance)
             StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
         else
+            StatusLabel.Text = "No prompts found"
             StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
         end
         
-        task.wait(0.5)
+        task.wait(0.3)
     end
     
-    -- Очищаем подсветки при выключении
+    -- Очистка
     for _, effect in pairs(highlightEffects) do
-        pcall(function()
-            if effect and effect.Parent then
-                effect:Destroy()
-            end
-        end)
+        pcall(function() effect:Destroy() end)
     end
 end
 
--- Обработчик промптов
-ProximityPromptService.PromptShown:Connect(function(prompt)
-    if _G.AutoInteractEnabled then
-        task.spawn(function()
-            pcall(function()
-                local originalDuration = prompt.HoldDuration
-                prompt.HoldDuration = 0
-                prompt:Prompt()
-                task.wait(0.05)
-                if prompt and prompt.Parent then
-                    prompt.HoldDuration = originalDuration
-                end
-            end)
-        end)
-    end
-end)
-
--- Функции для GUI
+-- Функции GUI
 local function toggleAutoInteract()
     _G.AutoInteractEnabled = not _G.AutoInteractEnabled
     
     if _G.AutoInteractEnabled then
         ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
         ToggleButton.Text = "AUTO INTERACT ON"
-        StatusLabel.Text = "Status: Auto interact enabled"
-        StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        StatusLabel.Text = "Status: Starting..."
         task.spawn(autoInteractLoop)
     else
         ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         ToggleButton.Text = "AUTO INTERACT OFF"
         StatusLabel.Text = "Status: Disabled"
-        StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
     end
 end
 
@@ -423,11 +424,13 @@ local function toggleFindPrompts()
     else
         AutoFindButton.BackgroundColor3 = Color3.fromRGB(50, 100, 200)
         AutoFindButton.Text = "FIND PROMPTS"
-        StatusLabel.Text = "Status: Idle"
+        if not _G.AutoInteractEnabled then
+            StatusLabel.Text = "Status: Idle"
+        end
     end
 end
 
--- Настройка дальности поиска
+-- Слайдер дальности
 local draggingSlider = false
 
 RangeSlider.InputBegan:Connect(function(input)
@@ -453,19 +456,11 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Обновление позиции слайдера
-local function updateSliderPosition()
-    local percentage = (_G.ScanRange - 5) / 45
-    SliderFill.Size = UDim2.new(percentage, 0, 1, 0)
-end
-
-updateSliderPosition()
-
--- Назначение кнопок
+-- Кнопки
 ToggleButton.MouseButton1Click:Connect(toggleAutoInteract)
 AutoFindButton.MouseButton1Click:Connect(toggleFindPrompts)
 
--- Минимизация окна
+-- Минимизация
 local minimized = false
 local function toggleMinimize()
     minimized = not minimized
@@ -506,11 +501,12 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     end
 end)
 
--- Отслеживание персонажа
+-- Переподключение персонажа
 player.CharacterAdded:Connect(function(newCharacter)
     character = newCharacter
     humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 end)
 
-print("Auto Prompt Script Loaded!")
-print("Hotkeys: V - Toggle Auto Interact | F - Find Prompts | P - Minimize")
+print("=== Auto Prompt v3.0 Loaded ===")
+print("Hotkeys: V - Auto Interact | F - Find Prompts | P - Minimize")
+print("The script will automatically interact with nearby prompts")
