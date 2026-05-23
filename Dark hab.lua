@@ -1,592 +1,466 @@
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
--- Создаём ScreenGui
+-- Создание GUI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "DarkFantasy_GUI"
-ScreenGui.Parent = player:WaitForChild("PlayerGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local ToggleButton = Instance.new("TextButton")
+local AutoFindButton = Instance.new("TextButton")
+local MinimizeButton = Instance.new("TextButton")
+local Credits = Instance.new("TextLabel")
+local RangeLabel = Instance.new("TextLabel")
+local RangeSlider = Instance.new("TextButton")
+local StatusLabel = Instance.new("TextLabel")
+
+ScreenGui.Name = "AutoPromptHub"
+ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Цветовая палитра Dark Fantasy
-local colors = {
-    bg = Color3.fromRGB(15, 5, 20),
-    titleBg = Color3.fromRGB(25, 10, 35),
-    tabBg = Color3.fromRGB(20, 8, 30),
-    tabActive = Color3.fromRGB(80, 20, 100),
-    tabInactive = Color3.fromRGB(30, 12, 45),
-    accent = Color3.fromRGB(180, 50, 220),
-    gold = Color3.fromRGB(255, 180, 50),
-    text = Color3.fromRGB(220, 200, 230),
-    textDark = Color3.fromRGB(150, 130, 160),
-    close = Color3.fromRGB(180, 30, 30),
-    stroke = Color3.fromRGB(100, 50, 130),
-    toggleOn = Color3.fromRGB(100, 30, 160),
-    toggleOff = Color3.fromRGB(35, 15, 55),
-    toggleCircle = Color3.fromRGB(220, 180, 255),
-    buttonBg = Color3.fromRGB(50, 20, 80),
-    buttonHover = Color3.fromRGB(70, 30, 110),
-}
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
+MainFrame.Size = UDim2.new(0, 220, 0, 210)
+MainFrame.BackgroundTransparency = 0.1
 
--- Основной фрейм
-local Main = Instance.new("Frame")
-Main.Name = "MainFrame"
-Main.Size = UDim2.new(0, 520, 0, 420)
-Main.Position = UDim2.new(0.5, -260, 0.5, -210)
-Main.BackgroundColor3 = colors.bg
-Main.BorderSizePixel = 0
-Main.ClipsDescendants = true
-Main.Parent = ScreenGui
+local UICorner_Frame = Instance.new("UICorner")
+UICorner_Frame.CornerRadius = UDim.new(0, 10)
+UICorner_Frame.Parent = MainFrame
 
-local corner = Instance.new("UICorner", Main)
-corner.CornerRadius = UDim.new(0, 12)
+local UIGradient = Instance.new("UIGradient")
+UIGradient.Color = ColorSequence.new(Color3.fromRGB(30, 30, 35), Color3.fromRGB(20, 20, 25))
+UIGradient.Parent = MainFrame
 
-local Stroke = Instance.new("UIStroke", Main)
-Stroke.Color = colors.stroke
-Stroke.Transparency = 0.4
-Stroke.Thickness = 1.5
-
-local AccentLine = Instance.new("Frame", Main)
-AccentLine.Name = "AccentLine"
-AccentLine.Size = UDim2.new(1, 0, 0, 2)
-AccentLine.BackgroundColor3 = colors.accent
-AccentLine.BorderSizePixel = 0
-Instance.new("UICorner", AccentLine).CornerRadius = UDim.new(0, 12)
-
-local Gradient = Instance.new("UIGradient", AccentLine)
-Gradient.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(120, 30, 180)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(220, 80, 255)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 30, 180))
-}
-
--- Заголовок
-local TitleBar = Instance.new("Frame", Main)
-TitleBar.Name = "TitleBar"
-TitleBar.Size = UDim2.new(1, 0, 0, 30)
-TitleBar.Position = UDim2.new(0, 0, 0, 2)
-TitleBar.BackgroundColor3 = colors.titleBg
-TitleBar.BackgroundTransparency = 0.3
-TitleBar.BorderSizePixel = 0
-Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
-
-local Title = Instance.new("TextLabel", TitleBar)
 Title.Name = "Title"
-Title.Text = "Dark Fantasy | Auto Loot + Equip Best"
-Title.Size = UDim2.new(0, 280, 1, 0)
-Title.Position = UDim2.new(0, 12, 0, 0)
+Title.Parent = MainFrame
 Title.BackgroundTransparency = 1
-Title.TextColor3 = colors.gold
-Title.Font = Enum.Font.GothamBlack
-Title.TextSize = 13
+Title.Position = UDim2.new(0, 10, 0, 10)
+Title.Size = UDim2.new(0, 170, 0, 30)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "Auto Prompt"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 16
 Title.TextXAlignment = Enum.TextXAlignment.Left
 
-local MinimizeBtn = Instance.new("TextButton", Main)
-MinimizeBtn.Text = "—"
-MinimizeBtn.Size = UDim2.new(0, 24, 0, 24)
-MinimizeBtn.Position = UDim2.new(1, -52, 0, 5)
-MinimizeBtn.BackgroundColor3 = Color3.fromRGB(40, 15, 60)
-MinimizeBtn.TextColor3 = colors.gold
-MinimizeBtn.Font = Enum.Font.GothamBold
-MinimizeBtn.TextSize = 14
-MinimizeBtn.BorderSizePixel = 0
-MinimizeBtn.ZIndex = 10
-Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 6)
-MinimizeBtn.AutoButtonColor = false
+MinimizeButton.Name = "MinimizeButton"
+MinimizeButton.Parent = MainFrame
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MinimizeButton.Position = UDim2.new(1, -35, 0, 12)
+MinimizeButton.Size = UDim2.new(0, 25, 0, 25)
+MinimizeButton.Font = Enum.Font.GothamBold
+MinimizeButton.Text = "-"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.TextSize = 16
 
-local CloseBtn = Instance.new("TextButton", Main)
-CloseBtn.Text = "×"
-CloseBtn.Size = UDim2.new(0, 24, 0, 24)
-CloseBtn.Position = UDim2.new(1, -26, 0, 5)
-CloseBtn.BackgroundColor3 = colors.close
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 16
-CloseBtn.BorderSizePixel = 0
-CloseBtn.ZIndex = 10
-Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
-CloseBtn.AutoButtonColor = false
+local UICorner_Min = Instance.new("UICorner")
+UICorner_Min.CornerRadius = UDim.new(0, 5)
+UICorner_Min.Parent = MinimizeButton
 
-local CollapsibleContent = Instance.new("Frame", Main)
-CollapsibleContent.Name = "CollapsibleContent"
-CollapsibleContent.Size = UDim2.new(1, 0, 1, -32)
-CollapsibleContent.Position = UDim2.new(0, 0, 0, 32)
-CollapsibleContent.BackgroundTransparency = 1
-CollapsibleContent.BorderSizePixel = 0
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = MainFrame
+ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+ToggleButton.Position = UDim2.new(0.5, 0, 0.32, 0)
+ToggleButton.Size = UDim2.new(0, 180, 0, 35)
+ToggleButton.Font = Enum.Font.GothamSemibold
+ToggleButton.Text = "AUTO INTERACT OFF"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 14
 
-local TabButtonsFrame = Instance.new("Frame", CollapsibleContent)
-TabButtonsFrame.Name = "TabButtons"
-TabButtonsFrame.Size = UDim2.new(1, 0, 0, 26)
-TabButtonsFrame.Position = UDim2.new(0, 0, 0, 0)
-TabButtonsFrame.BackgroundColor3 = colors.tabBg
-TabButtonsFrame.BackgroundTransparency = 0.3
-TabButtonsFrame.BorderSizePixel = 0
+local UICorner_Button = Instance.new("UICorner")
+UICorner_Button.CornerRadius = UDim.new(0, 8)
+UICorner_Button.Parent = ToggleButton
 
-local layout = Instance.new("UIListLayout", TabButtonsFrame)
-layout.FillDirection = Enum.FillDirection.Horizontal
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-layout.VerticalAlignment = Enum.VerticalAlignment.Center
-layout.Padding = UDim.new(0, 2)
+AutoFindButton.Name = "AutoFindButton"
+AutoFindButton.Parent = MainFrame
+AutoFindButton.BackgroundColor3 = Color3.fromRGB(50, 100, 200)
+AutoFindButton.Position = UDim2.new(0.5, 0, 0.52, 0)
+AutoFindButton.Size = UDim2.new(0, 180, 0, 35)
+AutoFindButton.Font = Enum.Font.GothamSemibold
+AutoFindButton.Text = "FIND PROMPTS"
+AutoFindButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoFindButton.TextSize = 14
 
-local ContentContainer = Instance.new("Frame", CollapsibleContent)
-ContentContainer.Name = "ContentContainer"
-ContentContainer.Size = UDim2.new(1, -16, 1, -32)
-ContentContainer.Position = UDim2.new(0, 8, 0, 30)
-ContentContainer.BackgroundColor3 = Color3.fromRGB(10, 3, 15)
-ContentContainer.BackgroundTransparency = 0.5
-ContentContainer.BorderSizePixel = 0
-Instance.new("UICorner", ContentContainer).CornerRadius = UDim.new(0, 8)
+local UICorner_Auto = Instance.new("UICorner")
+UICorner_Auto.CornerRadius = UDim.new(0, 8)
+UICorner_Auto.Parent = AutoFindButton
 
--- === ОПРЕДЕЛЕНИЕ УСТРОЙСТВА ===
-local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled and not UserInputService.MouseEnabled
+RangeLabel.Name = "RangeLabel"
+RangeLabel.Parent = MainFrame
+RangeLabel.BackgroundTransparency = 1
+RangeLabel.Position = UDim2.new(0, 10, 0, 110)
+RangeLabel.Size = UDim2.new(0, 200, 0, 20)
+RangeLabel.Font = Enum.Font.GothamSemibold
+RangeLabel.Text = "Range: 15"
+RangeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+RangeLabel.TextSize = 12
+RangeLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- === АВТО-ЛУТ (ПОЛНАЯ ВЕРСИЯ) ===
-local autoLootEnabled = true
-local equipBestEnabled = true
-local lootFolder = nil
-local childAddedConnection = nil
-local equipBestConnection = nil
+RangeSlider.Name = "RangeSlider"
+RangeSlider.Parent = MainFrame
+RangeSlider.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+RangeSlider.Position = UDim2.new(0, 10, 0, 130)
+RangeSlider.Size = UDim2.new(0, 200, 0, 15)
+RangeSlider.Text = ""
+RangeSlider.AutoButtonColor = false
 
-local TELEPORT_OFFSET = Vector3.new(0, 2, 0)
+local SliderFill = Instance.new("Frame")
+SliderFill.Name = "SliderFill"
+SliderFill.Parent = RangeSlider
+SliderFill.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
+SliderFill.Size = UDim2.new(0.5, 0, 1, 0)
+SliderFill.Position = UDim2.new(0, 0, 0, 0)
 
--- Поиск папки Loot
-local function findLootFolder()
-    local folder = workspace:FindFirstChild("Loot")
-    if not folder then folder = workspace:FindFirstChild("loot") end
-    if not folder then
-        for _, child in pairs(workspace:GetChildren()) do
-            if child:FindFirstChild("Loot") then
-                folder = child.Loot
-                break
-            end
-            if child:FindFirstChild("loot") then
-                folder = child.loot
-                break
-            end
-        end
-    end
-    return folder
+local UICorner_Slider = Instance.new("UICorner")
+UICorner_Slider.CornerRadius = UDim.new(0, 7)
+UICorner_Slider.Parent = RangeSlider
+
+local UICorner_Fill = Instance.new("UICorner")
+UICorner_Fill.CornerRadius = UDim.new(0, 7)
+UICorner_Fill.Parent = SliderFill
+
+StatusLabel.Name = "StatusLabel"
+StatusLabel.Parent = MainFrame
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Position = UDim2.new(0, 10, 0, 155)
+StatusLabel.Size = UDim2.new(0, 200, 0, 20)
+StatusLabel.Font = Enum.Font.GothamSemibold
+StatusLabel.Text = "Status: Idle"
+StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+StatusLabel.TextSize = 11
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+Credits.Name = "Credits"
+Credits.Parent = MainFrame
+Credits.BackgroundTransparency = 1
+Credits.Position = UDim2.new(0, 0, 1, -25)
+Credits.Size = UDim2.new(1, 0, 0, 20)
+Credits.Font = Enum.Font.GothamSemibold
+Credits.Text = "Auto Prompt v2.0"
+Credits.TextColor3 = Color3.fromRGB(255, 255, 255)
+Credits.TextSize = 11
+
+-- Перетаскивание окна
+local dragging, dragInput, dragStart, startPos
+local function update(input)
+    local delta = input.Position - dragStart
+    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
 end
 
--- Телепорт к луту
-local function teleportToPart(targetPart)
-    if not autoLootEnabled then return end
-    
-    local character = player.Character
-    if not character then return end
-    
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then return end
-    
-    if not targetPart or not targetPart.Parent then return end
-    
-    humanoidRootPart.CFrame = CFrame.new(targetPart.Position + TELEPORT_OFFSET)
-end
-
--- Обработка лута
-local function processLoot(lootModel)
-    if not autoLootEnabled then return end
-    
-    local targetPart = lootModel.PrimaryPart
-    if not targetPart then
-        targetPart = lootModel:FindFirstChildWhichIsA("BasePart")
-    end
-    
-    if targetPart then
-        teleportToPart(targetPart)
-    end
-end
-
--- Новый лут
-local function onLootAdded(loot)
-    if not autoLootEnabled then return end
-    task.wait(0.05)
-    processLoot(loot)
-end
-
--- === АВТОМАТИЧЕСКОЕ НАЖАТИЕ ЧЕРЕЗ PROXIMITY PROMPT ===
-local function autoTriggerPrompt(prompt)
-    if not autoLootEnabled then return end
-    
-    local character = player.Character
-    if not character then return end
-    
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
-    
-    local promptParent = prompt.Parent
-    if promptParent and promptParent:IsA("BasePart") then
-        local distance = (rootPart.Position - promptParent.Position).Magnitude
-        
-        if distance <= (prompt.MaxActivationDistance or 0) then
-            prompt:InputHoldBegin()
-            task.wait(prompt.HoldDuration)
-            prompt:InputHoldEnd()
-        end
-    end
-end
-
--- === ФУНКЦИЯ EQUIP BEST ===
-local function findEquipBestButton()
-    local playerGui = player:FindFirstChild("PlayerGui")
-    if not playerGui then return nil end
-    
-    local inventory = playerGui:FindFirstChild("Inventory")
-    if not inventory then return nil end
-    
-    local pageInventoryContent = inventory:FindFirstChild("PageInventoryContent")
-    if not pageInventoryContent then return nil end
-    
-    local slimesPage = pageInventoryContent:FindFirstChild("SlimesPage")
-    if not slimesPage then return nil end
-    
-    local equipBestButton = slimesPage:FindFirstChild("EquipBestButton")
-    return equipBestButton
-end
-
--- Автоматическое нажатие Equip Best
-local function autoEquipBest()
-    if not equipBestEnabled then return end
-    
-    local button = findEquipBestButton()
-    if button and button:IsA("TextButton") and button.Visible then
-        button:Click()
-    end
-end
-
--- === ВКЛЮЧЕНИЕ/ВЫКЛЮЧЕНИЕ ===
-local function enableAutoLoot()
-    if autoLootEnabled then return end
-    autoLootEnabled = true
-    
-    if lootFolder and not childAddedConnection then
-        childAddedConnection = lootFolder.ChildAdded:Connect(onLootAdded)
-    end
-end
-
-local function disableAutoLoot()
-    if not autoLootEnabled then return end
-    autoLootEnabled = false
-end
-
-local function enableEquipBest()
-    if equipBestEnabled then return end
-    equipBestEnabled = true
-end
-
-local function disableEquipBest()
-    if not equipBestEnabled then return end
-    equipBestEnabled = false
-end
-
--- Находим папку и запускаем авто-лут
-lootFolder = findLootFolder()
-
-if lootFolder then
-    childAddedConnection = lootFolder.ChildAdded:Connect(onLootAdded)
-    
-    -- Обработка существующего лута
-    for _, loot in pairs(lootFolder:GetChildren()) do
-        task.spawn(function()
-            processLoot(loot)
-        end)
-    end
-    print("[Auto Loot] Папка найдена: " .. lootFolder.Name)
-else
-    print("[Auto Loot] Папка Loot не найдена!")
-end
-
--- Запускаем отслеживание ProximityPrompt
-ProximityPromptService.PromptShown:Connect(autoTriggerPrompt)
-
--- Запускаем Equip Best (каждые 2 секунды)
-equipBestConnection = RunService.Heartbeat:Connect(function()
-    autoEquipBest()
-end)
-
-print("[Auto Loot] Включён | Устройство: " .. (isMobile and "Телефон" or "ПК"))
-print("[Equip Best] Включён")
-
--- === СОЗДАНИЕ TOGGLE ===
-local function createToggle(parent, name, default, callback)
-    local container = Instance.new("Frame", parent)
-    container.Size = UDim2.new(1, 0, 0, 35)
-    container.BackgroundTransparency = 1
-    container.BorderSizePixel = 0
-    
-    local button = Instance.new("TextButton", container)
-    button.Text = name
-    button.Size = UDim2.new(1, -60, 0, 28)
-    button.Position = UDim2.new(0, 8, 0, 3)
-    button.BackgroundColor3 = Color3.fromRGB(30, 12, 45)
-    button.TextColor3 = colors.text
-    button.Font = Enum.Font.GothamBold
-    button.TextSize = 11
-    button.TextXAlignment = Enum.TextXAlignment.Left
-    button.BorderSizePixel = 0
-    button.AutoButtonColor = false
-    button.ZIndex = 5
-    Instance.new("UICorner", button).CornerRadius = UDim.new(0, 5)
-    
-    local toggleFrame = Instance.new("Frame", container)
-    toggleFrame.Size = UDim2.new(0, 40, 0, 20)
-    toggleFrame.Position = UDim2.new(1, -48, 0, 7)
-    toggleFrame.BackgroundColor3 = colors.toggleOff
-    toggleFrame.BorderSizePixel = 0
-    toggleFrame.ZIndex = 6
-    Instance.new("UICorner", toggleFrame).CornerRadius = UDim.new(0, 10)
-    
-    local toggleCircle = Instance.new("Frame", toggleFrame)
-    toggleCircle.Size = UDim2.new(0, 16, 0, 16)
-    toggleCircle.Position = UDim2.new(0, 2, 0, 2)
-    toggleCircle.BackgroundColor3 = Color3.fromRGB(100, 80, 120)
-    toggleCircle.BorderSizePixel = 0
-    toggleCircle.ZIndex = 7
-    Instance.new("UICorner", toggleCircle).CornerRadius = UDim.new(0, 8)
-    
-    local isOn = default
-    
-    local function updateToggle()
-        if isOn then
-            toggleFrame.BackgroundColor3 = colors.toggleOn
-            toggleCircle.BackgroundColor3 = colors.toggleCircle
-            TweenService:Create(toggleCircle, TweenInfo.new(0.15), {
-                Position = UDim2.new(1, -18, 0, 2)
-            }):Play()
-        else
-            toggleFrame.BackgroundColor3 = colors.toggleOff
-            toggleCircle.BackgroundColor3 = Color3.fromRGB(100, 80, 120)
-            TweenService:Create(toggleCircle, TweenInfo.new(0.15), {
-                Position = UDim2.new(0, 2, 0, 2)
-            }):Play()
-        end
-    end
-    
-    updateToggle()
-    
-    button.MouseButton1Click:Connect(function()
-        isOn = not isOn
-        updateToggle()
-        if callback then callback(isOn) end
-    end)
-    
-    local toggleButton = Instance.new("TextButton", toggleFrame)
-    toggleButton.Size = UDim2.new(1, 0, 1, 0)
-    toggleButton.BackgroundTransparency = 1
-    toggleButton.Text = ""
-    toggleButton.BorderSizePixel = 0
-    toggleButton.ZIndex = 8
-    
-    toggleButton.MouseButton1Click:Connect(function()
-        isOn = not isOn
-        updateToggle()
-        if callback then callback(isOn) end
-    end)
-    
-    return container
-end
-
--- Вкладки
-local tabs = {}
-local tabButtons = {}
-local tabNames = {"Main", "Info", "Settings"}
-local isMinimized = false
-
-local function createTab(name)
-    local tabContent = Instance.new("Frame", ContentContainer)
-    tabContent.Name = name
-    tabContent.Size = UDim2.new(1, 0, 1, 0)
-    tabContent.BackgroundTransparency = 1
-    tabContent.Visible = false
-    
-    if name == "Main" then
-        local scrollFrame = Instance.new("ScrollingFrame", tabContent)
-        scrollFrame.Size = UDim2.new(1, 0, 1, 0)
-        scrollFrame.BackgroundTransparency = 1
-        scrollFrame.ScrollBarThickness = 2
-        scrollFrame.ScrollBarImageColor3 = colors.accent
-        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 150)
-        
-        createToggle(scrollFrame, "📦 Auto Loot", autoLootEnabled, function(val)
-            if val then enableAutoLoot() else disableAutoLoot() end
-        end)
-        
-        createToggle(scrollFrame, "⚔️ Equip Best", equipBestEnabled, function(val)
-            if val then enableEquipBest() else disableEquipBest() end
-        end)
-        
-        local buttonExists = findEquipBestButton() ~= nil
-        local statusLabel = Instance.new("TextLabel", scrollFrame)
-        statusLabel.Text = "✅ Auto Loot Ready\n📁 Watching folder: 'Loot'\n🔘 Auto-press ProximityPrompt\n⚔️ Equip Best: " .. (buttonExists and "✅ Доступна" or "❌ Не найдена") .. "\n📱 " .. (isMobile and "Телефон режим" or "ПК режим")
-        statusLabel.Size = UDim2.new(1, -16, 0, 110)
-        statusLabel.Position = UDim2.new(0, 8, 0, 80)
-        statusLabel.BackgroundTransparency = 1
-        statusLabel.TextColor3 = colors.textDark
-        statusLabel.Font = Enum.Font.Gotham
-        statusLabel.TextSize = 9
-        statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-        statusLabel.TextYAlignment = Enum.TextYAlignment.Top
-        
-    elseif name == "Info" then
-        local infoText = Instance.new("TextLabel", tabContent)
-        infoText.Text = "Dark Fantasy GUI\nVersion 3.3\n\nAuto Loot:\n- Телепорт к луту (папка Loot)\n- Автонажатие ProximityPrompt\n\nEquip Best:\n- Автонажатие кнопки EquipBestButton\n- Путь: PlayerGui → Inventory → PageInventoryContent → SlimesPage → EquipBestButton"
-        infoText.Size = UDim2.new(1, -16, 1, 0)
-        infoText.Position = UDim2.new(0, 8, 0, 10)
-        infoText.BackgroundTransparency = 1
-        infoText.TextColor3 = colors.text
-        infoText.Font = Enum.Font.Gotham
-        infoText.TextSize = 11
-        infoText.TextWrapped = true
-        infoText.TextXAlignment = Enum.TextXAlignment.Left
-        infoText.TextYAlignment = Enum.TextYAlignment.Top
-        
-    elseif name == "Settings" then
-        local unloadBtn = Instance.new("TextButton", tabContent)
-        unloadBtn.Text = "Unload Script"
-        unloadBtn.Size = UDim2.new(0, 150, 0, 35)
-        unloadBtn.Position = UDim2.new(0.5, -75, 0.5, -17)
-        unloadBtn.BackgroundColor3 = colors.buttonBg
-        unloadBtn.TextColor3 = colors.text
-        unloadBtn.Font = Enum.Font.GothamBold
-        unloadBtn.TextSize = 12
-        unloadBtn.BorderSizePixel = 0
-        Instance.new("UICorner", unloadBtn).CornerRadius = UDim.new(0, 6)
-        
-        unloadBtn.MouseButton1Click:Connect(function()
-            autoLootEnabled = false
-            equipBestEnabled = false
-            if childAddedConnection then childAddedConnection:Disconnect() end
-            if equipBestConnection then equipBestConnection:Disconnect() end
-            ScreenGui:Destroy()
-        end)
-        
-        unloadBtn.MouseEnter:Connect(function()
-            TweenService:Create(unloadBtn, TweenInfo.new(0.2), {
-                BackgroundColor3 = colors.buttonHover
-            }):Play()
-        end)
-        
-        unloadBtn.MouseLeave:Connect(function()
-            TweenService:Create(unloadBtn, TweenInfo.new(0.2), {
-                BackgroundColor3 = colors.buttonBg
-            }):Play()
-        end)
-    end
-    
-    return tabContent
-end
-
-local function switchTab(tabName)
-    for name, content in pairs(tabs) do
-        content.Visible = (name == tabName)
-    end
-    for name, button in pairs(tabButtons) do
-        if name == tabName then
-            button.BackgroundColor3 = colors.tabActive
-            button.TextColor3 = colors.gold
-        else
-            button.BackgroundColor3 = colors.tabInactive
-            button.TextColor3 = colors.textDark
-        end
-    end
-end
-
-local function toggleMinimize()
-    isMinimized = not isMinimized
-    local currentPos = Main.Position
-    
-    if isMinimized then
-        Main.Size = UDim2.new(0, 220, 0, 32)
-        Main.Position = currentPos
-        Title.TextSize = 11
-        Title.Size = UDim2.new(1, -56, 1, 0)
-        Title.Position = UDim2.new(0, 28, 0, 0)
-        Title.TextXAlignment = Enum.TextXAlignment.Center
-        MinimizeBtn.Position = UDim2.new(1, -52, 0, 4)
-        MinimizeBtn.Text = "+"
-        MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 20, 80)
-        CloseBtn.Position = UDim2.new(1, -26, 0, 4)
-        CollapsibleContent.Visible = false
-        AccentLine.Visible = false
-    else
-        Main.Size = UDim2.new(0, 520, 0, 420)
-        Main.Position = currentPos
-        Title.TextSize = 13
-        Title.Size = UDim2.new(0, 280, 1, 0)
-        Title.Position = UDim2.new(0, 12, 0, 0)
-        Title.TextXAlignment = Enum.TextXAlignment.Left
-        MinimizeBtn.Position = UDim2.new(1, -52, 0, 5)
-        MinimizeBtn.Text = "—"
-        MinimizeBtn.BackgroundColor3 = Color3.fromRGB(40, 15, 60)
-        CloseBtn.Position = UDim2.new(1, -26, 0, 5)
-        CollapsibleContent.Visible = true
-        AccentLine.Visible = true
-    end
-end
-
-MinimizeBtn.MouseButton1Click:Connect(toggleMinimize)
-CloseBtn.MouseButton1Click:Connect(function() 
-    autoLootEnabled = false
-    equipBestEnabled = false
-    if childAddedConnection then childAddedConnection:Disconnect() end
-    if equipBestConnection then equipBestConnection:Disconnect() end
-    ScreenGui:Destroy() 
-end)
-
-for _, name in ipairs(tabNames) do
-    local tabButton = Instance.new("TextButton", TabButtonsFrame)
-    tabButton.Name = name
-    tabButton.Text = name
-    tabButton.Size = UDim2.new(0, 80, 1, 0)
-    tabButton.BackgroundColor3 = colors.tabInactive
-    tabButton.TextColor3 = colors.textDark
-    tabButton.Font = Enum.Font.GothamBlack
-    tabButton.TextSize = 9
-    tabButton.BorderSizePixel = 0
-    tabButton.AutoButtonColor = false
-    Instance.new("UICorner", tabButton).CornerRadius = UDim.new(0, 5)
-    
-    tabs[name] = createTab(name)
-    tabButtons[name] = tabButton
-    
-    tabButton.MouseButton1Click:Connect(function() switchTab(name) end)
-end
-
-switchTab("Main")
-
-local UIS = game:GetService("UserInputService")
-local frame = TitleBar
-local dragging, dragStart, startPos
-
-frame.InputBegan:Connect(function(input)
+MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
-        startPos = Main.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end
 end)
 
-UIS.InputEnded:Connect(function(input)
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+-- Переменные
+local _G = _G or {}
+_G.AutoInteractEnabled = false
+_G.FindPromptsEnabled = false
+_G.ScanRange = 15
+_G.NearestPrompt = nil
+_G.PromptsList = {}
+
+-- Функция для получения всех промптов вокруг игрока
+local function getPromptsInRange()
+    local prompts = {}
+    local rootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return prompts end
+    
+    local rootPos = rootPart.Position
+    
+    for _, prompt in pairs(workspace:GetDescendants()) do
+        if prompt:IsA("ProximityPrompt") then
+            local promptParent = prompt.Parent
+            local promptPosition = promptParent and promptParent:FindFirstChild("HumanoidRootPart") or promptParent and promptParent:FindFirstChild("Head")
+            
+            if promptPosition and promptPosition.Position then
+                local distance = (rootPos - promptPosition.Position).Magnitude
+                if distance <= _G.ScanRange then
+                    table.insert(prompts, {
+                        prompt = prompt,
+                        position = promptPosition.Position,
+                        distance = distance
+                    })
+                end
+            elseif promptParent and promptParent.PrimaryPart then
+                local distance = (rootPos - promptParent.PrimaryPart.Position).Magnitude
+                if distance <= _G.ScanRange then
+                    table.insert(prompts, {
+                        prompt = prompt,
+                        position = promptParent.PrimaryPart.Position,
+                        distance = distance
+                    })
+                end
+            end
+        end
+    end
+    
+    -- Сортировка по расстоянию
+    table.sort(prompts, function(a, b)
+        return a.distance < b.distance
+    end)
+    
+    return prompts
+end
+
+-- Функция для нахождения ближайшего промпта
+local function findNearestPrompt()
+    local prompts = getPromptsInRange()
+    if #prompts > 0 then
+        _G.NearestPrompt = prompts[1].prompt
+        return _G.NearestPrompt
+    end
+    _G.NearestPrompt = nil
+    return nil
+end
+
+-- Функция для автоматического взаимодействия с промптами
+local function autoInteractLoop()
+    while _G.AutoInteractEnabled do
+        local nearest = findNearestPrompt()
+        if nearest and nearest.Enabled then
+            StatusLabel.Text = "Status: Interacting with prompt"
+            StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+            
+            -- Устанавливаем нулевую задержку для мгновенного взаимодействия
+            local originalDuration = nearest.HoldDuration
+            nearest.HoldDuration = 0
+            
+            -- Симулируем нажатие на промпт
+            local args = {
+                [1] = nearest
+            }
+            
+            -- Запускаем взаимодействие
+            nearest:Prompt()
+            
+            task.wait(0.1)
+            
+            -- Восстанавливаем оригинальную задержку
+            if nearest and nearest.Parent then
+                nearest.HoldDuration = originalDuration
+            end
+            
+            task.wait(0.05)
+        else
+            StatusLabel.Text = "Status: Searching for prompts..."
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+            task.wait(0.1)
+        end
+    end
+end
+
+-- Функция для поиска и подсветки промптов
+local function findPromptsLoop()
+    local highlightEffects = {}
+    
+    while _G.FindPromptsEnabled do
+        local prompts = getPromptsInRange()
+        
+        -- Удаляем старые подсветки
+        for _, effect in pairs(highlightEffects) do
+            if effect and effect.Parent then
+                effect:Destroy()
+            end
+        end
+        table.clear(highlightEffects)
+        
+        -- Создаем новые подсветки для найденных промптов
+        for _, promptData in pairs(prompts) do
+            local prompt = promptData.prompt
+            local promptParent = prompt.Parent
+            
+            if promptParent and not highlightEffects[promptParent] then
+                local highlight = Instance.new("Highlight")
+                highlight.Parent = promptParent
+                highlight.FillColor = Color3.fromRGB(0, 255, 0)
+                highlight.FillTransparency = 0.7
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                highlight.OutlineTransparency = 0.3
+                highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                table.insert(highlightEffects, highlight)
+                
+                highlightEffects[promptParent] = highlight
+            end
+        end
+        
+        StatusLabel.Text = string.format("Status: Found %d prompts", #prompts)
+        
+        if #prompts > 0 then
+            StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        else
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        end
+        
+        task.wait(0.5)
+    end
+    
+    -- Очищаем подсветки при выключении
+    for _, effect in pairs(highlightEffects) do
+        if effect and effect.Parent then
+            effect:Destroy()
+        end
+    end
+end
+
+-- Обработчик промптов
+ProximityPromptService.PromptShown:Connect(function(prompt)
+    if _G.AutoInteractEnabled then
+        task.spawn(function()
+            prompt.HoldDuration = 0
+            prompt:Prompt()
+            task.wait(0.05)
+            if prompt and prompt.Parent then
+                local originalDuration = prompt.HoldDuration
+                prompt.HoldDuration = originalDuration or 1
+            end
+        end)
+    end
+end)
+
+-- Функции для GUI
+local function toggleAutoInteract()
+    _G.AutoInteractEnabled = not _G.AutoInteractEnabled
+    
+    if _G.AutoInteractEnabled then
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
+        ToggleButton.Text = "AUTO INTERACT ON"
+        StatusLabel.Text = "Status: Auto interact enabled"
+        StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        task.spawn(autoInteractLoop)
+    else
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        ToggleButton.Text = "AUTO INTERACT OFF"
+        StatusLabel.Text = "Status: Disabled"
+        StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    end
+end
+
+local function toggleFindPrompts()
+    _G.FindPromptsEnabled = not _G.FindPromptsEnabled
+    
+    if _G.FindPromptsEnabled then
+        AutoFindButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+        AutoFindButton.Text = "SCANNING..."
+        task.spawn(findPromptsLoop)
+    else
+        AutoFindButton.BackgroundColor3 = Color3.fromRGB(50, 100, 200)
+        AutoFindButton.Text = "FIND PROMPTS"
+        StatusLabel.Text = "Status: Idle"
+    end
+end
+
+-- Настройка дальности поиска
+local draggingSlider = false
+
+RangeSlider.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
+        draggingSlider = true
     end
 end)
 
-UIS.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+RangeSlider.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingSlider = false
     end
 end)
 
-Main.Position = UDim2.new(0.5, -260, 0.8, 0)
-TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
-    Position = UDim2.new(0.5, -260, 0.5, -210)
-}):Play()
+UserInputService.InputChanged:Connect(function(input)
+    if draggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local relativeX = math.clamp((input.Position.X - RangeSlider.AbsolutePosition.X) / RangeSlider.AbsoluteSize.X, 0, 1)
+        local newRange = math.floor(relativeX * 45 + 5) -- От 5 до 50
+        
+        SliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
+        _G.ScanRange = newRange
+        RangeLabel.Text = string.format("Range: %d", newRange)
+    end
+end)
 
-print("Dark Fantasy GUI загружен | Auto Loot + Equip Best")
+-- Обновление позиции слайдера при изменении диапазона
+local function updateSliderPosition()
+    local percentage = (_G.ScanRange - 5) / 45
+    SliderFill.Size = UDim2.new(percentage, 0, 1, 0)
+end
+
+updateSliderPosition()
+
+-- Назначение кнопок
+ToggleButton.MouseButton1Click:Connect(toggleAutoInteract)
+AutoFindButton.MouseButton1Click:Connect(toggleFindPrompts)
+
+-- Минимизация окна
+local minimized = false
+local function toggleMinimize()
+    minimized = not minimized
+    if minimized then
+        ToggleButton.Visible = false
+        AutoFindButton.Visible = false
+        RangeLabel.Visible = false
+        RangeSlider.Visible = false
+        StatusLabel.Visible = false
+        Credits.Visible = false
+        MainFrame:TweenSize(UDim2.new(0, 200, 0, 48), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
+        MinimizeButton.Text = "+"
+    else
+        MainFrame:TweenSize(UDim2.new(0, 220, 0, 210), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
+        MinimizeButton.Text = "-"
+        task.wait(0.1)
+        ToggleButton.Visible = true
+        AutoFindButton.Visible = true
+        RangeLabel.Visible = true
+        RangeSlider.Visible = true
+        StatusLabel.Visible = true
+        Credits.Visible = true
+    end
+end
+
+MinimizeButton.MouseButton1Click:Connect(toggleMinimize)
+
+-- Горячие клавиши
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    if gameProcessedEvent then return end
+    
+    if input.KeyCode == Enum.KeyCode.V then
+        toggleAutoInteract()
+    elseif input.KeyCode == Enum.KeyCode.F then
+        toggleFindPrompts()
+    elseif input.KeyCode == Enum.KeyCode.P then
+        toggleMinimize()
+    end
+end)
+
+-- Отслеживание персонажа
+player.CharacterAdded:Connect(function(newCharacter)
+    character = newCharacter
+    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+end)
+
+print("Auto Prompt Script Loaded!")
+print("Hotkeys: V - Toggle Auto Interact | F - Find Prompts | P - Minimize")
