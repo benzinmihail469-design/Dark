@@ -187,6 +187,46 @@ _G.ScanRange = 15
 _G.NearestPrompt = nil
 _G.PromptsList = {}
 
+-- ПОЛУЧЕНИЕ ПОЗИЦИИ ОБЪЕКТА (БЕЗ ОШИБОК)
+local function getObjectPosition(obj)
+    -- Пытаемся найти HumanoidRootPart
+    local hrp = obj:FindFirstChild("HumanoidRootPart")
+    if hrp and hrp:IsA("BasePart") then
+        return hrp.Position
+    end
+    
+    -- Пытаемся найти Head
+    local head = obj:FindFirstChild("Head")
+    if head and head:IsA("BasePart") then
+        return head.Position
+    end
+    
+    -- Пытаемся найти PrimaryPart
+    local success, primaryPart = pcall(function()
+        return obj.PrimaryPart
+    end)
+    if success and primaryPart and primaryPart:IsA("BasePart") then
+        return primaryPart.Position
+    end
+    
+    -- Ищем любую BasePart
+    for _, child in pairs(obj:GetChildren()) do
+        if child:IsA("BasePart") then
+            return child.Position
+        end
+    end
+    
+    -- Получаем позицию через pcall для Attachment и других объектов
+    local success, pos = pcall(function()
+        return obj.Position
+    end)
+    if success and type(pos) == "Vector3" then
+        return pos
+    end
+    
+    return nil
+end
+
 -- Функция для получения всех промптов вокруг игрока
 local function getPromptsInRange()
     local prompts = {}
@@ -198,25 +238,18 @@ local function getPromptsInRange()
     for _, prompt in pairs(workspace:GetDescendants()) do
         if prompt:IsA("ProximityPrompt") then
             local promptParent = prompt.Parent
-            local promptPosition = promptParent and promptParent:FindFirstChild("HumanoidRootPart") or promptParent and promptParent:FindFirstChild("Head")
-            
-            if promptPosition and promptPosition.Position then
-                local distance = (rootPos - promptPosition.Position).Magnitude
-                if distance <= _G.ScanRange then
-                    table.insert(prompts, {
-                        prompt = prompt,
-                        position = promptPosition.Position,
-                        distance = distance
-                    })
-                end
-            elseif promptParent and promptParent.PrimaryPart then
-                local distance = (rootPos - promptParent.PrimaryPart.Position).Magnitude
-                if distance <= _G.ScanRange then
-                    table.insert(prompts, {
-                        prompt = prompt,
-                        position = promptParent.PrimaryPart.Position,
-                        distance = distance
-                    })
+            if promptParent then
+                local promptPosition = getObjectPosition(promptParent)
+                
+                if promptPosition then
+                    local distance = (rootPos - promptPosition).Magnitude
+                    if distance <= _G.ScanRange then
+                        table.insert(prompts, {
+                            prompt = prompt,
+                            position = promptPosition,
+                            distance = distance
+                        })
+                    end
                 end
             end
         end
@@ -244,8 +277,9 @@ end
 -- Функция для автоматического взаимодействия с промптами
 local function autoInteractLoop()
     while _G.AutoInteractEnabled do
-        local nearest = findNearestPrompt()
-        if nearest and nearest.Enabled then
+        local success, nearest = pcall(findNearestPrompt)
+        
+        if success and nearest and nearest.Enabled then
             StatusLabel.Text = "Status: Interacting with prompt"
             StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
             
@@ -253,20 +287,29 @@ local function autoInteractLoop()
             local originalDuration = nearest.HoldDuration
             nearest.HoldDuration = 0
             
-            -- Симулируем нажатие на промпт
-            local args = {
-                [1] = nearest
-            }
-            
             -- Запускаем взаимодействие
-            nearest:Prompt()
+            local promptSuccess, errorMsg = pcall(function()
+                nearest:Prompt()
+            end)
+            
+            if not promptSuccess then
+                -- Если не сработало, пытаемся симулировать нажатие
+                pcall(function()
+                    local fireProximityPrompt = prompt and prompt.Prompt or nil
+                    if fireProximityPrompt then
+                        fireProximityPrompt:Fire()
+                    end
+                end)
+            end
             
             task.wait(0.1)
             
             -- Восстанавливаем оригинальную задержку
-            if nearest and nearest.Parent then
-                nearest.HoldDuration = originalDuration
-            end
+            pcall(function()
+                if nearest and nearest.Parent then
+                    nearest.HoldDuration = originalDuration
+                end
+            end)
             
             task.wait(0.05)
         else
@@ -286,9 +329,11 @@ local function findPromptsLoop()
         
         -- Удаляем старые подсветки
         for _, effect in pairs(highlightEffects) do
-            if effect and effect.Parent then
-                effect:Destroy()
-            end
+            pcall(function()
+                if effect and effect.Parent then
+                    effect:Destroy()
+                end
+            end)
         end
         table.clear(highlightEffects)
         
@@ -298,16 +343,17 @@ local function findPromptsLoop()
             local promptParent = prompt.Parent
             
             if promptParent and not highlightEffects[promptParent] then
-                local highlight = Instance.new("Highlight")
-                highlight.Parent = promptParent
-                highlight.FillColor = Color3.fromRGB(0, 255, 0)
-                highlight.FillTransparency = 0.7
-                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                highlight.OutlineTransparency = 0.3
-                highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                table.insert(highlightEffects, highlight)
-                
-                highlightEffects[promptParent] = highlight
+                pcall(function()
+                    local highlight = Instance.new("Highlight")
+                    highlight.Parent = promptParent
+                    highlight.FillColor = Color3.fromRGB(0, 255, 0)
+                    highlight.FillTransparency = 0.7
+                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    highlight.OutlineTransparency = 0.3
+                    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                    table.insert(highlightEffects, highlight)
+                    highlightEffects[promptParent] = highlight
+                end)
             end
         end
         
@@ -324,9 +370,11 @@ local function findPromptsLoop()
     
     -- Очищаем подсветки при выключении
     for _, effect in pairs(highlightEffects) do
-        if effect and effect.Parent then
-            effect:Destroy()
-        end
+        pcall(function()
+            if effect and effect.Parent then
+                effect:Destroy()
+            end
+        end)
     end
 end
 
@@ -334,13 +382,15 @@ end
 ProximityPromptService.PromptShown:Connect(function(prompt)
     if _G.AutoInteractEnabled then
         task.spawn(function()
-            prompt.HoldDuration = 0
-            prompt:Prompt()
-            task.wait(0.05)
-            if prompt and prompt.Parent then
+            pcall(function()
                 local originalDuration = prompt.HoldDuration
-                prompt.HoldDuration = originalDuration or 1
-            end
+                prompt.HoldDuration = 0
+                prompt:Prompt()
+                task.wait(0.05)
+                if prompt and prompt.Parent then
+                    prompt.HoldDuration = originalDuration
+                end
+            end)
         end)
     end
 end)
@@ -395,7 +445,7 @@ end)
 UserInputService.InputChanged:Connect(function(input)
     if draggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local relativeX = math.clamp((input.Position.X - RangeSlider.AbsolutePosition.X) / RangeSlider.AbsoluteSize.X, 0, 1)
-        local newRange = math.floor(relativeX * 45 + 5) -- От 5 до 50
+        local newRange = math.floor(relativeX * 45 + 5)
         
         SliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
         _G.ScanRange = newRange
@@ -403,7 +453,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Обновление позиции слайдера при изменении диапазона
+-- Обновление позиции слайдера
 local function updateSliderPosition()
     local percentage = (_G.ScanRange - 5) / 45
     SliderFill.Size = UDim2.new(percentage, 0, 1, 0)
