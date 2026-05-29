@@ -7,6 +7,7 @@ local newSpeed = 100000
 local oldSpeed = humanoid.WalkSpeed
 
 humanoid.WalkSpeed = newSpeed
+while true do 
 
 -- Проверка: изменилась ли скорость?
 if humanoid.WalkSpeed == newSpeed then
