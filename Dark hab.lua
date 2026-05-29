@@ -1,17 +1,20 @@
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
-local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
-
 local newSpeed = 100000
-local oldSpeed = humanoid.WalkSpeed
 
-humanoid.WalkSpeed = newSpeed
-while true do 
+local lastSpeed = 0
 
--- Проверка: изменилась ли скорость?
-if humanoid.WalkSpeed == newSpeed then
-    print("✅ Скорость УВЕЛИЧЕНА! Было: " .. oldSpeed .. ", Стало: " .. humanoid.WalkSpeed)
-else
-    print("❌ Не удалось изменить скорость. Возможно, стоит ограничение.")
+while true do
+    local character = localPlayer.Character
+    if character then
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid and humanoid.WalkSpeed ~= newSpeed then
+            humanoid.WalkSpeed = newSpeed
+            if lastSpeed ~= humanoid.WalkSpeed then
+                print("🔄 Восстановил скорость: " .. humanoid.WalkSpeed)
+                lastSpeed = humanoid.WalkSpeed
+            end
+        end
+    end
+    task.wait(0.05)  -- 20 раз в секунду
 end
