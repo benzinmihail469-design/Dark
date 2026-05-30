@@ -1,20 +1,3 @@
-local Players = game:GetService("Players")
-local localPlayer = Players.LocalPlayer
-local newSpeed = 100000
+local CleanUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua"))()
 
-local lastSpeed = 0
-
-while true do
-    local character = localPlayer.Character
-    if character then
-        local humanoid = character:FindFirstChild("Humanoid")
-        if humanoid and humanoid.WalkSpeed ~= newSpeed then
-            humanoid.WalkSpeed = newSpeed
-            if lastSpeed ~= humanoid.WalkSpeed then
-                print("🔄 Восстановил скорость: " .. humanoid.WalkSpeed)
-                lastSpeed = humanoid.WalkSpeed
-            end
-        end
-    end
-    task.wait(0.05)  -- 20 раз в секунду
-end
+local Window = CleanUI:CreateWindow("Мой Чит", "Dark") -- темы: "Dark", "Purple", "Blue", "Green"
