@@ -1,7 +1,20 @@
-local CleanUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua"))()
+-- 1. Сначала вставляешь весь код библиотеки выше, присвоив его переменной:
+-- (Допустим, код выше выполнен, и у нас есть объект ModernLib)
 
-local Window = CleanUI:CreateWindow("Dark Hub", "Dark") -- темы: "Dark", "Purple", "Blue", "Green"
+-- 2. Создаем твое новое красивое окно
+local MyUI = ModernLib:CreateWindow("⚡ BRAINROT HUB v2.0")
 
-local MainTab = Window:AddTab("main")
+-- 3. Добавляем кнопки в один клик!
+MyUI:CreateButton("🤖 Включить Perfect Hits (Авто-удар)", function()
+    print("Perfect Hits активирован!")
+    -- Сюда пишешь свой скрипт автоматизации
+end)
 
-local CombatSection = MainTab:AddSection("walk speed")
+MyUI:CreateButton("🔥 Собрать Brainrot предметы", function()
+    print("Предметы собираются...")
+    -- Твой код на сбор лута
+end)
+
+MyUI:CreateButton("💨 Скорость х2", function()
+    game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 32
+end)
