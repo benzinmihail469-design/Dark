@@ -1,27 +1,26 @@
---[[
-	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
-]]
-local Noclip = nil
-local Clip = nil
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
 
-function noclip()
-	Clip = false
-	local function Nocl()
-		if Clip == false and game.Players.LocalPlayer.Character ~= nil then
-			for _,v in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
-				if v:IsA('BasePart') and v.CanCollide and v.Name ~= floatName then
-					v.CanCollide = false
-				end
-			end
-		end
-		wait(0.21) -- basic optimization
-	end
-	Noclip = game:GetService('RunService').Stepped:Connect(Nocl)
-end
+local LocalPlayer = Players.LocalPlayer
+local noclipEnabled = false
+local toggleKey = Enum.KeyCode.N
 
-function clip()
-	if Noclip then Noclip:Disconnect() end
-	Clip = true
-end
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == toggleKey then
+        noclipEnabled = not noclipEnabled
+    end
+end)
 
-noclip() -- to toggle noclip() and clip()
+RunService.RenderStepped:Connect(function()
+    if not noclipEnabled then return end
+    
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    
+    if hrp and humanoid and humanoid.MoveDirection.Magnitude > 0 then
+        -- Смещает персонажа вперед сквозь стены без изменения CanCollide
+        hrp.CFrame = hrp.CFrame + (humanoid.MoveDirection * 0.35)
+    end
+end)
