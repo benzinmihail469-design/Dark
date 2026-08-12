@@ -1,18 +1,4 @@
-Skip to content
- 
-Search Gists
-Search...
-All gists
-Back to GitHub
-@ffdrrdfdew-alt
-ffdrrdfdew-alt/Mm2
-Last active last month • Report abuse
-Code
-Revisions
-2
-Clone this repository at &lt;script src=&quot;https://gist.github.com/ffdrrdfdew-alt/3914a8fcd39b0cd4e57216e457be719d.js&quot;&gt;&lt;/script&gt;
-<script src="https://gist.github.com/ffdrrdfdew-alt/3914a8fcd39b0cd4e57216e457be719d.js"></script>
-Mm2
+
 -- Инструментарий для манипуляции игровыми объектами (MM2)
 -- UI Library: Rayfield
 
