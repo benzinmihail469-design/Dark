@@ -1,1630 +1,1143 @@
---!strict
--- made by Zynic
---------------------------------VARIABLES SECTION OF THE CODE-----------------------------------
-------------------------------------------------------------------------------------------------
-local Octree
-local library
-local Iris
-
-if httpget then
-	Octree = loadstring(httpget("https://raw.githubusercontent.com/Sleitnick/rbxts-octo-tree/main/src/init.lua", true))()
-	library = loadstring(httpget("https://raw.githubusercontent.com/Zyn-ic/MM2-AutoFarm/refs/heads/main/UI-Library/XSX.lua", true))()
-	Iris = loadstring(httpget("https://raw.githubusercontent.com/x0581/Iris-Exploit-Bundle/2.0.4/bundle.lua"))().Init(game.CoreGui)
-else
-	game:GetService("StarterGui"):SetCore("SendNotification", { Title = "Using Old Method", Text = "using discontinued 'game:HttpGet'", Duration = 4 })
-	Octree = loadstring(game:HttpGet("https://raw.githubusercontent.com/Sleitnick/rbxts-octo-tree/main/src/init.lua", true))()
-	library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zyn-ic/MM2-AutoFarm/refs/heads/main/UI-Library/XSX.lua", true))()
-	Iris = loadstring(game:HttpGet("https://raw.githubusercontent.com/x0581/Iris-Exploit-Bundle/2.0.4/bundle.lua"))().Init(game.CoreGui)
-end
-
---local WayPointManager = loadstring(httpget("https://raw.githubusercontent.com/Zyn-ic/MM2-AutoFarm/refs/heads/main/Iris-Functions/WayPointManager", true))()
-
-local Notif = library:InitNotifications()
-library.rank = "developer"
-
-
-local rt = {} -- Removable table
-rt.__index = rt
-rt.octree = Octree.new()
-
-rt.Players = game:GetService("Players")
-rt.RunService = game:GetService("RunService")
-rt.CoreGui = game:GetService("CoreGui")
-rt.TeleportService = game:GetService("TeleportService")
-rt.HttpService = game:GetService("HttpService")
-rt.Camera = game:GetService("Workspace").CurrentCamera
-
-rt.IWPM = false :: boolean-- Iris WayPointManager
-
-rt.player = rt.Players.LocalPlayer :: Player
-rt.sheriff = nil :: Player 
-rt.Murderer = nil :: Player 
-rt.PreviousMurderer = nil :: Player
-rt.Viewing = false :: boolean
-rt.RoleTracker1 = nil :: RBXScriptConnection 
-rt.RoleTracker2 = nil :: RBXScriptConnection 
-rt.WeaponTracker1 = nil :: RBXScriptConnection 
-rt.WeaponTracker2 = nil :: RBXScriptConnection
-rt.Joined = nil :: RBXScriptConnection 
-rt.Left = nil :: RBXScriptConnection 
-rt.viewChanged = nil :: RBXScriptConnection 
-rt.viewDiedFunc = nil :: RBXScriptConnection 
-rt.Map = nil :: Model 
-
-rt.flingActive = false :: boolean
-rt.refresh = nil :: (boolean?) -> ()
-
-rt.HitboxSize = nil :: number
-
-rt.espON = false :: boolean
-rt.playerESP = {}
-
-
-rt.AutoFarmOn = false
-rt.coinContainer = nil
-rt.Material = Enum.Material.Ice :: EnumItem
-rt.TpBackToStart = true :: boolean
-rt.Uninterrupted = false :: boolean
-rt.radius = 200 :: number -- Radius to search for coins
-rt.walkspeed = 35 :: number -- speed at which you will go to a coin measured in walkspeed
-rt.touchedCoins = {} -- Table to track touched coins
-rt.positionChangeConnections = setmetatable({}, { __mode = "v" }) -- Weak table for connections
-rt.Added = nil :: RBXScriptConnection
-rt.Removing = nil :: RBXScriptConnection
-rt.start = nil :: thread
-
-rt.UserDied = nil :: RBXScriptConnection
-
-rt.Settings = {}
-rt.waypoint = nil :: CFrame
-rt.Settings.WayPoints = {}
-
-
----------------------------------------LOCAL FUNCTIONS-------------------------------------------
--------------------------------------------------------------------------------------------------
-
--- Function to set a palyer Collision Status
--- local function setCharacterCollision (character: Model, state:boolean)
---     for _, part in pairs(character:GetDescendants()) do
---         if part:IsA("BasePart") or part:IsA("MeshPart") then
---             part.CanCollide = state
---         end
---     end
--- end
-
--- Function to teleport to a player
-local function TeleportToPlayer(targetPlayer)
-    if rt:Character() and rt:Character():FindFirstChild("HumanoidRootPart") and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        rt:Character():PivotTo(targetPlayer.Character:GetPivot())
-    end
-end
-
--- Function to disconnect ESP for a player
-local function RemovePlayerESP(player)
-    if rt.playerESP[player] then
-        rt.playerESP[player].button.Parent:Destroy()
-        rt.Disconnect(rt.playerESP[player].connection1)
-        rt.Disconnect(rt.playerESP[player].connection2)
-        rt.Disconnect(rt.playerESP[player].connection3)
-        rt.playerESP[player] = nil
-    end
-end
-
--- Function to create the UI for a player's ESP
-local function CreatePlayerESP(player)
-    if rt.espON == false then return end
-    if rt.playerESP[player] then return end -- Prevent duplicate ESPs
-
-    -- Create ScreenGui for the ESP
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "CorePosition_" .. player.Name
-    screenGui.Parent = game:GetService("CoreGui")
-
-    -- Create a button for the ESP
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(0, 25, 0, 25) -- Size of the button
-    button.Text = "👤"
-    button.BackgroundColor3 = Color3.fromRGB(94, 94, 94) -- Default grey color
-    button.TextSize = 14
-    button.Visible = false
-    button.Parent = screenGui
-    Instance.new("UICorner").Parent = button -- Rounded corners
-
-    -- Track the button and connection
-    rt.playerESP[player] = { button = button, connection1 = nil, connection2 = nil, connection3 = nil }
-
-	local lastClick = 0
-	local holdingStartTime = 0
-	local holding = false
-
-	button.MouseButton1Down:Connect(function()
-		holdingStartTime = tick()
-		holding = true
-
-		-- Start a task to check if the button is held for 1.5 seconds
-		task.spawn(function()
-			while holding do
-				if tick() - holdingStartTime >= 0.3 then
-					TeleportToPlayer(player) -- Teleport after 1.5 seconds
-					holding = false -- Stop the loop
-					break
-				end
-				task.wait()
-			end
-		end)
-	end)
-
-	button.MouseButton1Up:Connect(function()
-		holding = false -- Stop checking when the button is released
-
-		local now = tick()
-
-		-- Handle button double-click for removing ESP
-		if now - lastClick < 0.5 then
-			RemovePlayerESP(player)
-		end
-
-		lastClick = now -- Update last click time
-	end)
-
-
-    -- Update button's position and properties each frame
-    rt.playerESP[player].connection1 = rt.RunService.RenderStepped:Connect(function()
-        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local character = player.Character
-            local rootPart = character.HumanoidRootPart
-            local screenPoint = rt.Camera:WorldToScreenPoint(rootPart.Position)
-
-            -- Check if the player is on screen
-            if screenPoint.Z > 0 then
-                button.Position = UDim2.new(0, screenPoint.X - button.Size.X.Offset / 2, 0, screenPoint.Y - button.Size.Y.Offset / 2)
-                button.Visible = true
-
-                -- Update button text and color based on role
-                if rt.Murderer ~= nil and player.Name == rt.Murderer.Name then
-                    button.Text = "🔪"
-                    button.BackgroundColor3 = Color3.fromRGB(184, 88, 88) -- Red
-                elseif rt.sheriff ~= nil and player.Name == rt.sheriff.Name then
-                    button.Text = "🔫"
-                    button.BackgroundColor3 = Color3.fromRGB(99, 99, 168) -- Blue
-                else
-                    button.Text = "👤"
-                    button.BackgroundColor3 = Color3.fromRGB(94, 94, 94) -- Grey
-                end
-            else
-                button.Visible = false
-            end
-        else
-            -- Update button to "dead" state
-            button.Text = "💀"
-            button.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Black
-            button.Visible = true
-        end
-    end)
-
-    -- Update ESP when the player dies or respawns
-    rt.playerESP[player].connection2 = player.CharacterRemoving:Connect(function()
-        button.Text = "💀"
-        button.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Black
-    end)
-
-    rt.playerESP[player].connection3 = player.CharacterAdded:Connect(function()
-		task.wait()
-        button.Text = "👤"
-        button.BackgroundColor3 = Color3.fromRGB(94, 94, 94) -- Grey
-        -- Refresh roles dynamically
-        if rt.Murderer ~= nil and player.Name == rt.Murderer.Name then
-            button.Text = "🔪"
-            button.BackgroundColor3 = Color3.fromRGB(184, 88, 88) -- Red
-        elseif rt.sheriff ~= nil and player.Name == rt.sheriff.Name then
-            button.Text = "🔫"
-            button.BackgroundColor3 = Color3.fromRGB(99, 99, 168) -- Blue
-        end
-    end)
-
-end
-
--- Function to refresh ESP roles dynamically
-local function RefreshRoles(newMurderer, newSheriff)
-    local murdererName = newMurderer or ""
-    local sheriffName = newSheriff or ""
-
-    -- Refresh all existing ESP buttons
-    for player, espData in pairs(rt.playerESP) do
-        local button = espData.button
-        if  player.Name == murdererName then
-            button.Text = "🔪"
-            button.BackgroundColor3 = Color3.fromRGB(184, 88, 88) -- Red
-        elseif player.Name == sheriffName then
-            button.Text = "🔫"
-            button.BackgroundColor3 = Color3.fromRGB(99, 99, 168) -- Blue
-        else
-            button.Text = "👤"
-            button.BackgroundColor3 = Color3.fromRGB(94, 94, 94) -- Grey
-        end
-    end
-end
-
-local function createHitboxForPlayers(players, sizeArg, Trans:number ?)
-    for _, v in pairs(players) do
-        if v.Name == rt.player.Name then continue end
-        if v.Character and v.Character:FindFirstChild('HumanoidRootPart') then
-            local Size = Vector3.new(sizeArg, sizeArg, sizeArg)
-            local Root = v.Character:FindFirstChild('HumanoidRootPart')
-            if Root:IsA("BasePart") then
-                if not sizeArg or sizeArg == 1 then
-                    Root.Size = Vector3.new(2, 2, 1)
-                    Root.Transparency = Trans or 0.3
-                    Root.CanCollide = false;
-                else
-                    --reset hitbox
-                    if sizeArg == 0 then Root.Size = rt:Character().PrimaryPart.Size; Root.Transparency = Trans or 1; Root.CanCollide = true; continue end
-                    
-                    -- set hitbox
-                    Root.Size = Size
-                    Root.Transparency = Trans or  0.3
-                    Root.CanCollide = false;
-                end
-            end
-        end
-    end
-end
-
----------------------------------------ATUOFARM SECTION--------------------------------------
-local collectCoins
-local function AutoFarmCleanUp()
-    -- Check if the table is empty
-    if next(rt.positionChangeConnections) == nil then
-        rt.AutoFarmOn = false
-        print("No items in positionChangeConnections")
-        return true
-    end
-
-    rt.AutoFarmOn = false
-    coroutine.yield(rt.start)
-    coroutine.close(rt.start)
-    if coroutine.status(rt.start) == "suspended" then
-        coroutine.yield(rt.start)
-        coroutine.close(rt.start)
-    end
-    
-    -- Disconnect all connections
-    for _, connection in pairs(rt.positionChangeConnections) do
-        rt.Disconnect(connection)
-    end
-    rt.Disconnect(rt.Added)
-    rt.Disconnect(rt.Removing)
-
-    -- Notify and clean up
-    Notif:Notify("Removing cached instances for AutoFarm", 1.5, "success")
-    table.clear(rt.touchedCoins)
-    table.clear(rt.positionChangeConnections)
-    
-    task.wait(1)
-    rt.start = coroutine.create(collectCoins)
-    return true
-end
-
-
--- Function to check if a coin has been touched
-local function isCoinTouched(coin)
-    return rt.touchedCoins[coin]
-end
-
--- Function to mark a coin as touched
-local function markCoinAsTouched(coin)
-    if not rt then return end
-    rt.touchedCoins[coin] = true
-    local node = rt.octree:FindFirstNode(coin)
-    if node then
-        rt.octree:RemoveNode(node)
-    end
-end
-
--- Function to track touch interactions
-local function setupTouchTracking(coin)
-    
-    local touchInterest = coin:FindFirstChildWhichIsA("TouchTransmitter")
-    if touchInterest then
-        local connection
-        connection = touchInterest.AncestryChanged:Connect(function(_, parent)
-            if not rt then connection:Disconnect() return end
-            if parent == nil then
-                -- TouchInterest removed; mark the coin as touched
-                markCoinAsTouched(coin)
-                rt.Disconnect(connection)
-            end
-        end)
-        rt.positionChangeConnections[coin] = connection
-    end
-end
-
-local function setupPositionTracking(coin: MeshPart, LastPositonY: number)
-    local connection
-    connection = coin:GetPropertyChangedSignal("Position"):Connect(function()
-        -- Check if the Y position has changed
-        local currentY = coin.Position.Y
-        if LastPositonY and LastPositonY ~= currentY then
-
-            -- Remove the coin from the octree as it has been moved
-            markCoinAsTouched(coin)
-
-            rt.Disconnect(connection)
-            coin:Destroy()
-            return
-        end
-    end)
-    rt.positionChangeConnections[coin] = connection
-end
-
--- Function to populate the Octree with coins
-local function populateOctree()
-    rt.octree:ClearAllNodes() -- Clear previous nodes
-
-    for _, descendant in pairs(rt.coinContainer:GetDescendants()) do
-        if descendant:IsA("TouchTransmitter") then --and descendant.Material == rt.Material then
-            local parentCoin = descendant.Parent
-            if not isCoinTouched(parentCoin) then
-                rt.octree:CreateNode(parentCoin.Position, parentCoin)
-                setupTouchTracking(parentCoin)
-            end
-            setupPositionTracking(parentCoin, parentCoin.Position.Y)
-        end
-    end
-
-    rt.Added = rt.coinContainer.DescendantAdded:Connect(function(descendant)
-        if descendant:IsA("TouchTransmitter") then --and descendant.Material == rt.Material then
-            local parentCoin = descendant.Parent
-            if not isCoinTouched(parentCoin) then
-                rt.octree:CreateNode(parentCoin.Position, parentCoin)
-                setupTouchTracking(parentCoin)
-                setupPositionTracking(parentCoin, parentCoin.Position.Y)
-            end
-        end
-    end)
-
-    rt.Removing = rt.coinContainer.DescendantRemoving:Connect(function(descendant)
-        if descendant:IsA("TouchTransmitter") and descendant.Parent.Name == "Coin_Server" then
-            local parentCoin = descendant.Parent
-            if isCoinTouched(parentCoin) then
-                markCoinAsTouched(parentCoin)
-            end
-        end
-    end)
-end
-
-local function moveToPositionSlowly(targetPosition: Vector3, duration: number)
-    rt.humanoidRootPart = rt:Character().PrimaryPart
-    local startPosition = rt.humanoidRootPart.Position
-    local startTime = tick()
-    
-    while true do
-        local elapsedTime = tick() - startTime
-        local alpha = math.min(elapsedTime / duration, 1)
-        rt:Character():PivotTo(CFrame.new(startPosition:Lerp(targetPosition, alpha)))
-
-        if alpha >= 1 then
-            task.wait(0.2)
-            break
-        end
-
-        task.wait() -- Small delay to make the movement smoother
-    end
-end
-
--- Function to collect coins
-collectCoins = function ()
-    -- Ensure CoinContainer exists
-    rt.coinContainer = rt:Map():FindFirstChild("CoinContainer")
-    rt.waypoint = rt:Character():GetPivot()
-    local check = rt:MainGUI():WaitForChild("Game").CoinBags.Container.SnowToken.CurrencyFrame.Icon.Coins
-    local price = "40"
-    if rt:IsElite() then price = "50" end
-
-    -- Populate Octree
-    populateOctree()
-    
-    while rt.AutoFarmOn do
-        if check.Text == price then
-            Notif:Notify("Full Bag", 2, "success")
-            break
-        end
-
-        -- Find nearest coin
-        local nearestNode = rt.octree:GetNearest(rt:Character().PrimaryPart.Position, rt.radius, 1)[1]
-
-        if nearestNode then
-            local closestCoin = nearestNode.Object
-            if not isCoinTouched(closestCoin) then
-                local closestCoinPosition = closestCoin.Position
-                local distance = (rt:Character().PrimaryPart.Position - closestCoinPosition).Magnitude
-                local duration = distance / rt.walkspeed -- Default walk speed is 26 studs/sec
-
-                -- Move to the coin
-                moveToPositionSlowly(closestCoinPosition, duration)
-
-                -- Mark coin as touched and clean up
-                markCoinAsTouched(closestCoin)
-                task.wait(0.2) -- Ensure touch is registered
-            end
-        else
-            task.wait(1) -- No coins; retry after delay
-        end
-    end
-
-    if rt.TpBackToStart then
-        rt:Character():PivotTo(rt.waypoint)
-    end
-    AutoFarmCleanUp()
-end
-
-local function ToggleAutoFarm(value : boolean)
-    if not value then
-        return AutoFarmCleanUp()
-    end
-
-    if not rt:CheckIfGameInProgress() then Notif:Notify("Map must be loaded to use Autofarm", 2, "error") return false  end
-    if not rt:CheckIfPlayerWasInARound() then Notif:Notify("You need to be in a round or have played a round to use the autofarm", 5, "error") return false end
-    if not rt.Murderer then Notif:Notify("No Murderer found to satisfy: Round in Progress", 4, "information") return false  end
-    local isAlive = rt:CheckIfPlayerIsInARound()
-    local OldState = rt.Uninterrupted
-    local IsMurderer = rt.player.Name == rt.Murderer.Name
-
-    --if the player is the murderer and has on rt.Uninterrupted
-    if rt.Uninterrupted and IsMurderer then rt.Uninterrupted = false; IsMurderer = not IsMurderer end
-
-    if rt.Uninterrupted then
-        rt:Character():FindFirstChildWhichIsA("Humanoid"):ChangeState(Enum.HumanoidStateType.Dead)
-        repeat task.wait() until rt.player.CharacterAdded:Wait()  --rt.player:HasAppearanceLoaded()
-        task.wait(1)
-        TeleportToPlayer(rt.Murderer)
-        --start autofarm
-        Notif:Notify("Uninterrupted made it all the way", 4, "alert")
-        rt.AutoFarmOn = true
-        coroutine.resume(rt.start)
-    else
-        if rt.Uninterrupted ~= OldState then rt.Uninterrupted = OldState end
-
-        if IsMurderer then
-            if not isAlive then Notif:Notify("Died before you could start? sad ngl ", 4, "alert") return false end 
-            --start autofarm
-            Notif:Notify("Collect sum coins Murderer!", 4, "alert")
-            rt.AutoFarmOn = true
-            coroutine.resume(rt.start)
-        else
-            --start autofarm
-            if not isAlive then TeleportToPlayer(rt.Murderer) end
-            Notif:Notify("Normal made it all the way", 4, "alert")
-            rt.AutoFarmOn = true
-            coroutine.resume(rt.start)
-        end
-    end
-
-    return true
-end
-
---------------------------------FUNCTIONS SECTION OF THE CODE-----------------------------------
-------------------------------------------------------------------------------------------------
-
-function rt:MainGUI () : (ScreenGui)
-    return rt.player.PlayerGui.MainGUI or rt.player.PlayerGui:WaitForChild("MainGUI")
-end
-
-function rt:Character () : (Model)
-    return self.player.Character or self.player.CharacterAdded:Wait()
-end
-
-function rt.Disconnect (connection:RBXScriptConnection)
-    if connection and connection.Connected then
-        connection:Disconnect()
-    end
-end
-
-function rt.FindPlayer(val : string) : (Player)
-    local match
-    for _, v : Player in pairs(rt.Players:GetChildren()) do
-        if string.match(v.Name:lower(), val:lower()) or string.match(v.DisplayName:lower(), val:lower()) then
-            match = v
-        end
-    end
-
-    return match
-end
-
-function rt:Map () : (Model | nil)
-    for _, v in workspace:GetDescendants() do
-        if v.Name == "Spawns" and v.Parent.Name ~= "Lobby"  then
-            return v.Parent
-        end
-    end
-    return nil
-end
-
-function rt:CheckForConnection () : (boolean) -- if someone reload the script while script this will help us know
-    if self.player:GetAttribute("Connection") then
-        return true
-    end
-    
-    return false
-end
-
-function rt:IsElite() : (boolean)
-    if self.player:GetAttribute("Elite") then
-        return true
-    end
-
-    return false
-end
-
-function rt:CheckIfGameInProgress () : (boolean)
-    if rt:Map() then return true end
-    return false
-end
-
-function rt:CheckIfPlayerIsInARound () : (boolean)
-    --check if player is in a round
-    --check by going to the players gui -> MainGui -> Game -> Timer.Visible
-    if not self:MainGUI() then return false end
-
-    if self:MainGUI().Game.Timer.Visible then
-        return true
-    end
-
-    --check by going to the players gui -> MainGui -> Game -> EarnedXP.Visible
-    if self:MainGUI().Game.EarnedXP.Visible then
-        return true
-    end
-
-    return false
-end
-
-function rt:CheckIfPlayerWasInARound () : (boolean)
-    --check if player was in a round
-    --check by going to the players -> localplayer -> GetAttributes() -> "Alive"
-    if self.player:GetAttribute("Alive") then
-        return true
-    end
-
-    return false
-end
-
-function rt:GetAlivePlayers (): (table | nil)
-    --get all players that are alive
-    local aliveplrs = setmetatable({}, {__mode = "v"})
-    local OldPos = self:Character():GetPivot()
-    local pos = CFrame.new(-121.995956, 134.462997, 46.4180717)
-    
-    if not rt:CheckIfGameInProgress() then return nil end
-
-    local isAlive = rt:CheckIfPlayerIsInARound()
-
-    if not isAlive then self:Character():PivotTo(pos) end
-
-    for _, v in pairs(rt.Players:GetPlayers()) do
-        local distance = (self:Character().PrimaryPart.Position - v.Character.PrimaryPart.Position).Magnitude
-        if isAlive then
-            if distance <= 500 then
-                table.insert(aliveplrs, v)
-            end
-        else
-            if distance > 500 then
-                table.insert(aliveplrs, v)
-            end
-        end
-    end
-
-    if not isAlive then self:Character():PivotTo(OldPos) end
-    
-    return aliveplrs
-end
-
-function rt:GetRoles() : {sheriff: Player | nil, Murderer : Player | nil}
-    if rt.sheriff ~= nil or rt.Murderer ~= nil then return {sheriff = rt.sheriff, Murderer = rt.Murderer} end
-
-    local checkBackPacks = function()
-        for _, v in pairs(rt.Players:GetPlayers()) do
-            if v.Backpack:FindFirstChild("Gun") then
-                rt.sheriff = v
-            elseif v.Backpack:FindFirstChild("Knife") then
-                rt.Murderer = v
-            end
-        end
-    end
-
-    local checkCharacters = function()
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("Tool") then
-                if v.Name == "Gun" then
-                    rt.sheriff = rt.Players:GetPlayerFromCharacter(v.Parent)
-                elseif v.Name == "Knife" then
-                    rt.Murderer = rt.Players:GetPlayerFromCharacter(v.Parent)
-                end
-            end
-        end
-    end
-
-    coroutine.wrap(checkBackPacks)
-    coroutine.wrap(checkCharacters)
-
-    task.wait(0.5)
-
-    return {sheriff = rt.sheriff, Murderer = rt.Murderer}
-end
-
-function rt:SpeedUp () : (boolean)
-    --speed up the player no more than 28
-    if self:Character():FindFirstChildWhichIsA("Humanoid").WalkSpeed == 28 then return false end
-    self:Character():FindFirstChildWhichIsA("Humanoid").WalkSpeed += 4
-
-    return true
-end
-
-function rt:ResetSpeed () : (boolean)
-    if self:Character():FindFirstChildWhichIsA("Humanoid").WalkSpeed == 16 then return false end
-    self:Character():FindFirstChildWhichIsA("Humanoid").WalkSpeed = 16
-    
-    return true
-end
-
-function rt:ViewMurderer () : (boolean | string)
-    
-    if not self.Murderer then self.Viewing = true return false end
-    if self.Viewing then return Notif:Notify("alr in view", 1, "error") end
-    self.Viewing = true
-
-    self.Camera.CameraSubject = self.Murderer and self.Murderer.Character:FindFirstChildWhichIsA("Humanoid") or self:Character():FindFirstChildWhichIsA("Humanoid")
-    
-    self.viewChanged = workspace.CurrentCamera:GetPropertyChangedSignal("CameraSubject"):Connect(function()
-        if not self.Murderer then return rt:UnViewMurderer() end
-        self.Murderer.CharacterAdded:Wait()
-        self.Camera.CameraSubject = self.Murderer and self.Murderer.Character:FindFirstChildWhichIsA("Humanoid") or self:Character():FindFirstChildWhichIsA("Humanoid")
-    end)
-
-    self.viewDiedFunc = self.player.CharacterAdded:Connect(function()
-        rt:UnViewMurderer()
-    end)
-
-    return true
-end
-
-function rt:UnViewMurderer () : (boolean | string)
-    
-    if not self.Murderer then self.Viewing = false; self.Camera.CameraSubject = self:Character():FindFirstChildWhichIsA("Humanoid")  return false end
-    if not self.Viewing then return  Notif:Notify("alr removed view", 1, "error") end
-    self.Viewing = false
-
-    local camera = game.Workspace.CurrentCamera
-    rt.Disconnect(rt.viewChanged)
-    rt.Disconnect(rt.viewDiedFunc)
-    self.Camera.CameraSubject = self:Character():FindFirstChildWhichIsA("Humanoid")
-    return true
-end
-
-function rt:GetGun ()
-    if not (rt:CheckIfGameInProgress()) then return Notif:Notify("No game in progress", 1, "error") end
-
-    local Gun = rt:Map():FindFirstChild("GunDrop") :: BasePart | MeshPart -- getinstances()["GunDrop"]
-    if not Gun then return Notif:Notify("No Gun found", 1, "error") end
-
-    if rt.Settings.Safe_Gun_Grab then
-        local distance = (rt:Character().PrimaryPart.Position - Gun.Position).Magnitude
-        if distance > 500 then
-            distance = nil
-            return Notif:Notify("Gun is too far away [Safe Gun Grab]", 1, "error")
-        end
-    end
-
-    rt:Character():PivotTo(Gun:GetPivot())
-    task.wait(0.2) -- wait for the character to pick up the gun
-
-    if not rt.player.Backpack:FindFirstChild("Gun") then
-        return Notif:Notify("Failed to get the gun. Sorry Sheriff you had your chance 😔.", 2, "alert")
-    end
-
-    Notif:Notify("Successfully picked up the gun", 1, "success")
-    Gun = nil
-end
-
-function rt.LoadRoleInfo (roles, MurdFolder : {}, SherFolder : {})
-    -- Load in Murderer info
-    if roles.Murderer then
-        
-        MurdFolder.MurdName:Text("Murderer Username: " .. roles.Murderer.Name)
-        MurdFolder.MurdKnife:Text("Murderer Knife: " .. (roles.Murderer:GetAttribute("EquippedKnife") or ""))
-        MurdFolder.MurdKnifeEffect:Text("Murderer Knife Effect: " .. (roles.Murderer:GetAttribute("EquippedEffect") or ""))
-        MurdFolder.MurdPerk:Text("Murderer Perk: " .. (roles.Murderer:GetAttribute("EquippedPerk") or ""))
-        MurdFolder.Murdlvl:Text("Murderer Lvl: " .. (roles.Murderer:GetAttribute("Level") or ""))
-        MurdFolder.MurdPres:Text("Murderer Prestige: " .. (roles.Murderer:GetAttribute("Prestige") or ""))
-        MurdFolder.MurdXP:Text("Murderer XP: " .. (roles.Murderer:GetAttribute("XP") or ""))
-    else
-        MurdFolder.MurdName:Text("Murderer Username: N/A")
-        MurdFolder.MurdKnife:Text("Murderer Knife: N/A")
-        MurdFolder.MurdKnifeEffect:Text("Murderer Knife Effect: N/A")
-        MurdFolder.MurdPerk:Text("Murderer Perk: N/A")
-        MurdFolder.Murdlvl:Text("Murderer Lvl: N/A")
-        MurdFolder.MurdPres:Text("Murderer Prestige: N/A")
-        MurdFolder.MurdXP:Text("Murderer XP: N/A")
-    end
-
-    -- Load in Sheriff info
-    if roles.sheriff then
-        SherFolder.SherName:Text("Sheriff Username: " .. roles.sheriff.Name)
-        SherFolder.SherGun:Text("Sheriff Gun: " .. (roles.sheriff:GetAttribute("EquippedGun") or ""))
-        SherFolder.Sherlvl:Text("Sheriff Lvl: " .. (roles.sheriff:GetAttribute("Level") or "N/A") or "")
-        SherFolder.SherPres:Text("Sheriff Prestige: " .. (roles.sheriff:GetAttribute("Prestige") or ""))
-        SherFolder.SherXP:Text("Sheriff XP: " .. (roles.sheriff:GetAttribute("XP") or ""))
-    else
-        SherFolder.SherName:Text("Sheriff Username: N/A")
-        SherFolder.SherGun:Text("Sheriff Gun: N/A")
-        SherFolder.Sherlvl:Text("Sheriff Lvl: N/A")
-        SherFolder.SherPres:Text("Sheriff Prestige: N/A")
-        SherFolder.SherXP:Text("Sheriff XP: N/A")
-    end
-end
-
---Checks places where Role Weapons are so it can update who has them
-function rt:UpdateRoles()
-    -- Reset roles
-    local oldSheriff = rt.sheriff
-    local oldMurderer = rt.Murderer
-    rt.sheriff = nil
-    rt.Murderer = nil
-
-    -- Check players' backpacks for tools
-    for _, player in ipairs(rt.Players:GetPlayers()) do
-        if player:FindFirstChild("Backpack") then
-            local backpack = player.Backpack
-            if backpack:FindFirstChild("Gun") then
-                rt.sheriff = player
-            elseif backpack:FindFirstChild("Knife") then
-                rt.Murderer = player
-            end
-        end
-    end
-
-    -- Check workspace for tools attached to characters
-    for _, descendant in ipairs(workspace:GetDescendants()) do
-        if descendant:IsA("Tool") then
-            if descendant.Name == "Gun" then
-                local owner = rt.Players:GetPlayerFromCharacter(descendant.Parent)
-                rt.sheriff = owner or rt.sheriff
-            elseif descendant.Name == "Knife" then
-                local owner = rt.Players:GetPlayerFromCharacter(descendant.Parent)
-                rt.Murderer = owner or rt.Murderer
-            end
-        elseif descendant.Name == "GunDrop" then
-            rt.sheriff = nil -- Gun dropped, sheriff is unknown
-        end
-    end
-
-    -- Refresh UI or ESP if roles have changed
-    if oldSheriff ~= rt.sheriff or oldMurderer ~= rt.Murderer then
-        rt.refresh("Roles Updated")
-        if rt.espON then RefreshRoles(rt.sheriff, rt.Murderer) end
-    end
-end
-
---This function is a bunch of connectings to triggers
-function rt:MonitorTools()
-    -- Listen for tools being added or removed in players
-    rt.RoleTracker1 = rt.Players.DescendantAdded:Connect(function(descendant)
-        if descendant:IsA("Tool") then
-            if descendant.Name == "Gun" or descendant.Name == "Knife" then
-                rt:UpdateRoles()
-            end
-        end
-    end)
-
-    rt.RoleTracker2 = rt.Players.DescendantRemoving:Connect(function(descendant)
-        if descendant:IsA("Tool") then
-            if descendant.Name == "Gun" or descendant.Name == "Knife" then
-                rt:UpdateRoles()
-            end
-        end
-    end)
-
-    -- Listen for tools being added or removed in workspace
-    rt.WeaponTracker1 = workspace.DescendantAdded:Connect(function(descendant)
-        if descendant:IsA("Tool") or descendant.Name == "GunDrop" then
-            rt:UpdateRoles()
-        end
-
-        if descendant:IsA("Model") then
-            if string.match(descendant.Name, "Glitch") and descendant.Parent.Name ~= "Lobby" then
-                descendant:Destroy()
-            end
-    
-            if string.match(descendant.Name, "Invis") and descendant.Parent.Name ~= "Lobby" then
-                descendant:Destroy()
-            end
-    
-            if string.match(descendant.Name, "Invis") and descendant.Parent.Name ~= "Lobby" then
-                descendant:Destroy()
-            end
-        end
-    end)
-
-    rt.WeaponTracker2 = workspace.DescendantRemoving:Connect(function(descendant)
-        if descendant:IsA("Tool") or descendant.Name == "GunDrop" then
-            rt:UpdateRoles()
-        end
-    end)
-end
-
-------------------------------------INFINITE YEILD SCRIPTS-----------------------------------------------
-----------------------------------------------------------------------------------------------------------
-
-local function Fling (targetPlayer)
-    if rt.flingActive then
-        rt.flingActive = false
-        return
-    end
-
-    rt.flingActive = true
-
-    local character = rt:Character()
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    local rootPart = humanoid and humanoid.RootPart
-    local tCharacter = targetPlayer.Character
-    local tHumanoid = tCharacter and tCharacter:FindFirstChildOfClass("Humanoid")
-    local tRootPart = tHumanoid and tHumanoid.RootPart
-    local tHead = tCharacter and tCharacter:FindFirstChild("Head")
-    local accessory = tCharacter and tCharacter:FindFirstChildOfClass("Accessory")
-    local handle = accessory and accessory:FindFirstChild("Handle")
-
-    if character and humanoid and rootPart then
-        if rootPart.Velocity.Magnitude < 50 then
-            getgenv().OldPos = rootPart:GetPivot()
-        end
-        if tHumanoid and tHumanoid.Sit then
-            Notif:Notify("Target is sitting", 5, "error")
-            return
-        end
-        if tHead then
-            workspace.CurrentCamera.CameraSubject = tHead
-        elseif handle then
-            workspace.CurrentCamera.CameraSubject = handle
-        else
-            workspace.CurrentCamera.CameraSubject = tHumanoid
-        end
-        if not tCharacter:FindFirstChildWhichIsA("BasePart") then
-            return
-        end
-
-        local function FPos(basePart, pos, ang)
-            rootPart.CFrame = CFrame.new(basePart.Position) * pos * ang
-            character:PivotTo(CFrame.new(basePart.Position) * pos * ang)
-            rootPart.Velocity = Vector3.new(9e7, 9e7 * 10, 9e7)
-            rootPart.RotVelocity = Vector3.new(9e8, 9e8, 9e8)
-        end
-
-        local function SFBasePart(basePart)
-            local timeToWait = 2
-            local time = tick()
-            local angle = 0
-
-            repeat
-                if rootPart and tHumanoid then
-                    if basePart.Velocity.Magnitude < 50 then
-                        angle = angle + 100
-
-                        FPos(basePart, CFrame.new(0, 1.5, 0) + tHumanoid.MoveDirection * basePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(angle), 0, 0))
-                        task.wait()
-
-                        FPos(basePart, CFrame.new(0, -1.5, 0) + tHumanoid.MoveDirection * basePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(angle), 0, 0))
-                        task.wait()
-
-                        FPos(basePart, CFrame.new(2.25, 1.5, -2.25) + tHumanoid.MoveDirection * basePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(angle), 0, 0))
-                        task.wait()
-
-                        FPos(basePart, CFrame.new(-2.25, -1.5, 2.25) + tHumanoid.MoveDirection * basePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(angle), 0, 0))
-                        task.wait()
-
-                        FPos(basePart, CFrame.new(0, 1.5, 0) + tHumanoid.MoveDirection, CFrame.Angles(math.rad(angle), 0, 0))
-                        task.wait()
-
-                        FPos(basePart, CFrame.new(0, -1.5, 0) + tHumanoid.MoveDirection, CFrame.Angles(math.rad(angle), 0, 0))
-                        task.wait()
-                    else
-                        FPos(basePart, CFrame.new(0, 1.5, tHumanoid.WalkSpeed), CFrame.Angles(math.rad(90), 0, 0))
-                        task.wait()
-
-                        FPos(basePart, CFrame.new(0, -1.5, -tHumanoid.WalkSpeed), CFrame.Angles(0, 0, 0))
-                        task.wait()
-
-                        FPos(basePart, CFrame.new(0, 1.5, tHumanoid.WalkSpeed), CFrame.Angles(math.rad(90), 0, 0))
-                        task.wait()
-
-                        FPos(basePart, CFrame.new(0, 1.5, tRootPart.Velocity.Magnitude / 1.25), CFrame.Angles(math.rad(90), 0, 0))
-                        task.wait()
-
-                        FPos(basePart, CFrame.new(0, -1.5, -tRootPart.Velocity.Magnitude / 1.25), CFrame.Angles(0, 0, 0))
-                        task.wait()
-
-                        FPos(basePart, CFrame.new(0, 1.5, tRootPart.Velocity.Magnitude / 1.25), CFrame.Angles(math.rad(90), 0, 0))
-                        task.wait()
-
-                        FPos(basePart, CFrame.new(0, -1.5, 0), CFrame.Angles(math.rad(90), 0, 0))
-                        task.wait()
-
-                        FPos(basePart, CFrame.new(0, -1.5, 0), CFrame.Angles(0, 0, 0))
-                        task.wait()
-
-                        FPos(basePart, CFrame.new(0, -1.5, 0), CFrame.Angles(math.rad(-90), 0, 0))
-                        task.wait()
-
-                        FPos(basePart, CFrame.new(0, -1.5, 0), CFrame.Angles(0, 0, 0))
-                        task.wait()
-                    end
-                else
-                    break
-                end
-            until basePart.Velocity.Magnitude > 500 or basePart.Parent ~= targetPlayer.Character or targetPlayer.Parent ~= rt.Players or not targetPlayer.Character == tCharacter or tHumanoid.Sit or humanoid.Health <= 0 or tick() > time + timeToWait
-        end
-
-        workspace.FallenPartsDestroyHeight = 0 / 0
-
-        local bv = Instance.new("BodyVelocity")
-        bv.Name = "EpixVel"
-        bv.Parent = rootPart
-        bv.Velocity = Vector3.new(9e8, 9e8, 9e8)
-        bv.MaxForce = Vector3.new(1 / 0, 1 / 0, 1 / 0)
-
-        humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
-
-        if tRootPart and tHead then
-            if (tRootPart.CFrame.p - tHead.CFrame.p).Magnitude > 5 then
-                SFBasePart(tHead)
-            else
-                SFBasePart(tRootPart)
-            end
-        elseif tRootPart and not tHead then
-            SFBasePart(tRootPart)
-        elseif not tRootPart and tHead then
-            SFBasePart(tHead)
-        elseif not tRootPart and not tHead and accessory and handle then
-            SFBasePart(handle)
-        else
-            Notif:Notify("Target is missing everything", 5, "error")
-            return
-        end
-
-        bv:Destroy()
-        humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-        workspace.CurrentCamera.CameraSubject = humanoid
-
-        repeat
-            rootPart.CFrame = getgenv().OldPos * CFrame.new(0, .5, 0)
-            character:PivotTo(getgenv().OldPos * CFrame.new(0, .5, 0))
-            humanoid:ChangeState("GettingUp")
-            for _, x in ipairs(character:GetChildren()) do
-                if x:IsA("BasePart") then
-                    x.Velocity, x.RotVelocity = Vector3.new(), Vector3.new()
-                end
-            end
-            task.wait()
-        until (rootPart.Position - getgenv().OldPos.p).Magnitude < 25
-        workspace.FallenPartsDestroyHeight = workspace.FallenPartsDestroyHeight
-        getgenv().OldPos = nil
-    else
-        Notif:Notify("Random error", 5, "error")
-    end
-end
-
-local function ServerHop()
-    local PlaceId = game.PlaceId
-    local JobId = game.JobId
-
-    local servers = {}
-    local req = request({Url = string.format("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100&excludeFullGames=true", PlaceId)})
-    local body = rt.HttpService:JSONDecode(req.Body)
-
-    if body and body.data then
-        for i, v in next, body.data do
-            if type(v) == "table" and tonumber(v.playing) and tonumber(v.maxPlayers) and v.playing < v.maxPlayers and v.id ~= JobId then
-                table.insert(servers, 1, v.id)
-            end
-        end
-    end
-
-    if #servers > 0 then
-        rt.TeleportService:TeleportToPlaceInstance(PlaceId, servers[math.random(1, #servers)], rt.player)
-    else
-        return Notif:Notify("Couldnt find a server", 1, "error")
-    end
-end
-
-local function RejoinServer()
-    local PlaceId = game.PlaceId
-    local JobId = game.JobId
-
-    if #rt.Players:GetPlayers() <= 1 then
-		rt.player:Kick("\nRejoining...")
-		task.wait()
-		rt.TeleportService:Teleport(PlaceId, rt.player)
+if game.PlaceId == 142823291 then --Proofing just because ;)
+--Note: Don't reset with godmode on or you will be stuck on a black screen for a reasonable amount of time
+--Change to false if you dont like printing to console
+local printvar = true
+--Change to true if you want to see names instead of murderer, sheriff, and innocents with esp
+local espnames = true
+--Change keybinds to your liking
+local coinkey = "c" --Coin grabber keybind
+local MSkey = "m" --Murderer/Sheriff esp keybind
+local playerskey = "q" --All players esp keybind
+local espoffkey = "b" --Turn esp off keybind
+local flykey = "f" --Fly keybind
+local noclipkey = "r" --Noclip keybind
+local godmodekey = "g" --Godmode keybind
+local xrayonkey = "x" --Xray on keybind
+local xrayoffkey = "z" --Xray off keybind
+local bringgunkey = "t" --Teleport to gun keybind
+local hideshowguikey = "p" --Show/Hide gui keybind
+--End of easy customization options
+
+--Gui Buttons and Status--
+local MM2 = Instance.new("ScreenGui")
+local Main = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local Coin = Instance.new("TextButton")
+local MSEsp = Instance.new("TextButton")
+local MSESPActive = Instance.new("TextLabel")
+local PlayersEsp = Instance.new("TextButton")
+local PlayersEspActive = Instance.new("TextLabel")
+local EspOff = Instance.new("TextButton")
+local EspOffActive = Instance.new("TextLabel")
+local Run = Instance.new("TextButton")
+local RunActiveGui = Instance.new("TextLabel")
+local Fly = Instance.new("TextButton")
+local FlyActive = Instance.new("TextLabel")
+local Noclip = Instance.new("TextButton")
+local NoclipActive = Instance.new("TextLabel")
+local GodMode = Instance.new("TextButton")
+local GodModeActive = Instance.new("TextLabel")
+local GuiXrayOn = Instance.new("TextButton")
+local GuiXrayOnActive = Instance.new("TextLabel")
+local GuiXrayOff = Instance.new("TextButton")
+local GuiXrayOffActive = Instance.new("TextLabel")
+local BringGun = Instance.new("TextButton")
+local Keybinds = Instance.new("TextButton")
+local KeybindsActive = Instance.new("TextLabel")
+local Hide = Instance.new("TextButton")
+local Show = Instance.new("TextButton")
+
+--Other Variables
+local runActive = false
+local teamname = "None"
+local murderer = "None"
+local sheriff = "None"
+local player = game:GetService("Players").LocalPlayer
+
+local esp = false
+local plresp
+local track = false
+
+local NClip = false
+local char = game.Players.LocalPlayer.Character
+local obj = game.workspace
+local mouse=game.Players.LocalPlayer:GetMouse()
+local LP = game:GetService("Players").LocalPlayer
+local flyvar = false
+
+local showvar = true
+local inputcode = game:GetService("UserInputService")
+local godmodevar = false
+local keyOff = false
+local NClip = false
+
+--Start of Gui--
+MM2.Name = "MM2"
+MM2.Parent = game.CoreGui
+MM2.ResetOnSpawn = false
+
+Main.Name = "Main"
+Main.Parent = MM2
+Main.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+Main.BorderColor3 = Color3.new(0, 0.607843, 1)
+Main.BorderSizePixel = 5
+Main.Draggable = true
+Main.Position = UDim2.new(0.574999988, 0, 0.349999994, 0)
+Main.Size = UDim2.new(0.2, 0, 0.4, 0)
+Main.Visible = true
+Main.Active = true
+
+Title.Name = "Title"
+Title.Parent = Main
+Title.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+Title.BorderColor3 = Color3.new(0, 0.607843, 1) 
+Title.BorderSizePixel = 5
+Title.Draggable = true
+Title.Size = UDim2.new(1.005, 0, 0.2, 0)
+Title.ZIndex = 3
+Title.Font = Enum.Font.SciFi
+Title.FontSize = Enum.FontSize.Size24
+Title.Text = "Murder Mystery 2"
+Title.TextColor3 = Color3.new(0, 0.607843, 1)
+Title.TextScaled = true
+Title.TextSize = 20
+Title.TextStrokeColor3 = Color3.new(0.129412, 0.54902, 1)
+Title.TextWrapped = true
+
+--Start of functions for buttons--
+function Create(base, team, colors1, colors2, colors3, teamname) --For all esps
+	local bb = Instance.new("BillboardGui",player.PlayerGui)
+	bb.Adornee = base
+	bb.ExtentsOffset = Vector3.new(0,1,0)
+	bb.AlwaysOnTop = true
+	bb.Size = UDim2.new(0,5,0,5)
+	bb.StudsOffset = Vector3.new(0,1,0)
+	bb.Name = "tracker"
+	local frame = Instance.new("Frame",bb)
+	frame.ZIndex = 10
+	frame.BackgroundTransparency = 0.3
+	frame.Size = UDim2.new(1,0,1,0)
+	local txtlbl = Instance.new("TextLabel",bb)
+	txtlbl.ZIndex = 10
+	txtlbl.Text = teamname
+	txtlbl.BackgroundTransparency = 1
+	txtlbl.Position = UDim2.new(0,0,0,-35)
+	txtlbl.Size = UDim2.new(1,0,10,0)
+	txtlbl.Font = "ArialBold"
+	txtlbl.FontSize = "Size12"
+	txtlbl.TextStrokeTransparency = 0.5
+	if team then --For teams, left over from origianl but never removed
+		txtlbl.TextColor3 = Color3.new(0,0,255)
+		frame.BackgroundColor3 = Color3.new(0,0,255)
 	else
-		rt.TeleportService:TeleportToPlaceInstance(PlaceId, JobId, rt.player)
+		txtlbl.TextColor3 = Color3.new(colors1,colors2,colors3)
+		frame.BackgroundColor3 = Color3.new(colors1,colors2,colors3)
 	end
 end
------------------------------------------IRIS SCRIPTS-----------------------------------------------------
-----------------------------------------------------------------------------------------------------------
 
-local function WayPointManager ()
-
-    local function helpMarker(helpText: string)
-        Iris.PushConfig({ TextColor = Iris._config.TextDisabledColor })
-        local text = Iris.Text({ "(?)" })
-        Iris.PopConfig()
-
-        Iris.PushConfig({ ContentWidth = UDim.new(0, 350) })
-        if text.hovered() then
-            Iris.Tooltip({ helpText })
-        end
-        Iris.PopConfig()
-    end
-
-    local function WaypointWindow()
-        Iris.Window({ "Waypoint Manager", [Iris.Args.Window.NoClose] = true })
-
-            -- Dropdown (tree) for waypoints
-            Iris.SameLine()
-                helpMarker("Double click to Teleport")
-                Iris.Tree({ "Waypoints" })
-                local waypointList = Iris.State({})
-                local sharedwaypoint = Iris.State(1)
-                local selectedWaypoint = Iris.State(0)
-                local inputtext = Iris.State("")
-                local waypointName = Iris.State("waypoint")
-
-                for i, waypoint in ipairs(waypointList:get()) do
-                    local item = Iris.Selectable({ waypoint, i }, { index = sharedwaypoint })
-
-                    if item.doubleClicked() then
-                        print("Waypoint double-clicked:", waypoint)
-                        -- Handle double-click logic
-                        for _, rtwaypoint in ipairs(rt.Settings.WayPoints) do
-                            if rtwaypoint.name == waypoint then
-                                rt:Character():PivotTo(rtwaypoint.waypoint)
-                                break
-                            end
-                        end
-                    end
-
-                    if item.selected() then
-                        selectedWaypoint:set(i)
-                    end
-                end
-                Iris.End() -- End Tree
-            Iris.End()
-            -- Separator
-            Iris.Separator()
-
-            -- Text Input and Help Marker
-            Iris.SameLine()
-
-            helpMarker("Not required but Recommended")
-            Iris.InputText({ "", "way point name" }, { text = inputtext })
-            
-            Iris.End()
-
-            -- Add Waypoint Button
-            if Iris.Button({ "Add Waypoint" }).clicked() then
-                local newWaypoint
-                local name = inputtext:get() ~= "" and inputtext:get() or waypointName:get() .. #waypointList:get() + 1
-                if inputtext:get() == "" then
-                    table.insert(waypointList:get(), name)
-                    sharedwaypoint:set(#waypointList:get())
-
-                    newWaypoint = { name = name, waypoint = rt:Character():GetPivot() }
-                    table.insert(rt.Settings.WayPoints, newWaypoint)
-                    inputtext:set("")
-                    return Iris.End()
-                end
-
-                table.insert(waypointList:get(), name)
-                sharedwaypoint:set(#waypointList:get())
-
-                newWaypoint = { name = name, waypoint = rt:Character():GetPivot() }
-                table.insert(rt.Settings.WayPoints, newWaypoint)
-                inputtext:set("")
-            end
-
-            -- Remove Selected Waypoint Button
-            if Iris.Button({ "Remove Selected" }).clicked() then
-                local selectedIndex = selectedWaypoint:get()
-                if selectedIndex ~= 0 then
-                    local selectedName = waypointList:get()[selectedIndex]
-
-                    -- Remove from waypointList
-                    local waypoints = waypointList:get()
-                    table.remove(waypoints, selectedIndex)
-                    waypointList:set(waypoints)
-
-                    -- Reset selection
-                    selectedWaypoint:set(0)
-
-                    -- Remove from rt.Settings.WayPoints
-                    for i, waypoint in ipairs(rt.Settings.WayPoints) do
-                        if waypoint.name == selectedName then
-                            table.remove(rt.Settings.WayPoints, i)
-                            break
-                        end
-                    end
-                end
-            end
-
-        Iris.End() -- End Window
-    end
-
-
-    Iris:Connect(WaypointWindow)
-
-end 
---------------------------------CONNECTIONS SECTION OF THE CODE---------------------------------
-------------------------------------------------------------------------------------------------
-
-if (rt:CheckForConnection()) then  
-    Notif:Notify("Cleaning Connections...", 1, "success")
-    rt.Disconnect(rt.RoleTracker1)
-    rt.Disconnect(rt.RoleTracker2)
-    rt:Disconnect(rt.viewChanged)
-    rt.Disconnect(rt.viewDiedFunc)
-    rt.Disconnect(rt.WeaponTracker1)
-    rt.Disconnect(rt.WeaponTracker2)
-    rt.Disconnect(rt.Joined)
-    rt.Disconnect(rt.Left)
-    rt.Disconnect(rt.UserDied)
-
-    for _, v in pairs(rt.playerESP) do
-        rt.Disconnect(v.connection1)
-        rt.Disconnect(v.connection2)
-        rt.Disconnect(v.connection3)
-    end
-
-    Notif:Notify("Cleaning Memory...", 1, "success")
-    rt.player:SetAttribute("Connection", nil)
-
-    -- if Esp is on while removing UI then we remove all ESP
-    if rt.espON then for _, v in (rt.Players:GetChildren()) do RemovePlayerESP(v) end end
-
-    rt = nil
-
-    Notif:Notify("Removing Instances...", 1, "success")
-
-    task.wait(0.5) -- add in before the scheduler
-
-    game:GetService("CoreGui"):FindFirstChild("watermark"):Destroy()
-    game:GetService("CoreGui"):FindFirstChild("Notifications"):Destroy()
-    game:GetService("CoreGui"):FindFirstChild("screen"):Destroy()
+function findmurderer() --Find who the murderer is
+	local colors1 = 255
+	local colors2 = 0
+	local colors3 = 0
+	for i, v in pairs(game:GetService("Players"):GetChildren()) do
+		if v ~= game:GetService("Players").LocalPlayer then
+			for i,v in pairs(v.Backpack:GetChildren()) do --Checks backpack for knife
+				if v.Name == "Knife" then
+					if espnames == true then
+						local teamname = v.Parent.Parent.Name
+						if v.Parent.Parent.Character.Head ~= nil then
+							Create(v.Parent.Parent.Character.Head, false, colors1 ,colors2, colors3, teamname)
+						else
+							if printvar == true then
+								print("Head missing from murderer!")
+							end
+						end
+					elseif espnames == false then
+						local teamname = "Murderer"
+						if v.Parent.Parent.Character.Head ~= nil then
+							Create(v.Parent.Parent.Character.Head, false, colors1 ,colors2, colors3, teamname)
+						else
+							if printvar == true then
+								print("Head missing from murderer!")
+							end
+						end
+					end
+					murderer = v.Parent.Parent.Name
+					if printvar == true then
+						print(murderer.." is Murderer")
+					end
+				end
+			end
+			for i,v in pairs(v.Character:GetChildren()) do --Checks workspace player for knife (holding it)
+				if v.Name == "Knife" then
+					if espnames == true then
+						local teamname = v.Parent.Name
+						if v.Parent.Head ~= nil then --Tried to failproof to stop printing nil
+							Create(v.Parent.Head, false, colors1 ,colors2, colors3, teamname)
+						else
+							if printvar == true then
+								print("Head missing from murderer!")
+							end
+						end
+					elseif espnames == false then
+						local teamname = "Murderer"
+						if v.Parent.Head ~= nil then
+							Create(v.Parent.Head, false, colors1 ,colors2, colors3, teamname)
+						else
+							if printvar == true then
+								print("Head missing from murderer!")
+							end
+						end
+					end
+					murderer = v.Parent.Name
+					if printvar == true then --Tried to failproof to stop printing nil
+						local murderer1 = tostring(v.Parent.Name)
+						print(murderer1.." is Murderer")
+					end
+				end
+			end
+		end
+	end
+end
+	
+function findsheriff() --Find who the sheriff is
+	local colors1 = 0
+	local colors2 = 0
+	local colors3 = 255
+	for i, v in pairs(game:GetService("Players"):GetChildren()) do
+		if v ~= game:GetService("Players").LocalPlayer then
+			for i,v in pairs(v.Backpack:GetChildren()) do
+				if v.Name == "Revolver" or v.Name == "Gun" then --Lazy to check if its revolver or gun and checks backpack for gun
+					if espnames == true then
+						local teamname = v.Parent.Parent.Name
+						if v.Parent.Parent.Character.Head ~= nil then --Tried to failproof to stop printing nil
+							Create(v.Parent.Parent.Character.Head, false, colors1 ,colors2, colors3, teamname)
+						else
+							if printvar == true then
+								print("Head missing from sheriff!")
+							end
+						end
+					elseif espnames == false then
+						local teamname = "Sheriff"
+						if v.Parent.Parent.Character.Head ~= nil then --Tried to failproof to stop printing nil
+							Create(v.Parent.Parent.Character.Head, false, colors1 ,colors2, colors3, teamname)
+						else
+							if printvar == true then
+								print("Head missing from sheriff!")
+							end
+						end
+					end
+					sheriff = v.Parent.Parent.Name
+					if printvar == true then
+						local sheriff1 = tostring(v.Parent.Parent.Name)
+						print(sheriff1.." is Sheriff")
+					end
+				end
+			end
+			for i,v in pairs(v.Character:GetChildren()) do
+				if v.Name == "Revolver" or v.Name == "Gun" then --Lazy to check if its revolver or gun and checks workspace player for gun (holding it)
+					if espnames == true then
+						local teamname = v.Parent.Name
+						if v.Parent.Head ~= nil then --Tried to failproof to stop printing nil
+							Create(v.Parent.Head, false, colors1 ,colors2, colors3, teamname)
+						else
+							if printvar == true then
+								print("Head missing from sheriff!")
+							end
+						end
+					elseif espnames == false then
+						local teamname = "Sheriff"
+						if v.Parent.Head ~= nil then --Tried to failproof to stop printing nil
+							Create(v.Parent.Head, false, colors1 ,colors2, colors3, teamname)
+						else
+							if printvar == true then
+								print("Head missing from sheriff!")
+							end
+						end
+					end
+					sheriff = v.Parent.Name
+					if printvar == true then
+						local sheriff1 = tostring(v.Parent.Name)
+						print(sheriff1.." is Sheriff")
+					end
+				end
+			end
+		end
+	end
 end
 
--- Add ESP for players who join later
-rt.Joined = rt.Players.PlayerAdded:Connect(function(player)
-    if rt.espON then CreatePlayerESP(player) end
+function findplayers() --Find all players but local player
+	findmurderer() --Finds murderer
+	findsheriff() --Finds sheriff
+	local colors1 = 0
+	local colors2 = 255
+	local colors3 = 0
+	for i, v in pairs(game:GetService("Players"):GetChildren()) do
+		if v ~= game:GetService("Players").LocalPlayer then --If not local player
+			if v.Name ~= murderer then --If not murderer
+				if v.Name ~= sheriff then --If not sheriff
+					if espnames == true then
+						local teamname = v.Name
+						if v.Character.Head ~= nil then --Tried to failproof to stop printing nil
+							Create(v.Character.Head, false, colors1 ,colors2, colors3, teamname)
+						else
+							if printvar == true then
+								print("Head missing from sheriff!")
+							end
+						end
+					elseif espnames == false then
+						local teamname = "Innocents"
+						if v.Parent.Head ~= nil then --Tried to failproof to stop printing nil
+							Create(v.Character.Head, false, colors1 ,colors2, colors3, teamname)
+						else
+							if printvar == true then
+								print("Head missing from sheriff!")
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
+function Clear() --Clears all the esps
+	for _,v in pairs(player.PlayerGui:children()) do
+		if v.Name == "tracker" and v:isA("BillboardGui") then
+			v:Destroy()
+		end
+	end
+end
+
+function XrayOn(obj) --Enables xray
+	for _,v in pairs(obj:GetChildren()) do 
+		if (v:IsA("BasePart")) and not v.Parent:FindFirstChild("Humanoid") then
+			v.LocalTransparencyModifier = 0.75
+		end
+	XrayOn(v) 
+	end
+end 
+
+function XrayOff(obj) --Disables xray
+	for _,v in pairs(obj:GetChildren()) do
+		if (v:IsA("BasePart")) and not v.Parent:FindFirstChild("Humanoid") then
+			v.LocalTransparencyModifier = 0
+		end XrayOff(v)
+	end
+end
+
+function sFLY() --Fly function
+	repeat wait() until LP and LP.Character and LP.Character:FindFirstChild('Torso') and LP.Character:FindFirstChild('Humanoid')
+	repeat wait() until mouse
+	
+	local T = LP.Character.Torso
+	local CONTROL = {F = 0, B = 0, L = 0, R = 0}
+	local lCONTROL = {F = 0, B = 0, L = 0, R = 0}
+	local SPEED = 0
+	
+	local function FLY()
+		FLYING = true
+		local BG = Instance.new('BodyGyro', T)
+		local BV = Instance.new('BodyVelocity', T)
+		BG.P = 9e4
+		BG.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+		BG.cframe = T.CFrame
+		BV.velocity = Vector3.new(0, 0.1, 0)
+		BV.maxForce = Vector3.new(9e9, 9e9, 9e9)
+		spawn(function()
+			repeat wait()
+				LP.Character.Humanoid.PlatformStand = true
+				if CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 then
+					SPEED = 50
+				elseif not (CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0) and SPEED ~= 0 then
+					SPEED = 0
+				end
+				if (CONTROL.L + CONTROL.R) ~= 0 or (CONTROL.F + CONTROL.B) ~= 0 then
+					BV.velocity = ((workspace.CurrentCamera.CoordinateFrame.lookVector * (CONTROL.F + CONTROL.B)) + ((workspace.CurrentCamera.CoordinateFrame * CFrame.new(CONTROL.L + CONTROL.R, (CONTROL.F + CONTROL.B) * 0.2, 0).p) - workspace.CurrentCamera.CoordinateFrame.p)) * SPEED
+					lCONTROL = {F = CONTROL.F, B = CONTROL.B, L = CONTROL.L, R = CONTROL.R}
+				elseif (CONTROL.L + CONTROL.R) == 0 and (CONTROL.F + CONTROL.B) == 0 and SPEED ~= 0 then
+					BV.velocity = ((workspace.CurrentCamera.CoordinateFrame.lookVector * (lCONTROL.F + lCONTROL.B)) + ((workspace.CurrentCamera.CoordinateFrame * CFrame.new(lCONTROL.L + lCONTROL.R, (lCONTROL.F + lCONTROL.B) * 0.2, 0).p) - workspace.CurrentCamera.CoordinateFrame.p)) * SPEED
+				else
+					BV.velocity = Vector3.new(0, 0.1, 0)
+				end
+				BG.cframe = workspace.CurrentCamera.CoordinateFrame
+			until not FLYING
+			CONTROL = {F = 0, B = 0, L = 0, R = 0}
+			lCONTROL = {F = 0, B = 0, L = 0, R = 0}
+			SPEED = 0
+			BG:destroy()
+			BV:destroy()
+			LP.Character.Humanoid.PlatformStand = false
+		end)
+	end
+	
+	mouse.KeyDown:connect(function(KEY)
+		if KEY:lower() == 'w' then
+			CONTROL.F = 1
+		elseif KEY:lower() == 's' then
+			CONTROL.B = -1
+		elseif KEY:lower() == 'a' then
+			CONTROL.L = -1 
+		elseif KEY:lower() == 'd' then 
+			CONTROL.R = 1
+		end
+	end)
+	
+	mouse.KeyUp:connect(function(KEY)
+		if KEY:lower() == 'w' then
+			CONTROL.F = 0
+		elseif KEY:lower() == 's' then
+			CONTROL.B = 0
+		elseif KEY:lower() == 'a' then
+			CONTROL.L = 0
+		elseif KEY:lower() == 'd' then
+			CONTROL.R = 0
+		end
+	end)
+	FLY()
+end
+
+function NOFLY() --Unfly function
+	FLYING = false
+	LP.Character.Humanoid.PlatformStand = false
+end
+
+local noclipcoro = coroutine.wrap(function() --Noclip function
+	while true do
+		if NClip == true then
+			if game.Players ~= nil then
+				if game.Players.LocalPlayer ~= nil then
+					if game.Players.LocalPlayer.Character ~= nil then
+						if game.Players.LocalPlayer.Character:FindFirstChild("Torso") ~= nil then
+							if game.Players.LocalPlayer.Character:FindFirstChild("Head") ~= nil then
+								game.Players.LocalPlayer.Character.Torso.CanCollide = false
+								game.Players.LocalPlayer.Character.Head.CanCollide = false
+							end
+						end
+					end
+				end
+			end
+		end
+	game:service("RunService").Stepped:wait()
+	end
 end)
 
-rt.Left = rt.Players.PlayerRemoving:Connect(function(player)
-    if rt.espON then RemovePlayerESP(player) end
+noclipcoro() --For noclip to work
+
+game:GetService("Players").LocalPlayer.CharacterAdded:connect(function(character) --Resets specific things for ease
+	flyvar = false
+	FlyActive.Text = "Inactive"
+	FlyActive.TextColor3 = Color3.new(1, 0, 1)
+	godmodevar = false
+	GodModeActive.Text = "Inactive"
+	GodModeActive.TextColor3 = Color3.new(1, 0, 1)
+	Clear()
+	MSESPActive.Text = "Inactive"
+	MSESPActive.TextColor3 = Color3.new(1, 0, 1)
+	PlayersEspActive.Text = "Inactive"
+	PlayersEspActive.TextColor3 = Color3.new(1, 0, 1)
+	EspOffActive.Text = "Active"
+	EspOffActive.TextColor3 = Color3.new(0, 1, 0)
 end)
 
-rt.UserDied = rt.player.CharacterRemoving:Connect(function(character)
-    if coroutine.status(rt.start) == 'running' then
-        AutoFarmCleanUp()
-    end
+mouse.KeyDown:connect(function(KeyDown) --If shift is held, run
+	if KeyDown == "0" and runActive == false and keyOff == false then
+		runActive = true
+		player.Character.Humanoid.WalkSpeed = 32
+		RunActiveGui.Text = "Active"
+		RunActiveGui.TextColor3 = Color3.new(0, 1, 0)
+	end
 end)
 
-rt.player:SetAttribute("Connection", true)
-rt.start = coroutine.create(collectCoins)
-
---------------------------------UI SECTION OF THE CODE------------------------------------------
-------------------------------------------------------------------------------------------------
-
-
-library.title = "Zynic's MM2 HUB 🎄"
-if library.rank ~= "developer" then library:Introduction(); task.wait(1) end
-
-
-local Init = library:Init()
-local Tab1 = Init:NewTab("Home 🏠")
-local Tab2 = Init:NewTab("Auto Farm ♻️")
-local Tab3 = Init:NewTab("Actions 🔨")
-local Tab4 = Init:NewTab("Misc ⚙️")
-local Tab5 = Init:NewTab("Credits 🎉")
-
-------------------------------------HOME TAB--------------------------------------------------
-----------------------------------------------------------------------------------------------
-Tab1:NewSection("KeyBind Section")
-
-Tab1:NewKeybind("Hide Gui", Enum.KeyCode.RightAlt, function(key)
-    Init:UpdateKeybind(key)
-end)
-Tab1:NewLabel("", "center")
-
--------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------
-Tab1:NewSection("Movement Section")
-
-Tab1:NewButton("Reset WalkSpeed", function()
-    local result = rt:ResetSpeed() -- reset speed
-    if result == false then Notif:Notify("WalkSpeed is already at default:", 1.5, "error") return end -- error handling
-
-    Notif:Notify("Reseted WalkSpeed to 16 ", 1, "success")
-    result = nil
+mouse.KeyUp:connect(function(KeyUp) --If shift is released, walk
+	if KeyUp == "0" and runActive == true and keyOff == false then
+		runActive = false
+		player.Character.Humanoid.WalkSpeed = 16
+		RunActiveGui.Text = "Inactive"
+		RunActiveGui.TextColor3 = Color3.new(1, 0, 1)
+	end
 end)
 
-Tab1:NewButton("Increase WalkSpeed", function()
-    local result = rt:SpeedUp() -- reset speed
-    if result == false then Notif:Notify("WalkSpeed is at max", 1.5, "error") return end -- error handling
+function coingrabberfunc() --Coin grabber function
+	local children = game.Workspace:GetChildren()
+	for _, child in pairs(children) do
+  		for _, child in pairs(child:GetChildren()) do
+       		table.insert(children, child)
+  		 end
+  		 if child:IsA("BasePart") and child.Name == "Coin" then
+         	child.CFrame = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+		end
+  	end
+end
 
-    Notif:Notify("Increased WalkSpeed to: ".. rt:Character():FindFirstChildWhichIsA("Humanoid").WalkSpeed, 1, "success")
-    result = nil
-end)
-Tab1:NewLabel("this will up your walkspeed by 4 [28 is max]", "center")
-Tab1:NewLabel("", "center")
+function godmodefunc() --Godmode function
+	local player = game.Players.LocalPlayer
+	if player.Character then
+		if player.Character:FindFirstChild("Humanoid") then
+			player.Character.Humanoid.Name = "1"
+		end
+		local l = player.Character["1"]:Clone()
+		l.Parent = player.Character
+		l.Name = "Humanoid"; wait(0.1)
+		player.Character["1"]:Destroy()
+		workspace.CurrentCamera.CameraSubject = player.Character.Humanoid
+		player.Character.Animate.Disabled = true; wait(0.1)
+		player.Character.Animate.Disabled = false
+	end
+end
 
--------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------
-Tab1:NewSection("Destory Section")
-
-local DestoryGui = Tab1:NewButton("Destroy gui", function()
-    --Add A function into the UI LIB to handle this and disconnect all connections within the UI
-    --Use schduler to handle the destruction of the UI
-
-    Notif:Notify("Cleaning Connections...", 1, "success")
-    AutoFarmCleanUp()
-    rt.Disconnect(rt.Added)
-    rt.Disconnect(rt.Removing)
-    rt.Disconnect(rt.RoleTracker1)
-    rt.Disconnect(rt.RoleTracker2)
-    rt:Disconnect(rt.viewChanged)
-    rt.Disconnect(rt.viewDiedFunc)
-    rt.Disconnect(rt.WeaponTracker1)
-    rt.Disconnect(rt.WeaponTracker2)
-    rt.Disconnect(rt.Joined)
-    rt.Disconnect(rt.Left)
-    rt.Disconnect(rt.UserDied)
-
-    for _, v in pairs(rt.playerESP) do
-        rt.Disconnect(v.connection1)
-        rt.Disconnect(v.connection2)
-        rt.Disconnect(v.connection3)
-    end
-
-    Notif:Notify("Cleaning Memory...", 1, "success")
-    rt.player:SetAttribute("Connection", nil)
-
-    -- if Esp is on while removing UI then we remove all ESP
-    if rt.espON then for _, v in (rt.Players:GetChildren()) do RemovePlayerESP(v) end end
-
-    rt = nil
-
-    Notif:Notify("Removing Instances...", 1, "success")
-
-    task.wait(0.5) -- add in before the scheduler
-
-    game:GetService("CoreGui"):FindFirstChild("watermark"):Destroy()
-    game:GetService("CoreGui"):FindFirstChild("Notifications"):Destroy()
-    game:GetService("CoreGui"):FindFirstChild("screen"):Destroy()
-end)
-Tab1:NewLabel("remove UI HUB and its CONNECTIONS", "center")
-
-------------------------------------AUTO FARM TAB--------------------------------------------------
----------------------------------------------------------------------------------------------------
-
-Tab2:NewSection("Zynic's Auto Farm Settings")
-
-Tab2:NewToggle("Uninterrupted Mode", rt.Uninterrupted, function(value)
-    local vers = value and "on" or "off"
-    rt.Uninterrupted = value
-    Notif:Notify("Uninterrupted Mode: " .. vers, 1, "success")
-end)
-Tab2:NewLabel("this will kill you before you start autofarm", "center")
-Tab2:NewLabel("", "center")
-
-Tab2:NewToggle("Set Return Point", rt.TpBackToStart, function(value)
-    local vers = value and "on" or "off"
-    rt.TpBackToStart = value
-    Notif:Notify("Return point: " .. vers, 1, "success")
-end)
-Tab2:NewLabel("this will return u to the point where u started the autofarm", "center")
-Tab2:NewLabel("", "center")
-
-Tab2:NewSlider("Radius", "", true, "/", {min = 50, max = rt.radius, default = 120}, function(value)
-    rt.radius = value
-end)
-Tab2:NewLabel("this will be how far in studs you can search for the closet token", "center")
-Tab2:NewLabel("", "center")
-rt.radius = 120
-
-Tab2:NewSlider("Tween Speed", "", true, "/", {min = 16, max = rt.walkspeed, default = 20}, function(value)
-    rt.walkspeed = value
-end)
-Tab2:NewLabel("speed at which you will move to a token", "center")
-Tab2:NewLabel("", "center")
-rt.walkspeed = 20
-
--------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------
-Tab2:NewSection("Auto Farm Section")
-
-local AutoFarm 
-local AutoFarmValueChanged = false 
-AutoFarm = Tab2:NewToggle("Zynic AutoFarm", false, function(value)
-    local vers = value and "on" or "off"
-
-    if AutoFarmValueChanged then AutoFarmValueChanged = not AutoFarmValueChanged return end
-    if not ToggleAutoFarm(value) then AutoFarmValueChanged = true; AutoFarm:Set(false) end
-
-    
-    Notif:Notify("Zynic AutoFarm is now " .. vers, 1, "success")
-end)
-Tab2:NewLabel("this is the built in autofarm maybe by Zynic [Recommended]", "center")
-Tab2:NewLabel("", "center")
-
-
-------------------------------------ACTIONS TAB--------------------------------------------------
----------------------------------------------------------------------------------------------------
-
-Tab3:NewSection("Roles Section")
-Tab3:NewLabel("Murderer Info", "center")
-local MurdName = Tab3:NewLabel("Murderer Username:", "left")
-local MurdKnife = Tab3:NewLabel("Murderer Knife:", "left")
-local MurdKnifeEffect = Tab3:NewLabel("Murderer Knife Effect:", "left")
-local MurdPerk = Tab3:NewLabel("Murderer Perk:", "left")
-local Murdlvl = Tab3:NewLabel("Murderer Lvl:", "left")
-local MurdPres = Tab3:NewLabel("Murderer Prestige:", "left")
-local MurdXP = Tab3:NewLabel("Murderer XP:", "left")
-
-Tab3:NewLabel("Sheriff Info", "center")
-local SherName = Tab3:NewLabel("Sheriff Username:", "left")
-local SherGun = Tab3:NewLabel("Sheriff Gun:", "left")
-local Sherlvl = Tab3:NewLabel("Sheriff Lvl:", "left")
-local SherPres = Tab3:NewLabel("Sheriff Prestige:", "left")
-local SherXP = Tab3:NewLabel("Sheriff XP:", "left")
-Tab3:NewLabel("", "center")
-
-rt.refresh = function(val :string) if val  then Notif:Notify(val, 1.5, "alert") end  local roles = rt:GetRoles(); rt.LoadRoleInfo(roles, {MurdName = MurdName, MurdKnife = MurdKnife, MurdKnifeEffect = MurdKnifeEffect, MurdPerk = MurdPerk, Murdlvl = Murdlvl, MurdPres = MurdPres, MurdXP = MurdXP }, { SherName = SherName,  SherGun = SherGun,  Sherlvl = Sherlvl,  SherPres = SherPres, SherXP = SherXP } ) end
-
-rt.refresh("Init")
-task.wait(1)
-rt:UpdateRoles()
-rt:MonitorTools()
--------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------
-
-Tab3:NewSection("Actions Settings")
-
-Tab3:NewToggle("Safe Gun Grab", false, function(value)
-    local vers = value and "on" or "off"
-    rt.Settings.Safe_Gun_Grab = value
-
-    Notif:Notify("Safe Gun Grab is now: " .. vers, 1, "success")
-    vers = nil
-end)
-Tab3:NewLabel("this will make sure you didnt die before getting gun", "center")
-Tab3:NewLabel("", "center")
-
-
--------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------
-
-Tab3:NewSection("Actions Section")
-local spectateMurd 
-local spectateMurdValueChanged = false
-spectateMurd = Tab3:NewToggle("Spectate Murderer", false, function(value)
-    local vers = value and "on" or "off"
-
-    if spectateMurdValueChanged then spectateMurdValueChanged = not spectateMurdValueChanged return end
-    if not rt.Murderer then spectateMurdValueChanged = true; Notif:Notify("No Murderer To View", 1, "error") return spectateMurd:Set(false) end
-
-    if vers == "on" then
-        rt:ViewMurderer()
-    else
-        rt:UnViewMurderer()
-    end
-
-    Notif:Notify("Murderer Spectate Status: " .. vers, 1, "success")
-end)
-Tab3:NewLabel("", "center")
-
-Tab3:NewButton("Refresh Roles", function()
-    Notif:Notify("Refreshing Roles...", 1, "information")
-    rt.refresh("Refresh Roles Button -> Fire")
-
-    if rt.sheriff or rt.Murderer then
-        Notif:Notify("Found a role(s)", 1, "success") 
-    else
-        Notif:Notify("Did not find any roles", 1, "error")
-    end
-end)
-Tab3:NewLabel("This will refresh murderer n sheriff roles", "center")
-
-Tab3:NewButton("Get Gun", function()
-    if rt.AutoFarmOn then return Notif:Notify("Cannot do this while autofarm is on", 1, "error") end
-    rt:GetGun()
+--Coin Grabber--
+Coin.Name = "CoinGrabber"
+Coin.Parent = Main
+Coin.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+Coin.BorderColor3 = Color3.new(0, 0.607843, 1)
+Coin.BorderSizePixel = 5
+Coin.Position = UDim2.new(0, 0, 0.215, 0)
+Coin.Size = UDim2.new(1.005, 0, 0.08, 0)
+Coin.ZIndex = 4
+Coin.Font = Enum.Font.SciFi
+Coin.FontSize = Enum.FontSize.Size24
+Coin.Text = "Coin Grabber ["..string.upper(coinkey).."]"
+Coin.TextColor3 = Color3.fromRGB(255, 255, 26)
+Coin.TextSize = 20
+Coin.TextWrapped = true
+Coin.MouseButton1Down:connect(function(x, y)
+	coingrabberfunc()
 end)
 
-Tab3:NewButton("Fling Murderer", function()
-    if rt.AutoFarmOn then return Notif:Notify("Cannot do this while autofarm is on", 1, "error") end
-    if not rt.Murderer then return Notif:Notify("There is no murderer", 1, "error") end
-    
-    Notif:Notify("Flinging Murderer...", 0.5, "information")
+--Murderer/Sheriff Esp--
+MSESPActive.Name = "MSEspActive"
+MSESPActive.Parent = Main
+MSESPActive.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+MSESPActive.BorderColor3 = Color3.new(0, 0.607843, 1)
+MSESPActive.BorderSizePixel = 5
+MSESPActive.Position = UDim2.new(0.755, 0, 0.315, 0)
+MSESPActive.Size = UDim2.new(0.25, 0, 0.08, 0)
+MSESPActive.ZIndex = 4
+MSESPActive.Font = Enum.Font.SciFi
+MSESPActive.FontSize = Enum.FontSize.Size24
+MSESPActive.Text = "Inactive"
+MSESPActive.TextColor3 = Color3.new(1, 0, 1)
+MSESPActive.TextSize = 20
+MSESPActive.TextWrapped = true
 
-    coroutine.wrap(Fling)(rt.Murderer)
-    if rt.flingActive == false then Notif:Notify("AdvanceFling is turned off", 1, "success") else Notif:Notify("AdvanceFling is turned on", 1, "success") end
+MSEsp.Name = "MSEsp"
+MSEsp.Parent = Main
+MSEsp.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+MSEsp.BorderColor3 = Color3.new(0, 0.607843, 1)
+MSEsp.BorderSizePixel = 5
+MSEsp.Position = UDim2.new(0, 0, 0.315, 0)
+MSEsp.Size = UDim2.new(0.75, 0, 0.08, 0)
+MSEsp.ZIndex = 4
+MSEsp.Font = Enum.Font.SciFi
+MSEsp.FontSize = Enum.FontSize.Size24
+MSEsp.Text = "Murderer/Sheriff Esp ["..string.upper(MSkey).."]"
+MSEsp.TextColor3 = Color3.fromRGB(255, 102, 255)
+MSEsp.TextSize = 20
+MSEsp.TextWrapped = true
+MSEsp.MouseButton1Down:connect(function(x, y)
+	murderer = "None"
+	sheriff = "None"
+	Clear()
+	findmurderer()
+	findsheriff()
+	if printvar == true then
+		print("Murderer/Sheriff")
+	end
+	MSESPActive.Text = "Active"
+	MSESPActive.TextColor3 = Color3.new(0, 1, 0)
+	PlayersEspActive.Text = "Inactive"
+	PlayersEspActive.TextColor3 = Color3.new(1, 0, 1)
+	EspOffActive.Text = "Inactive"
+	EspOffActive.TextColor3 = Color3.new(1, 0, 1)
 end)
 
-------------------------------------MISC TAB--------------------------------------------------
----------------------------------------------------------------------------------------------------
+--All Players Esp
+PlayersEspActive.Name = "PlayersEspActive"
+PlayersEspActive.Parent = Main
+PlayersEspActive.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+PlayersEspActive.BorderColor3 = Color3.new(0, 0.607843, 1)
+PlayersEspActive.BorderSizePixel = 5
+PlayersEspActive.Position = UDim2.new(0.755, 0, 0.415, 0)
+PlayersEspActive.Size = UDim2.new(0.25, 0, 0.08, 0)
+PlayersEspActive.ZIndex = 4
+PlayersEspActive.Font = Enum.Font.SciFi
+PlayersEspActive.FontSize = Enum.FontSize.Size24
+PlayersEspActive.Text = "Inactive"
+PlayersEspActive.TextColor3 = Color3.new(1, 0, 1)
+PlayersEspActive.TextSize = 20
+PlayersEspActive.TextWrapped = true
 
-Tab4:NewSection("WayPoints Section")
-local WayPointTable = Tab4:NewSelector("WayPoints Table", "Empty Table", rt.Settings.WayPoints, function(d)
-    rt.CurrentWayPointName = d
-    Notif:Notify("Selected: " .. d, 1, "success")
-end)
-Tab4:NewLabel("This waypoint table is buggy due to the UI LIB \n[use Iris WITH CAUTION]", "center")
-
-Tab4:NewKeybind("Set WayPoint", Enum.KeyCode.Backspace, function(key)
-    local name = #rt.Settings.WayPoints+1
-    local newWaypoint = {name = "waypoint"..tostring(name), waypoint = rt:Character():GetPivot() }
-    table.insert(rt.Settings.WayPoints, newWaypoint)
-
-    WayPointTable:AddOption(newWaypoint.name)
-
-    Notif:Notify("WayPoint has been Set", 1, "success")
-end)
-
-Tab4:NewKeybind("GoTo WayPoint", nil, function(key)
-    if rt.AutoFarmOn then return Notif:Notify("Cannot do this while autofarm is on", 1, "error") end
-    local pos = nil
-    for _, waypoint in ipairs(rt.Settings.WayPoints) do
-        if waypoint.name == rt.CurrentWayPointName then
-            pos = waypoint.waypoint
-            break
-        end
-    end
-
-    if not pos then return Notif:Notify("No WayPoint Selected", 1, "error") end
-    Notif:Notify("Going to WayPoint...", 1, "success")
-
-    rt:Character():PivotTo(pos) 
-end)
-Tab4:NewLabel("", "center")
-
-Tab4:NewButton("Remove WayPoint", function()
-    for i, v in ipairs(rt.Settings.WayPoints) do
-        if v.name == rt.CurrentWayPointName then
-            table.remove(rt.Settings.WayPoints, i)
-            WayPointTable:RemoveOption(rt.CurrentWayPointName)
-            break
-        end
-    end
-
-    Notif:Notify("WayPoint Removed", 1, "success")
-end)
-Tab4:NewLabel("", "center")
-
-Tab4:NewSection("Iris")
-Tab4:NewButton("Iris WayPointManager", function()
-    if rt.AutoFarmOn then return Notif:Notify("Cannot do this while autofarm is on", 1, "error") end
-    if rt.IWPM then return Notif:Notify("Iris is already loaded and cannot be removed until you leave", 2, "error") end
-
-    rt.IWPM = true
-    WayPointManager()
-    Notif:Notify("Iris WayPointManager Loaded", 1, "success")
-end)
-Tab4:NewLabel("[Recommended] Only issue is that its a 1 time use and will stay until u leave", "center")
-Tab4:NewLabel("", "center")
-
--------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------
-
-Tab4:NewSection("HitBox Section")
-
-local hitbox
-hitbox = Tab4:NewTextbox("HitBox Size", "", "5", "all", "small", true, false, function(val)
-    if rt.AutoFarmOn then return Notif:Notify("Cannot do this while autofarm is on", 1, "error") end
-    local size = tonumber(val);
-    print(size)
-    --if size == 0 then return Notif:Notify("HitBox Size has been Reseted", 1, "success") end
-     if size == 0 then createHitboxForPlayers(rt.Players:GetChildren(), 0); hitbox:Input("") return Notif:Notify("HitBox Size has been Reseted", 1, "success") end
-   
-    if not size then return Notif:Notify("HitBox Size is invalid", 1, "error") end
-    -- if size == nil then hitbox:Input("") return Notif:Notify("HitBox Size is invalid", 1, "error") end
-
-    createHitboxForPlayers(rt.Players:GetChildren(), tonumber(size))
-    Notif:Notify("HitBox Size Set to: ".. val, 1, "success")
-    hitbox:Input("")
-end)
-Tab4:NewLabel("Default size is 1, Max size is 15, enter 0\nto Remove them", "center")
-Tab4:NewLabel("", "center")
-
--------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------
-
-Tab4:NewSection("Other Stuff")
-
-Tab4:NewToggle("Save Settings", false, function(value)
-    local vers = value and "on" or "off"
-    Notif:Notify("Saving Settings...", 1, "success")
-end)
-Tab4:NewLabel("This will save your Auto Farm Settings, Actions Settings, WayPoints, and KeyBinds", "center")
-Tab4:NewLabel("", "center")
-
-Tab4:NewToggle("Esp", false, function(value)
-    local vers = value and "on" or "off"
-    Notif:Notify("Esp is now " .. vers, 1, "success")
-
-    if value then
-        -- loops thru all the players and creates ESP
-        rt.espON = value
-        for _, player in pairs(rt.Players:GetPlayers()) do if player ~= rt.player then CreatePlayerESP(player) end end
-    else
-        --loops thru all the players and removes ESP
-        rt.espON = value
-        for _, player in pairs(rt.Players:GetPlayers()) do if player ~= rt.player then RemovePlayerESP(player) end end
-    end
-end)
-Tab4:NewLabel("Uses My Custom Esp derived from Position Logger'", "left")
-Tab4:NewLabel("", "center")
-
-local teleportBox
-teleportBox = Tab4:NewTextbox("TP to plr", "", "user", "all", "small", true, false, function(val)
-    if rt.AutoFarmOn then return Notif:Notify("Cannot do this while autofarm is on", 1, "error") end
-    if val == "" then return Notif:Notify("Please provide a Plrs name or display name", 1, "error") end
-    local result = rt.FindPlayer(val)
-    if not result then return Notif:Notify("No such person: ".. val, 1, "error") end
-
-    Notif:Notify("Teleporting to: ".. val, 1, "success")
-    rt:Character():PivotTo(result.Character:GetPivot())
-
-    teleportBox:Input("")
-end):Place("username/display name")
-
-Tab4:NewLabel("just type in the first 3 letters of the user, 4 if someone else has the same first 3 letters", "center")
-Tab4:NewLabel("", "center")
-
-Tab4:NewButton("Tp to alive plr", function()
-    if rt.AutoFarmOn then return Notif:Notify("Cannot do this while autofarm is on", 1, "error") end
-    local AlivePlayers = rt:GetAlivePlayers()
-    if not AlivePlayers then return Notif:Notify("Game not in progress", 1, "error") end
-
-    local RandomPlr = AlivePlayers[math.random(1, #AlivePlayers)]
-    RandomPlr = RandomPlr ~= rt.player and RandomPlr or AlivePlayers[math.random(1, #AlivePlayers)] --looks confusing? ikr but it will make sure it doesn't give the current plr
-    Notif:Notify("Teleporting to: ".. RandomPlr.Name, 1, "success")
-
-    TeleportToPlayer(RandomPlr)
-end)
-Tab4:NewLabel("Teleport you to a plr still alive in the round", "center")
-
-Tab4:NewButton("Rejoin Server/Panic Button", function()
-    Notif:Notify("Running Panic...", 1, "success")
-    RejoinServer()
-end)
-Tab4:NewLabel("Lets say somehow u break the gui or jus want2 rejoin\nwell then, use this", "center")
-
-Tab4:NewButton("Server Hop", function()
-    Notif:Notify("Teleporting...", 1, "success")
-    ServerHop()
+PlayersEsp.Name = "PlayersEsp"
+PlayersEsp.Parent = Main
+PlayersEsp.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+PlayersEsp.BorderColor3 = Color3.new(0, 0.607843, 1)
+PlayersEsp.BorderSizePixel = 5
+PlayersEsp.Position = UDim2.new(0, 0, 0.415, 0)
+PlayersEsp.Size = UDim2.new(0.75, 0, 0.08, 0)
+PlayersEsp.ZIndex = 4
+PlayersEsp.Font = Enum.Font.SciFi
+PlayersEsp.FontSize = Enum.FontSize.Size24
+PlayersEsp.Text = "All Players Esp ["..string.upper(playerskey).."]"
+PlayersEsp.TextColor3 = Color3.fromRGB(102, 255, 51)
+PlayersEsp.TextSize = 20
+PlayersEsp.TextWrapped = true
+PlayersEsp.MouseButton1Down:connect(function(x, y)
+	Clear()
+	if printvar == true then
+		print("Players Esp")
+	end
+	MSESPActive.Text = "Inactive"
+	MSESPActive.TextColor3 = Color3.new(1, 0, 1)
+	PlayersEspActive.Text = "Active"
+	PlayersEspActive.TextColor3 = Color3.new(0, 1, 0)
+	EspOffActive.Text = "Inactive"
+	EspOffActive.TextColor3 = Color3.new(1, 0, 1)
+	findplayers()
 end)
 
-------------------------------------CREDITS TAB--------------------------------------------------
----------------------------------------------------------------------------------------------------
+--Esp Off
+EspOffActive.Name = "EspOffActive"
+EspOffActive.Parent = Main
+EspOffActive.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+EspOffActive.BorderColor3 = Color3.new(0, 0.607843, 1)
+EspOffActive.BorderSizePixel = 5
+EspOffActive.Position = UDim2.new(0.755, 0, 0.515, 0)
+EspOffActive.Size = UDim2.new(0.25, 0, 0.08, 0)
+EspOffActive.ZIndex = 4
+EspOffActive.Font = Enum.Font.SciFi
+EspOffActive.FontSize = Enum.FontSize.Size24
+EspOffActive.Text = "Active"
+EspOffActive.TextColor3 = Color3.new(0, 1, 0)
+EspOffActive.TextSize = 20
+EspOffActive.TextWrapped = true
 
-Tab5:NewSection("Creators:")
-Tab5:NewLabel("Zynic", "left")
-Tab5:NewLabel("", "center")
+EspOff.Name = "EspOff"
+EspOff.Parent = Main
+EspOff.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+EspOff.BorderColor3 = Color3.new(0, 0.607843, 1)
+EspOff.BorderSizePixel = 5
+EspOff.Position = UDim2.new(0, 0, 0.515, 0)
+EspOff.Size = UDim2.new(0.75, 0, 0.08, 0)
+EspOff.ZIndex = 4
+EspOff.Font = Enum.Font.SciFi
+EspOff.FontSize = Enum.FontSize.Size24
+EspOff.Text = "Esp Off ["..string.upper(espoffkey).."]"
+EspOff.TextColor3 = Color3.fromRGB(255, 255, 255)
+EspOff.TextSize = 20
+EspOff.TextWrapped = true
+EspOff.MouseButton1Down:connect(function(x, y)
+	Clear()
+	if printvar == true then
+		print("Esp Off")
+	end
+	MSESPActive.Text = "Inactive"
+	MSESPActive.TextColor3 = Color3.new(1, 0, 1)
+	PlayersEspActive.Text = "Inactive"
+	PlayersEspActive.TextColor3 = Color3.new(1, 0, 1)
+	EspOffActive.Text = "Active"
+	EspOffActive.TextColor3 = Color3.new(0, 1, 0)
+end)
 
-Tab5:NewSection("Tools I used:", "left")
-Tab5:NewLabel("XSX UI Library", "left")
-Tab5:NewLabel("Octree", "left")
-Tab5:NewLabel("Infinite Yield", "left")
-Tab5:NewLabel("", "center")
+--Run
+RunActiveGui.Name = "RunActiveGui"
+RunActiveGui.Parent = Main
+RunActiveGui.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+RunActiveGui.BorderColor3 = Color3.new(0, 0.607843, 1)
+RunActiveGui.BorderSizePixel = 5
+RunActiveGui.Position = UDim2.new(0.755, 0, 0.615, 0)
+RunActiveGui.Size = UDim2.new(0.25, 0, 0.08, 0)
+RunActiveGui.ZIndex = 4
+RunActiveGui.Font = Enum.Font.SciFi
+RunActiveGui.FontSize = Enum.FontSize.Size24
+RunActiveGui.Text = "Inactive"
+RunActiveGui.TextColor3 = Color3.new(1, 0, 1)
+RunActiveGui.TextSize = 20
+RunActiveGui.TextWrapped = true
 
-Tab5:NewSection("Special Thanks:", "left")
-Tab5:NewLabel("Infinite Yield & Dark Dex Devs", "left")
-Tab5:NewLabel("Swift Executor Devs", "left")
+Run.Name = "Run"
+Run.Parent = Main
+Run.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+Run.BorderColor3 = Color3.new(0, 0.607843, 1)
+Run.BorderSizePixel = 5
+Run.Position = UDim2.new(0, 0, 0.615, 0)
+Run.Size = UDim2.new(0.75, 0, 0.08, 0)
+Run.ZIndex = 4
+Run.Font = Enum.Font.SciFi
+Run.FontSize = Enum.FontSize.Size24
+Run.Text = "Run [Shift]"
+Run.TextColor3 = Color3.fromRGB(255, 51, 0)
+Run.TextSize = 20
+Run.TextWrapped = true
+Run.MouseButton1Down:connect(function(x, y)
+	if runActive == false then
+		runActive = true
+		player.Character.Humanoid.WalkSpeed = 32
+		RunActiveGui.Text = "Active"
+		RunActiveGui.TextColor3 = Color3.new(0, 1, 0)
+	elseif runActive == true then
+		runActive = false
+		player.Character.Humanoid.WalkSpeed = 16
+		RunActiveGui.Text = "Inactive"
+		RunActiveGui.TextColor3 = Color3.new(1, 0, 1)
+	end
+end)
 
+--Fly
+FlyActive.Name = "FlyActive"
+FlyActive.Parent = Main
+FlyActive.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+FlyActive.BorderColor3 = Color3.new(0, 0.607843, 1)
+FlyActive.BorderSizePixel = 5
+FlyActive.Position = UDim2.new(0.755, 0, 0.715, 0)
+FlyActive.Size = UDim2.new(0.25, 0, 0.08, 0)
+FlyActive.ZIndex = 4
+FlyActive.Font = Enum.Font.SciFi
+FlyActive.FontSize = Enum.FontSize.Size24
+FlyActive.Text = "Inactive"
+FlyActive.TextColor3 = Color3.new(1, 0, 1)
+FlyActive.TextSize = 20
+FlyActive.TextWrapped = true
 
-Notif:Notify("Loaded zynic's mm2 hub", 2, "success")
-library:Watermark("xsx ui lib | v" .. library.version ..  " | " .. library:GetUsername() .. " | rank: " .. library.rank)
+Fly.Name = "Fly"
+Fly.Parent = Main
+Fly.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+Fly.BorderColor3 = Color3.new(0, 0.607843, 1)
+Fly.BorderSizePixel = 5
+Fly.Position = UDim2.new(0, 0, 0.715, 0)
+Fly.Size = UDim2.new(0.75, 0, 0.08, 0)
+Fly.ZIndex = 4
+Fly.Font = Enum.Font.SciFi
+Fly.FontSize = Enum.FontSize.Size24
+Fly.Text = "Fly ["..string.upper(flykey).."]"
+Fly.TextColor3 = Color3.fromRGB(204, 255, 255)
+Fly.TextSize = 20
+Fly.TextWrapped = true
+Fly.MouseButton1Down:connect(function(x, y)
+	if flyvar == false then
+		sFLY()
+		flyvar = true
+		FlyActive.Text = "Active"
+		FlyActive.TextColor3 = Color3.new(0, 1, 0)
+	elseif flyvar == true then
+		flyvar = false
+		NOFLY()
+		FlyActive.Text = "Inactive"
+		FlyActive.TextColor3 = Color3.new(1, 0, 1)
+	end
+end)
+
+--Noclip
+NoclipActive.Name = "NoclipActive"
+NoclipActive.Parent = Main
+NoclipActive.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+NoclipActive.BorderColor3 = Color3.new(0, 0.607843, 1)
+NoclipActive.BorderSizePixel = 5
+NoclipActive.Position = UDim2.new(0.755, 0, 0.815, 0)
+NoclipActive.Size = UDim2.new(0.25, 0, 0.08, 0)
+NoclipActive.ZIndex = 4
+NoclipActive.Font = Enum.Font.SciFi
+NoclipActive.FontSize = Enum.FontSize.Size24
+NoclipActive.Text = "Inactive"
+NoclipActive.TextColor3 = Color3.new(1, 0, 1)
+NoclipActive.TextSize = 20
+NoclipActive.TextWrapped = true
+
+Noclip.Name = "Noclip"
+Noclip.Parent = Main
+Noclip.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+Noclip.BorderColor3 = Color3.new(0, 0.607843, 1)
+Noclip.BorderSizePixel = 5
+Noclip.Position = UDim2.new(0, 0, 0.815, 0)
+Noclip.Size = UDim2.new(0.75, 0, 0.08, 0)
+Noclip.ZIndex = 4
+Noclip.Font = Enum.Font.SciFi
+Noclip.FontSize = Enum.FontSize.Size24
+Noclip.Text = "Noclip ["..string.upper(noclipkey).."]"
+Noclip.TextColor3 = Color3.fromRGB(0, 102, 255)
+Noclip.TextSize = 20
+Noclip.TextWrapped = true
+Noclip.MouseButton1Down:connect(function(x, y)
+	if NClip == false then
+		NClip = true
+		if printvar == true then
+			print("Noclip Enabled")
+		end
+		NoclipActive.Text = "Active"
+		NoclipActive.TextColor3 = Color3.new(0, 1, 0)
+	elseif NClip == true then
+		NClip = false
+		if printvar == true then
+			print("Noclip Disabled")
+		end
+		NoclipActive.Text = "Inactive"
+		NoclipActive.TextColor3 = Color3.new(1, 0, 1)
+	end
+end)
+
+--GodMode
+GodModeActive.Name = "GodModeActive"
+GodModeActive.Parent = Main
+GodModeActive.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+GodModeActive.BorderColor3 = Color3.new(0, 0.607843, 1)
+GodModeActive.BorderSizePixel = 5
+GodModeActive.Position = UDim2.new(0.755, 0, 0.915, 0)
+GodModeActive.Size = UDim2.new(0.25, 0, 0.08, 0)
+GodModeActive.ZIndex = 4
+GodModeActive.Font = Enum.Font.SciFi
+GodModeActive.FontSize = Enum.FontSize.Size24
+GodModeActive.Text = "Inactive"
+GodModeActive.TextColor3 = Color3.new(1, 0, 1)
+GodModeActive.TextSize = 20
+GodModeActive.TextWrapped = true
+
+GodMode.Name = "GodMode"
+GodMode.Parent = Main
+GodMode.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+GodMode.BorderColor3 = Color3.new(0, 0.607843, 1)
+GodMode.BorderSizePixel = 5
+GodMode.Position = UDim2.new(0, 0, 0.915, 0)
+GodMode.Size = UDim2.new(0.75, 0, 0.08, 0)
+GodMode.ZIndex = 4
+GodMode.Font = Enum.Font.SciFi
+GodMode.FontSize = Enum.FontSize.Size24
+GodMode.Text = "God Mode ["..string.upper(godmodekey).."]"
+GodMode.TextColor3 = Color3.fromRGB(255, 255, 255)
+GodMode.TextSize = 20
+GodMode.TextWrapped = true
+GodMode.MouseButton1Down:connect(function(x, y)
+	if godmodevar == false then
+		GodModeActive.Text = "Active"
+		GodModeActive.TextColor3 = Color3.new(0, 1, 0)
+		godmodevar = true
+		godmodefunc()
+	end
+end)
+
+--Xray On
+GuiXrayOnActive.Name = "GuiXrayOnActive"
+GuiXrayOnActive.Parent = Main
+GuiXrayOnActive.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+GuiXrayOnActive.BorderColor3 = Color3.new(0, 0.607843, 1)
+GuiXrayOnActive.BorderSizePixel = 5
+GuiXrayOnActive.Position = UDim2.new(0.755, 0, 1.015, 0)
+GuiXrayOnActive.Size = UDim2.new(0.25, 0, 0.08, 0)
+GuiXrayOnActive.ZIndex = 4
+GuiXrayOnActive.Font = Enum.Font.SciFi
+GuiXrayOnActive.FontSize = Enum.FontSize.Size24
+GuiXrayOnActive.Text = "Inactive"
+GuiXrayOnActive.TextColor3 = Color3.new(1, 0, 1)
+GuiXrayOnActive.TextSize = 20
+GuiXrayOnActive.TextWrapped = true
+
+GuiXrayOn.Name = "XrayOn"
+GuiXrayOn.Parent = Main
+GuiXrayOn.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+GuiXrayOn.BorderColor3 = Color3.new(0, 0.607843, 1)
+GuiXrayOn.BorderSizePixel = 5
+GuiXrayOn.Position = UDim2.new(0, 0, 1.015, 0)
+GuiXrayOn.Size = UDim2.new(0.75, 0, 0.08, 0)
+GuiXrayOn.ZIndex = 4
+GuiXrayOn.Font = Enum.Font.SciFi
+GuiXrayOn.FontSize = Enum.FontSize.Size24
+GuiXrayOn.Text = "Xray On ["..string.upper(xrayonkey).."]"
+GuiXrayOn.TextColor3 = Color3.fromRGB(255, 204, 102)
+GuiXrayOn.TextSize = 20
+GuiXrayOn.TextWrapped = true
+GuiXrayOn.MouseButton1Down:connect(function(x, y)
+	GuiXrayOnActive.Text = "Active"
+	GuiXrayOnActive.TextColor3 = Color3.new(0, 1, 0)
+	GuiXrayOffActive.Text = "Inactive"
+	GuiXrayOffActive.TextColor3 = Color3.new(1, 0, 1)
+	XrayOn(obj)
+end)
+
+--Xray Off
+GuiXrayOffActive.Name = "GuiXrayOffActive"
+GuiXrayOffActive.Parent = Main
+GuiXrayOffActive.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+GuiXrayOffActive.BorderColor3 = Color3.new(0, 0.607843, 1)
+GuiXrayOffActive.BorderSizePixel = 5
+GuiXrayOffActive.Position = UDim2.new(0.755, 0, 1.115, 0)
+GuiXrayOffActive.Size = UDim2.new(0.25, 0, 0.08, 0)
+GuiXrayOffActive.ZIndex = 4
+GuiXrayOffActive.Font = Enum.Font.SciFi
+GuiXrayOffActive.FontSize = Enum.FontSize.Size24
+GuiXrayOffActive.Text = "Active"
+GuiXrayOffActive.TextColor3 = Color3.new(0, 1, 0)
+GuiXrayOffActive.TextSize = 20
+GuiXrayOffActive.TextWrapped = true
+
+GuiXrayOff.Name = "XrayOff"
+GuiXrayOff.Parent = Main
+GuiXrayOff.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+GuiXrayOff.BorderColor3 = Color3.new(0, 0.607843, 1)
+GuiXrayOff.BorderSizePixel = 5
+GuiXrayOff.Position = UDim2.new(0, 0, 1.115, 0)
+GuiXrayOff.Size = UDim2.new(0.75, 0, 0.08, 0)
+GuiXrayOff.ZIndex = 4
+GuiXrayOff.Font = Enum.Font.SciFi
+GuiXrayOff.FontSize = Enum.FontSize.Size24
+GuiXrayOff.Text = "Xray Off ["..string.upper(xrayoffkey).."]"
+GuiXrayOff.TextColor3 = Color3.fromRGB(255, 153, 51)
+GuiXrayOff.TextSize = 20
+GuiXrayOff.TextWrapped = true
+GuiXrayOff.MouseButton1Down:connect(function(x, y)
+	GuiXrayOnActive.Text = "Inactive"
+	GuiXrayOnActive.TextColor3 = Color3.new(1, 0, 1)
+	GuiXrayOffActive.Text = "Active"
+	GuiXrayOffActive.TextColor3 = Color3.new(0, 1, 0)
+	XrayOff(obj)
+end)
+
+--Bring Gun to You
+BringGun.Name = "BringGun"
+BringGun.Parent = Main
+BringGun.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+BringGun.BorderColor3 = Color3.new(0, 0.607843, 1)
+BringGun.BorderSizePixel = 5
+BringGun.Position = UDim2.new(0, 0, 1.215, 0)
+BringGun.Size = UDim2.new(1.005, 0, 0.08, 0)
+BringGun.ZIndex = 4
+BringGun.Font = Enum.Font.SciFi
+BringGun.FontSize = Enum.FontSize.Size24
+BringGun.Text = "Teleport Gun ["..string.upper(bringgunkey).."]"
+BringGun.TextColor3 = Color3.fromRGB(0, 255, 0)
+BringGun.TextSize = 20
+BringGun.TextWrapped = true
+BringGun.MouseButton1Down:connect(function(x, y)
+	if game.Workspace.GunDrop.CFrame ~= nil then
+		game.Workspace.GunDrop.CFrame = game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.CFrame
+	else
+		if printvar == true then
+			print("Gun not currently dropped")
+		end
+	end
+end)
+
+--Keybinds
+KeybindsActive.Name = "KeybindsActive"
+KeybindsActive.Parent = Main
+KeybindsActive.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+KeybindsActive.BorderColor3 = Color3.new(0, 0.607843, 1)
+KeybindsActive.BorderSizePixel = 5
+KeybindsActive.Position = UDim2.new(0.755, 0, 1.315, 0)
+KeybindsActive.Size = UDim2.new(0.25, 0, 0.08, 0)
+KeybindsActive.ZIndex = 4
+KeybindsActive.Font = Enum.Font.SciFi
+KeybindsActive.FontSize = Enum.FontSize.Size24
+KeybindsActive.Text = "Active"
+KeybindsActive.TextColor3 = Color3.new(0, 1, 0)
+KeybindsActive.TextSize = 20
+KeybindsActive.TextWrapped = true
+
+Keybinds.Name = "Keybinds"
+Keybinds.Parent = Main
+Keybinds.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+Keybinds.BorderColor3 = Color3.new(0, 0.607843, 1)
+Keybinds.BorderSizePixel = 5
+Keybinds.Position = UDim2.new(0, 0, 1.315, 0)
+Keybinds.Size = UDim2.new(0.75, 0, 0.08, 0)
+Keybinds.ZIndex = 4
+Keybinds.Font = Enum.Font.SciFi
+Keybinds.FontSize = Enum.FontSize.Size24
+Keybinds.Text = "Keybinds [Ctrl]"
+Keybinds.TextColor3 = Color3.fromRGB(255, 255, 255)
+Keybinds.TextSize = 20
+Keybinds.TextWrapped = true
+Keybinds.MouseButton1Down:connect(function(x, y)
+	if keyOff == true then
+		keyOff = false
+		KeybindsActive.Text = "Active"
+		KeybindsActive.TextColor3 = Color3.new(0, 1, 0)
+	elseif keyOff == false then
+		keyOff = true
+		KeybindsActive.Text = "Inactive"
+		KeybindsActive.TextColor3 = Color3.new(1, 0, 1)
+	end
+end)
+
+Show.Name = "Show"
+Show.Parent = MM2
+Show.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+Show.BorderColor3 = Color3.new(0, 0.607843, 1)
+Show.BorderSizePixel = 5
+Show.Position = UDim2.new(0, 0, 0.85799998, 0)
+Show.Size = UDim2.new(0.08, 0, 0.04, 0)
+Show.ZIndex = 4
+Show.Font = Enum.Font.SciFi
+Show.FontSize = Enum.FontSize.Size24
+Show.Text = "Show ["..string.upper(hideshowguikey).."]"
+Show.TextColor3 = Color3.new(0, 0.333333, 1)
+Show.TextSize = 20
+Show.TextWrapped = true
+Show.Visible = false
+
+Hide.Name = "Hide"
+Hide.Parent = Main
+Hide.BackgroundColor3 = Color3.new(0.188235, 0.188235, 0.188235)
+Hide.BorderColor3 = Color3.new(0, 0.607843, 1)
+Hide.BorderSizePixel = 5
+Hide.Position = UDim2.new(0, 0, 1.415, 0)
+Hide.Size = UDim2.new(1.005, 0, 0.08, 0)
+Hide.ZIndex = 4
+Hide.Font = Enum.Font.SciFi
+Hide.FontSize = Enum.FontSize.Size24
+Hide.Text = "Hide ["..string.upper(hideshowguikey).."]"
+Hide.TextColor3 = Color3.new(0, 0.333333, 1)
+Hide.TextSize = 20
+Hide.TextWrapped = true
+
+Hide.MouseButton1Down:connect(function(x, y)
+	if showvar == true then
+		showvar = false
+		Main.Visible = false
+		Show.Visible = true
+		if printvar == true then
+			print("Hidden")
+		end
+	end
+end)
+
+Show.MouseButton1Down:connect(function(x, y)
+	if showvar == false then
+		showvar = true
+		Show.Visible = false
+		Main.Visible = true
+		if printvar == true then
+			print("Shown")
+		end
+	end
+end)
+
+inputcode.InputBegan:connect(function(input)
+	if input.KeyCode == Enum.KeyCode.LeftControl then
+		if keyOff == true then
+			keyOff = false
+			KeybindsActive.Text = "Active"
+			KeybindsActive.TextColor3 = Color3.new(0, 1, 0)
+		elseif keyOff == false then
+			keyOff = true
+			KeybindsActive.Text = "Inactive"
+			KeybindsActive.TextColor3 = Color3.new(1, 0, 1)
+		end
+	end
+end)
+
+mouse.keyDown:connect(function(key)
+	if keyOff == false then
+		if key == coinkey then --Coin Grabber
+			coingrabberfunc()
+		elseif key == MSkey then --Murderer/Sheriff Esp On
+			murderer = "None"
+			sheriff = "None"
+			Clear()
+			findmurderer()
+			findsheriff()
+			if printvar == true then
+				print("Murderer/Sheriff")
+			end
+			MSESPActive.Text = "Active"
+			MSESPActive.TextColor3 = Color3.new(0, 1, 0)
+			PlayersEspActive.Text = "Inactive"
+			PlayersEspActive.TextColor3 = Color3.new(1, 0, 1)
+			EspOffActive.Text = "Inactive"
+			EspOffActive.TextColor3 = Color3.new(1, 0, 1)
+		elseif key == playerskey then --Player Esp On
+			Clear()
+			MSESPActive.Text = "Inactive"
+			MSESPActive.TextColor3 = Color3.new(1, 0, 1)
+			PlayersEspActive.Text = "Active"
+			PlayersEspActive.TextColor3 = Color3.new(0, 1, 0)
+			EspOffActive.Text = "Inactive"
+			EspOffActive.TextColor3 = Color3.new(1, 0, 1)
+			findplayers()
+			if printvar == true then
+				print("Players")
+			end
+		elseif key == espoffkey then --Esp off
+			Clear()
+			if printvar == true then
+				print("Esp Disabled")
+			end
+			MSESPActive.Text = "Inactive"
+			MSESPActive.TextColor3 = Color3.new(1, 0, 1)
+			PlayersEspActive.Text = "Inactive"
+			PlayersEspActive.TextColor3 = Color3.new(1, 0, 1)
+			EspOffActive.Text = "Active"
+			EspOffActive.TextColor3 = Color3.new(0, 1, 0)
+		elseif key == flykey then --Fly
+			if flyvar == false then
+				sFLY()
+				flyvar = true
+				FlyActive.Text = "Active"
+				FlyActive.TextColor3 = Color3.new(0, 1, 0)
+			elseif flyvar == true then
+				flyvar = false
+				NOFLY()
+				FlyActive.Text = "Inactive"
+				FlyActive.TextColor3 = Color3.new(1, 0, 1)
+			end
+		elseif key == noclipkey then --Noclip toggle
+			if NClip == false then
+				NClip = true
+				if printvar == true then
+					print("Noclip Enabled")
+				end
+				NoclipActive.Text = "Active"
+				NoclipActive.TextColor3 = Color3.new(0, 1, 0)
+			elseif NClip == true then
+				NClip = false
+				if printvar == true then
+					print("Noclip Disabled")
+				end
+				NoclipActive.Text = "Inactive"
+				NoclipActive.TextColor3 = Color3.new(1, 0, 1)
+			end
+		elseif key == godmodekey then --Godmode
+			if godmodevar == false then
+				godmodevar = true
+				godmodefunc()
+				GodModeActive.Text = "Active"
+				GodModeActive.TextColor3 = Color3.new(0, 1, 0)
+			end
+		elseif key == xrayonkey then --Xray On
+			GuiXrayOnActive.Text = "Active"
+			GuiXrayOnActive.TextColor3 = Color3.new(0, 1, 0)
+			GuiXrayOffActive.Text = "Inactive"
+			GuiXrayOffActive.TextColor3 = Color3.new(1, 0, 1)
+			XrayOn(obj)
+		elseif key == xrayoffkey then --Xray Off
+			GuiXrayOnActive.Text = "Inactive"
+			GuiXrayOnActive.TextColor3 = Color3.new(1, 0, 1)
+			GuiXrayOffActive.Text = "Active"
+			GuiXrayOffActive.TextColor3 = Color3.new(0, 1, 0)
+			XrayOff(obj)
+		elseif key == bringgunkey then --Teleport Gun to You
+			if game.Workspace.GunDrop.CFrame ~= nil then
+				game.Workspace.GunDrop.CFrame = game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.CFrame
+			else
+				if printvar == true then
+					print("Gun not currently dropped")
+				end
+			end
+		elseif key == hideshowguikey then --Show/Hide Gui
+			if showvar == false then
+				showvar = true
+				Show.Visible = false
+				Main.Visible = true
+				if printvar == true then
+					print("Shown")
+				end
+			elseif showvar == true then
+				showvar = false
+				Main.Visible = false
+				Show.Visible = true
+				if printvar == true then
+					print("Hidden")
+				end
+			end
+		end
+	end
+end)
+end
