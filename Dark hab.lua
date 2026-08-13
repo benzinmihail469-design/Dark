@@ -24,7 +24,7 @@ local FooterHeight = 42                       -- Высота подвала с 
 local function GetIconUri(Icon)
     if not Icon or Icon == "" then return "" end
     local StrIcon = tostring(Icon)
-    if string.find(StrIcon, "rbxthumb://") then
+    if string.find(StrIcon, "rbxthumb://") or string.find(StrIcon, "rbxassetid://") then
         return StrIcon
     end
     local Id = string.match(StrIcon, "%d+")
@@ -349,7 +349,6 @@ local LeftTabs = Create("ScrollingFrame", {
     ScrollBarThickness = 0,
     CanvasSize = UDim2.new(0, 0, 0, 0),
     AutomaticCanvasSize = Enum.AutomaticSize.Y,
-    ZIndex = 7,
 })
 
 Create("UICorner", { Parent = LeftTabs, CornerRadius = UDim.new(0, 10) })
@@ -367,20 +366,6 @@ Create("UIPadding", {
     PaddingLeft = UDim.new(0, 4),
     PaddingRight = UDim.new(0, 4),
 })
-
--- ИНДИКАТОР АКТИВНОЙ ВКЛАДКИ (Исправлена привязка)
-local ActiveIndicator = Create("Frame", {
-    Parent = LeftTabs,
-    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-    Size = UDim2.new(0, 3, 0, 19),
-    AnchorPoint = Vector2.new(0, 0.5),
-    Position = UDim2.new(0, 2, 0, 0),
-    Visible = false,
-    BorderSizePixel = 0,
-    ZIndex = 15,
-})
-
-Create("UICorner", { Parent = ActiveIndicator, CornerRadius = UDim.new(1, 0) })
 
 -- ПОДВАЛ (ПРОФИЛЬ ИГРОКА)
 local ProfileFooter = Create("Frame", {
@@ -466,6 +451,20 @@ local ArrowIcon = Create("ImageLabel", {
     ZIndex = 9,
 })
 
+-- ИНДИКАТОР АКТИВНОЙ ВКЛАДКИ (БЕЛАЯ ПОЛОСКА)
+local ActiveIndicator = Create("Frame", {
+    Parent = MainFrame,
+    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+    Size = UDim2.new(0, 3, 0, 19),
+    AnchorPoint = Vector2.new(0, 0.5),
+    Position = UDim2.new(0, 6, 0, 0),
+    Visible = false,
+    BorderSizePixel = 0,
+    ZIndex = 10,
+})
+
+Create("UICorner", { Parent = ActiveIndicator, CornerRadius = UDim.new(1, 0) })
+
 -- Контентная зона
 local Content = Create("Frame", {
     Parent = MainFrame,
@@ -513,20 +512,33 @@ local Pages = {}
 local CurrentPage = nil
 
 -- Обновление позиции белой полоски
-local function UpdateIndicatorPosition(TabButton)
-    if not TabButton then return end
-    local TargetY = TabButton.Position.Y.Offset + (TabButton.Size.Y.Offset / 2)
-    local TargetPos = UDim2.new(0, 2, 0, TargetY)
+local function UpdateActiveIndicator(instant)
+    if not CurrentPage or not CurrentPage.TabButton then return end
+    local TabButton = CurrentPage.TabButton
+    if TabButton.AbsoluteSize.Y == 0 or MainFrame.AbsoluteSize.Y == 0 then return end
+
+    local TargetY = TabButton.AbsolutePosition.Y - MainFrame.AbsolutePosition.Y + (TabButton.AbsoluteSize.Y / 2)
+    local TargetPos = UDim2.new(0, 6, 0, TargetY)
 
     if not ActiveIndicator.Visible then
         ActiveIndicator.Position = TargetPos
         ActiveIndicator.Visible = true
+    elseif instant then
+        ActiveIndicator.Position = TargetPos
     else
         CreateTween(ActiveIndicator, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
             Position = TargetPos
         })
     end
 end
+
+LeftTabs:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+    UpdateActiveIndicator(true)
+end)
+
+MainFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+    UpdateActiveIndicator(true)
+end)
 
 -- Глобальная система поиска
 local function GlobalSearch(Query)
@@ -605,7 +617,6 @@ local function CreatePage(PageConfig)
         Size = UDim2.new(1, 0, 0, 32),
         BorderSizePixel = 0,
         ClipsDescendants = true,
-        ZIndex = 8,
     })
     
     Create("UICorner", { Parent = TabButton, CornerRadius = UDim.new(0, 8) })
@@ -618,7 +629,6 @@ local function CreatePage(PageConfig)
         Size = UDim2.new(0, 16, 0, 16),
         Position = UDim2.new(0, 12, 0.5, 0),
         AnchorPoint = Vector2.new(0, 0.5),
-        ZIndex = 9,
     })
     
     local TabLabel = Create("TextLabel", {
@@ -633,7 +643,6 @@ local function CreatePage(PageConfig)
         AnchorPoint = Vector2.new(0, 0.5),
         Size = UDim2.new(1, -52, 0, 14),
         TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 9,
     })
     
     local DotsContainer = Create("Frame", {
@@ -643,7 +652,6 @@ local function CreatePage(PageConfig)
         AnchorPoint = Vector2.new(1, 0.5),
         Size = UDim2.new(0, 3, 0, 13),
         BorderSizePixel = 0,
-        ZIndex = 9,
     })
 
     Create("UIListLayout", {
@@ -662,7 +670,6 @@ local function CreatePage(PageConfig)
             Size = UDim2.new(0, 3, 0, 3),
             BorderSizePixel = 0,
             LayoutOrder = i,
-            ZIndex = 9,
         })
         Create("UICorner", { Parent = Dot, CornerRadius = UDim.new(1, 0) })
     end
@@ -758,7 +765,7 @@ local function CreatePage(PageConfig)
             PageData.TabLabel.FontFace = FontSemiBold
             CurrentPage = PageData
 
-            UpdateIndicatorPosition(TabButton)
+            UpdateActiveIndicator(false)
         else
             PageData.Active = false
             PageData.Frame.Visible = false
@@ -781,6 +788,7 @@ local function CreatePage(PageConfig)
     local function CreateSection(SectionConfig)
         local SectionName = SectionConfig.Name or "Section"
         local SectionDesc = SectionConfig.Description or ""
+        local SectionIcon = SectionConfig.Icon
         
         local SectionFrame = Create("Frame", {
             Parent = PageContent,
@@ -825,6 +833,20 @@ local function CreatePage(PageConfig)
         })
         Create("UICorner", { Parent = AccentBar, CornerRadius = UDim.new(1, 0) })
         
+        local TextXOffset = 14
+        if SectionIcon then
+            Create("ImageLabel", {
+                Parent = SectionTopBg,
+                Image = GetIconUri(SectionIcon),
+                ImageColor3 = Theme.Text,
+                BackgroundTransparency = 1,
+                Size = UDim2.new(0, 12, 0, 12),
+                Position = UDim2.new(0, 12, 0.5, 0),
+                AnchorPoint = Vector2.new(0, 0.5),
+            })
+            TextXOffset = 28
+        end
+
         Create("TextLabel", {
             Parent = SectionTopBg,
             Text = SectionName,
@@ -832,7 +854,7 @@ local function CreatePage(PageConfig)
             BackgroundTransparency = 1,
             FontFace = FontSemiBold,
             TextSize = 11,
-            Position = UDim2.new(0, 14, 0.5, SectionDesc ~= "" and -5 or 0),
+            Position = UDim2.new(0, TextXOffset, 0.5, SectionDesc ~= "" and -5 or 0),
             AnchorPoint = Vector2.new(0, SectionDesc ~= "" and 0 or 0.5),
             Size = UDim2.new(0, 0, 0, 12),
             AutomaticSize = Enum.AutomaticSize.X,
@@ -847,7 +869,7 @@ local function CreatePage(PageConfig)
                 BackgroundTransparency = 1,
                 FontFace = FontRegular,
                 TextSize = 9,
-                Position = UDim2.new(0, 14, 0, 13),
+                Position = UDim2.new(0, TextXOffset, 0, 13),
                 Size = UDim2.new(0, 0, 0, 10),
                 AutomaticSize = Enum.AutomaticSize.X,
             })
@@ -2335,14 +2357,15 @@ MovementSection:Toggle({Name = "Auto Strafe", Default = false})
 MovementSection:Slider({Name = "Strafe Speed", Min = 0, Max = 100, Default = 60, Suffix = "%"})
 
 -- === ВКЛАДКА FLING PLAYERS ===
-local FlingIcon = "10709781323" -- Установлена подходящая иконка Fling (UserX)
+local FlingIcon = "10709781323" -- Подходящая иконка таргетинга / игрока
 local FlingPage = CreatePage({Name = "Fling Players", Icon = FlingIcon})
 local FlingSection = FlingPage:CreateSection({
     Name = "Fling Players", 
-    Description = "Tap a player to fling them"
+    Description = "Tap a player to fling them",
+    Icon = FlingIcon
 })
 
--- Добавляем переключатель Anti-Fling прямо во вкладку Fling Players
+-- Переключатель Anti-Fling
 FlingSection:Toggle({
     Name = "Anti-Fling Protection",
     Default = false,
@@ -2507,10 +2530,15 @@ ConfigsSection:Button({Name = "Load", Callback = function()
     end
 end})
 
--- Активация первой страницы
+-- Активация первой страницы и привязка индикатора
 if Pages[1] then
     Pages[1]:SetActive(true)
 end
+
+task.defer(function()
+    task.wait(0.1)
+    UpdateActiveIndicator(true)
+end)
 
 -- === ЗАГОЛОВОК-ТУГГЛ (DARK HUB) ===
 local FloatHeader = Create("TextButton", {
@@ -2670,6 +2698,7 @@ FloatHeader.MouseButton1Click:Connect(function()
         CreateTween(StatusDot, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
             Size = UDim2.new(0, 6, 0, 6)
         })
+        UpdateActiveIndicator(true)
     else
         StatusDot.BackgroundColor3 = Color3.fromRGB(255, 75, 75)
         CreateTween(StatusDot, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
