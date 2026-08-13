@@ -254,11 +254,11 @@ task.spawn(function()
 end)
 
 -- === ОБНОВЛЕННЫЕ НАСТРОЙКИ РАЗМЕРОВ ГУИ ===
-local MainWidth = IsMobile and 530 or 570     -- Ширина главного окна
-local MainHeight = IsMobile and 320 or 340    -- Высота главного окна
-local SidebarWidth = IsMobile and 140 or 150  -- Ширина боковой панели
-local HeaderHeight = 36                       -- Высота шапки
-local FooterHeight = 42                       -- Высота подвала с профилем
+local MainWidth = IsMobile and 530 or 570
+local MainHeight = IsMobile and 320 or 340
+local SidebarWidth = IsMobile and 140 or 150
+local HeaderHeight = 36
+local FooterHeight = 42
 
 local function GetIconUri(Icon)
     if not Icon or Icon == "" then return "" end
@@ -296,7 +296,7 @@ local function CleanString(Str)
     return Cleaned
 end
 
--- Цветовая схема
+-- Цветовая схема (По умолчанию AMOLED Black)
 local Theme = {
     Background = Color3.fromRGB(0, 0, 0),
     Background2 = Color3.fromRGB(5, 5, 5),
@@ -308,6 +308,82 @@ local Theme = {
     Text = Color3.fromRGB(255, 255, 255),
     Accent = Color3.fromRGB(0, 116, 224),
     AccentGradient = Color3.fromRGB(0, 195, 255),
+}
+
+-- ПРЕСЕТЫ ТЕМ ДЛЯ UI
+local ThemesPresets = {
+    ["AMOLED Black"] = {
+        Background = Color3.fromRGB(0, 0, 0),
+        Background2 = Color3.fromRGB(5, 5, 5),
+        SectionBackground = Color3.fromRGB(6, 6, 6),
+        SectionBackground2 = Color3.fromRGB(10, 10, 10),
+        SectionTop = Color3.fromRGB(16, 16, 16),
+        Element = Color3.fromRGB(12, 12, 12),
+        Outline = Color3.fromRGB(22, 22, 22),
+        Text = Color3.fromRGB(255, 255, 255),
+        Accent = Color3.fromRGB(0, 116, 224),
+        AccentGradient = Color3.fromRGB(0, 195, 255),
+    },
+    ["Dark Blue"] = {
+        Background = Color3.fromRGB(8, 12, 22),
+        Background2 = Color3.fromRGB(12, 18, 30),
+        SectionBackground = Color3.fromRGB(14, 20, 34),
+        SectionBackground2 = Color3.fromRGB(18, 26, 42),
+        SectionTop = Color3.fromRGB(22, 32, 52),
+        Element = Color3.fromRGB(20, 28, 45),
+        Outline = Color3.fromRGB(35, 48, 75),
+        Text = Color3.fromRGB(240, 245, 255),
+        Accent = Color3.fromRGB(0, 132, 255),
+        AccentGradient = Color3.fromRGB(0, 210, 255),
+    },
+    ["Crimson Red"] = {
+        Background = Color3.fromRGB(18, 8, 10),
+        Background2 = Color3.fromRGB(24, 12, 14),
+        SectionBackground = Color3.fromRGB(28, 14, 16),
+        SectionBackground2 = Color3.fromRGB(35, 18, 20),
+        SectionTop = Color3.fromRGB(45, 22, 25),
+        Element = Color3.fromRGB(32, 16, 18),
+        Outline = Color3.fromRGB(60, 25, 28),
+        Text = Color3.fromRGB(255, 240, 242),
+        Accent = Color3.fromRGB(225, 29, 72),
+        AccentGradient = Color3.fromRGB(251, 113, 133),
+    },
+    ["Emerald Green"] = {
+        Background = Color3.fromRGB(6, 16, 12),
+        Background2 = Color3.fromRGB(10, 22, 16),
+        SectionBackground = Color3.fromRGB(12, 26, 19),
+        SectionBackground2 = Color3.fromRGB(16, 32, 24),
+        SectionTop = Color3.fromRGB(22, 42, 32),
+        Element = Color3.fromRGB(18, 35, 26),
+        Outline = Color3.fromRGB(30, 58, 44),
+        Text = Color3.fromRGB(240, 253, 244),
+        Accent = Color3.fromRGB(16, 185, 129),
+        AccentGradient = Color3.fromRGB(52, 211, 153),
+    },
+    ["Purple Velvet"] = {
+        Background = Color3.fromRGB(14, 8, 20),
+        Background2 = Color3.fromRGB(20, 12, 28),
+        SectionBackground = Color3.fromRGB(24, 14, 34),
+        SectionBackground2 = Color3.fromRGB(30, 18, 42),
+        SectionTop = Color3.fromRGB(40, 24, 56),
+        Element = Color3.fromRGB(28, 16, 40),
+        Outline = Color3.fromRGB(55, 30, 78),
+        Text = Color3.fromRGB(250, 245, 255),
+        Accent = Color3.fromRGB(147, 51, 234),
+        AccentGradient = Color3.fromRGB(192, 132, 252),
+    },
+    ["Cyberpunk"] = {
+        Background = Color3.fromRGB(15, 10, 25),
+        Background2 = Color3.fromRGB(22, 14, 36),
+        SectionBackground = Color3.fromRGB(26, 16, 42),
+        SectionBackground2 = Color3.fromRGB(32, 20, 50),
+        SectionTop = Color3.fromRGB(42, 26, 65),
+        Element = Color3.fromRGB(30, 18, 48),
+        Outline = Color3.fromRGB(65, 35, 95),
+        Text = Color3.fromRGB(255, 240, 255),
+        Accent = Color3.fromRGB(236, 72, 153),
+        AccentGradient = Color3.fromRGB(249, 115, 22),
+    },
 }
 
 -- Шрифты
@@ -323,37 +399,6 @@ local Holder = Create("ScreenGui", {
     ResetOnSpawn = false,
 })
 
--- Функция динамической смены темы UI
-local Pages = {}
-local function UpdateThemeColors(accent, accentGradient)
-    Theme.Accent = accent
-    Theme.AccentGradient = accentGradient
-
-    for _, desc in ipairs(Holder:GetDescendants()) do
-        if desc:IsA("UIGradient") then
-            local p = desc.Parent
-            if p then
-                if p.Name == "FloatStroke" then
-                    desc.Color = ColorSequence.new({
-                        ColorSequenceKeypoint.new(0, accent),
-                        ColorSequenceKeypoint.new(0.5, Theme.Outline),
-                        ColorSequenceKeypoint.new(1, accentGradient),
-                    })
-                elseif p.Name == "CloseAccent" or p.Name == "Accent" or p.Name == "SliderFill" or p.Name == "FloatAccent" then
-                    desc.Color = ColorSequence.new({
-                        ColorSequenceKeypoint.new(0, accent),
-                        ColorSequenceKeypoint.new(1, accentGradient),
-                    })
-                end
-            end
-        elseif desc:IsA("Frame") and desc.Name == "AccentBar" then
-            desc.BackgroundColor3 = accent
-        elseif desc:IsA("TextButton") and desc.Parent and desc.Parent.Name == "LeftTabs" then
-            desc.BackgroundColor3 = accent
-        end
-    end
-end
-
 -- Контейнер для уведомлений
 local NotificationHolder = Create("Frame", {
     Parent = Holder,
@@ -364,7 +409,7 @@ local NotificationHolder = Create("Frame", {
     BorderSizePixel = 0,
 })
 
-local NotificationLayout = Create("UIListLayout", {
+Create("UIListLayout", {
     Parent = NotificationHolder,
     Padding = UDim.new(0, 6),
     SortOrder = Enum.SortOrder.LayoutOrder,
@@ -536,7 +581,6 @@ local CloseText = Create("TextLabel", {
 
 local CloseAccent = Create("Frame", {
     Parent = CloseButton,
-    Name = "CloseAccent",
     BackgroundColor3 = Color3.new(1, 1, 1),
     BackgroundTransparency = 1,
     Size = UDim2.new(0, 0, 0, 0),
@@ -546,7 +590,7 @@ local CloseAccent = Create("Frame", {
 
 Create("UICorner", { Parent = CloseAccent, CornerRadius = UDim.new(0, 6) })
 
-Create("UIGradient", {
+local CloseGradient = Create("UIGradient", {
     Parent = CloseAccent,
     Rotation = -115,
     Color = ColorSequence.new({
@@ -608,7 +652,6 @@ local HeaderSearchInput = Create("TextBox", {
 -- Левая панель вкладок (Сайдбар)
 local LeftTabs = Create("ScrollingFrame", {
     Parent = MainFrame,
-    Name = "LeftTabs",
     BackgroundColor3 = Theme.Background,
     BackgroundTransparency = 0.1,
     Size = UDim2.new(0, SidebarWidth, 1, -FooterHeight),
@@ -777,7 +820,49 @@ Create("UIListLayout", {
 })
 
 -- Страницы
+local Pages = {}
 local CurrentPage = nil
+
+-- ФУНКЦИЯ ДИНАМИЧЕСКОЙ СМЕНЫ ТЕМЫ
+local function ApplyTheme(themeName)
+    local t = ThemesPresets[themeName]
+    if not t then return end
+
+    Theme.Background = t.Background
+    Theme.Background2 = t.Background2
+    Theme.SectionBackground = t.SectionBackground
+    Theme.SectionBackground2 = t.SectionBackground2
+    Theme.SectionTop = t.SectionTop
+    Theme.Element = t.Element
+    Theme.Outline = t.Outline
+    Theme.Text = t.Text
+    Theme.Accent = t.Accent
+    Theme.AccentGradient = t.AccentGradient
+
+    CreateTween(MainFrame, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
+    CreateTween(LeftTabs, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
+    CreateTween(Content, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
+    CreateTween(ProfileFooter, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
+    CreateTween(HeaderSearchContainer, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Element})
+    CreateTween(CloseButton, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Element})
+
+    for _, desc in ipairs(Holder:GetDescendants()) do
+        if desc:IsA("UIGradient") then
+            desc.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Theme.Accent),
+                ColorSequenceKeypoint.new(1, Theme.AccentGradient)
+            })
+        elseif desc.Name == "SectionTopBg" then
+            CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.SectionTop})
+        elseif desc.Name == "SectionContent" then
+            CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.SectionBackground})
+        elseif desc.Name == "AccentBar" or desc.Name == "FloatAccent" then
+            CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent})
+        elseif desc:IsA("UIStroke") and desc.Name ~= "StatusDotStroke" then
+            CreateTween(desc, TweenInfo.new(0.3), {Color = Theme.Outline})
+        end
+    end
+end
 
 -- Обновление позиции белой полоски
 local function UpdateActiveIndicator(instant)
@@ -1082,6 +1167,7 @@ local function CreatePage(PageConfig)
 
         local SectionTopBg = Create("Frame", {
             Parent = SectionTop,
+            Name = "SectionTopBg",
             BackgroundColor3 = Theme.SectionTop,
             BackgroundTransparency = 0.3,
             Position = UDim2.new(0, 1, 0, 1),
@@ -1215,7 +1301,6 @@ local function CreatePage(PageConfig)
             
             local Accent = Create("Frame", {
                 Parent = Indicator,
-                Name = "Accent",
                 BackgroundColor3 = Color3.new(1, 1, 1),
                 BackgroundTransparency = 1,
                 Size = UDim2.new(0, 0, 0, 0),
@@ -1318,7 +1403,6 @@ local function CreatePage(PageConfig)
             
             local Accent = Create("Frame", {
                 Parent = ButtonFrame,
-                Name = "Accent",
                 BackgroundColor3 = Color3.new(1, 1, 1),
                 BackgroundTransparency = 1,
                 Size = UDim2.new(0, 0, 0, 0),
@@ -1452,7 +1536,6 @@ local function CreatePage(PageConfig)
             
             local SliderFill = Create("Frame", {
                 Parent = SliderBar,
-                Name = "SliderFill",
                 BackgroundColor3 = Color3.new(1, 1, 1),
                 Size = UDim2.new(0.5, 0, 1, 0),
                 BorderSizePixel = 0,
@@ -1621,7 +1704,7 @@ local function CreatePage(PageConfig)
                 local Pos = DropdownButton.AbsolutePosition
                 local Size = DropdownButton.AbsoluteSize
                 DropdownList.Position = UDim2.new(0, Pos.X, 0, Pos.Y + Size.Y + 3)
-                DropdownList.Size = UDim2.new(0, Size.X, 0, math.min(90, #Items * 20 + 4))
+                DropdownList.Size = UDim2.new(0, Size.X, 0, math.min(110, #Items * 20 + 4))
             end
             
             local function SetOpen(Open)
@@ -2600,28 +2683,57 @@ AimbotSection:Slider({Name = "Smoothness", Min = 0, Max = 100, Default = 50, Suf
 AimbotSection:Dropdown({Name = "Target", Items = {"Head", "Body", "Legs"}, Default = "Head"})
 AimbotSection:Keybind({Name = "Aimbot Key", Default = Enum.KeyCode.LeftShift})
 
--- Settings (Добавлена функция Ui Theme)
+-- Settings (Вкладка настроек с выбором темы и кастомного цвета)
 local SettingsPage = CreatePage({Name = "settings", Icon = "123944728972740"})
-local SettingsSection = SettingsPage:CreateSection({Name = "Settings"})
+local SettingsSection = SettingsPage:CreateSection({Name = "Theme Settings", Description = "Customize GUI colors"})
 
-local Themes = {
-    ["Default (AMOLED)"] = {Accent = Color3.fromRGB(0, 116, 224), Gradient = Color3.fromRGB(0, 195, 255)},
-    ["Purple Neon"]      = {Accent = Color3.fromRGB(140, 0, 255), Gradient = Color3.fromRGB(255, 0, 200)},
-    ["Blood Red"]        = {Accent = Color3.fromRGB(220, 20, 60), Gradient = Color3.fromRGB(255, 70, 70)},
-    ["Emerald Green"]    = {Accent = Color3.fromRGB(0, 200, 100), Gradient = Color3.fromRGB(0, 255, 170)},
-    ["Ocean Blue"]       = {Accent = Color3.fromRGB(0, 150, 255), Gradient = Color3.fromRGB(0, 230, 255)},
-    ["Sunset Orange"]    = {Accent = Color3.fromRGB(255, 100, 0), Gradient = Color3.fromRGB(255, 180, 0)},
-    ["Cyber Yellow"]     = {Accent = Color3.fromRGB(255, 200, 0), Gradient = Color3.fromRGB(255, 240, 100)},
-}
+local themeDropdown
+local customColorpicker
 
-SettingsSection:Dropdown({
+themeDropdown = SettingsSection:Dropdown({
     Name = "Ui Theme",
-    Items = {"Default (AMOLED)", "Purple Neon", "Blood Red", "Emerald Green", "Ocean Blue", "Sunset Orange", "Cyber Yellow"},
-    Default = "Default (AMOLED)",
+    Items = {"AMOLED Black", "Dark Blue", "Crimson Red", "Emerald Green", "Purple Velvet", "Cyberpunk", "Custom Accent"},
+    Default = "AMOLED Black",
     Callback = function(selected)
-        local themeData = Themes[selected]
-        if themeData then
-            UpdateThemeColors(themeData.Accent, themeData.Gradient)
+        if selected == "Custom Accent" then
+            local customCol = customColorpicker and customColorpicker.Get() or Color3.fromRGB(0, 116, 224)
+            local h, s, v = customCol:ToHSV()
+            ThemesPresets["Custom Accent"] = {
+                Background = Color3.fromRGB(5, 5, 5),
+                Background2 = Color3.fromRGB(10, 10, 10),
+                SectionBackground = Color3.fromRGB(12, 12, 12),
+                SectionBackground2 = Color3.fromRGB(16, 16, 16),
+                SectionTop = Color3.fromRGB(22, 22, 22),
+                Element = Color3.fromRGB(18, 18, 18),
+                Outline = Color3.fromRGB(30, 30, 30),
+                Text = Color3.fromRGB(255, 255, 255),
+                Accent = customCol,
+                AccentGradient = Color3.fromHSV((h + 0.05) % 1, s, v),
+            }
+        end
+        ApplyTheme(selected)
+    end
+})
+
+customColorpicker = SettingsSection:Colorpicker({
+    Name = "Custom Accent Color",
+    Default = Color3.fromRGB(0, 116, 224),
+    Callback = function(col)
+        local h, s, v = col:ToHSV()
+        ThemesPresets["Custom Accent"] = {
+            Background = Color3.fromRGB(5, 5, 5),
+            Background2 = Color3.fromRGB(10, 10, 10),
+            SectionBackground = Color3.fromRGB(12, 12, 12),
+            SectionBackground2 = Color3.fromRGB(16, 16, 16),
+            SectionTop = Color3.fromRGB(22, 22, 22),
+            Element = Color3.fromRGB(18, 18, 18),
+            Outline = Color3.fromRGB(30, 30, 30),
+            Text = Color3.fromRGB(255, 255, 255),
+            Accent = col,
+            AccentGradient = Color3.fromHSV((h + 0.05) % 1, s, v),
+        }
+        if themeDropdown and themeDropdown.Get() == "Custom Accent" then
+            ApplyTheme("Custom Accent")
         end
     end
 })
@@ -2864,7 +2976,6 @@ Create("UICorner", { Parent = FloatHeader, CornerRadius = UDim.new(0, 8) })
 
 local FloatStroke = Create("UIStroke", {
     Parent = FloatHeader,
-    Name = "FloatStroke",
     Color = Theme.Outline,
     Thickness = 1.2,
     ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
@@ -2945,6 +3056,7 @@ Create("UICorner", { Parent = StatusDot, CornerRadius = UDim.new(1, 0) })
 
 local StatusDotStroke = Create("UIStroke", {
     Parent = StatusDot,
+    Name = "StatusDotStroke",
     Color = StatusDot.BackgroundColor3,
     Transparency = 0.4,
     Thickness = 1.5,
@@ -2964,29 +3076,29 @@ end
 
 MainFrame:GetPropertyChangedSignal("Visible"):Connect(UpdateStatusDot)
 
--- === ЛОГИКА ПЕРЕТАСКИВАНИЯ И ПЕРЕКЛЮЧЕНИЯ ПЛАВАЮЩЕЙ КНОПКИ ===
-local Dragging = false
-local DragInput, DragStart, StartPos
+-- === ЛОГИКА ПЕРЕТАСКИВАНИЯ КНОПКИ И ГЛАВНОГО ОКНА ===
+local DraggingFloat = false
+local DragInputFloat, DragStartFloat, StartPosFloat
 
-local function UpdateDrag(input)
-    local Delta = input.Position - DragStart
+local function UpdateDragFloat(input)
+    local Delta = input.Position - DragStartFloat
     FloatHeader.Position = UDim2.new(
-        StartPos.X.Scale,
-        StartPos.X.Offset + Delta.X,
-        StartPos.Y.Scale,
-        StartPos.Y.Offset + Delta.Y
+        StartPosFloat.X.Scale,
+        StartPosFloat.X.Offset + Delta.X,
+        StartPosFloat.Y.Scale,
+        StartPosFloat.Y.Offset + Delta.Y
     )
 end
 
 FloatHeader.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        Dragging = true
-        DragStart = input.Position
-        StartPos = FloatHeader.Position
+        DraggingFloat = true
+        DragStartFloat = input.Position
+        StartPosFloat = FloatHeader.Position
 
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
-                Dragging = false
+                DraggingFloat = false
             end
         end)
     end
@@ -2994,18 +3106,61 @@ end)
 
 FloatHeader.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        DragInput = input
+        DragInputFloat = input
     end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if input == DragInput and Dragging then
-        UpdateDrag(input)
+    if input == DragInputFloat and DraggingFloat then
+        UpdateDragFloat(input)
     end
 end)
 
-FloatHeader.MouseButton1Click:Connect(function()
+FloatHeader.MouseButton1Down:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- Перетаскивание главного окна
+local DraggingMain = false
+local DragInputMain, DragStartMain, StartPosMain
+
+local function UpdateDragMain(input)
+    local Delta = input.Position - DragStartMain
+    MainFrame.Position = UDim2.new(
+        StartPosMain.X.Scale,
+        StartPosMain.X.Offset + Delta.X,
+        StartPosMain.Y.Scale,
+        StartPosMain.Y.Offset + Delta.Y
+    )
+end
+
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        local mousePos = input.Position
+        if mousePos.Y <= MainFrame.AbsolutePosition.Y + HeaderHeight then
+            DraggingMain = true
+            DragStartMain = input.Position
+            StartPosMain = MainFrame.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    DraggingMain = false
+                end
+            end)
+        end
+    end
+end)
+
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        DragInputMain = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == DragInputMain and DraggingMain then
+        UpdateDragMain(input)
+    end
 end)
 
 return DarkHub
