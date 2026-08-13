@@ -506,7 +506,7 @@ do
     end)
 end
 
--- ИКОНКА В ГЛАВНОМ ОКНЕ
+-- ИКОНКА В ГЛАВНОМ ОКНЕ (КРУГЛАЯ)
 local Logo = Create("ImageLabel", {
     Parent = MainFrame,
     Name = "Logo",
@@ -518,6 +518,8 @@ local Logo = Create("ImageLabel", {
     ScaleType = Enum.ScaleType.Fit,
     ZIndex = 5,
 })
+
+Create("UICorner", { Parent = Logo, CornerRadius = UDim.new(1, 0) })
 
 Create("TextLabel", {
     Parent = MainFrame,
@@ -651,13 +653,13 @@ local HeaderSearchInput = Create("TextBox", {
     ZIndex = 6,
 })
 
--- Левая панель вкладок (Сайдбар)
+-- Левая панель вкладок (Сайдбар) - Начинается СТРОГО под шапкой
 local LeftTabs = Create("ScrollingFrame", {
     Parent = MainFrame,
     BackgroundColor3 = Theme.Background,
     BackgroundTransparency = 0.1,
-    Size = UDim2.new(0, SidebarWidth, 1, -FooterHeight),
-    Position = UDim2.new(0, 0, 0, 0),
+    Size = UDim2.new(0, SidebarWidth, 1, -(HeaderHeight + FooterHeight)),
+    Position = UDim2.new(0, 0, 0, HeaderHeight),
     BorderSizePixel = 0,
     ClipsDescendants = true,
     ScrollBarThickness = 0,
@@ -675,7 +677,7 @@ Create("UIListLayout", {
 
 Create("UIPadding", {
     Parent = LeftTabs,
-    PaddingTop = UDim.new(0, HeaderHeight + 4),
+    PaddingTop = UDim.new(0, 4),
     PaddingBottom = UDim.new(0, 6),
     PaddingLeft = UDim.new(0, 4),
     PaddingRight = UDim.new(0, 4),
@@ -764,6 +766,8 @@ local ArrowIcon = Create("ImageLabel", {
     Rotation = -90,
     ZIndex = 9,
 })
+
+Create("UICorner", { Parent = ArrowIcon, CornerRadius = UDim.new(1, 0) })
 
 -- ИНДИКАТОР АКТИВНОЙ ВКЛАДКИ (БЕЛАЯ ПОЛОСКА)
 local ActiveIndicator = Create("Frame", {
@@ -1009,6 +1013,8 @@ local function CreatePage(PageConfig)
         Position = UDim2.new(0, 12, 0.5, 0),
         AnchorPoint = Vector2.new(0, 0.5),
     })
+
+    Create("UICorner", { Parent = TabIcon, CornerRadius = UDim.new(1, 0) })
     
     local TabLabel = Create("TextLabel", {
         Parent = TabButton,
@@ -1218,7 +1224,7 @@ local function CreatePage(PageConfig)
         
         local TextXOffset = 14
         if SectionIcon then
-            Create("ImageLabel", {
+            local SecIcon = Create("ImageLabel", {
                 Parent = SectionTopBg,
                 Image = GetIconUri(SectionIcon),
                 ImageColor3 = Theme.Text,
@@ -1227,6 +1233,7 @@ local function CreatePage(PageConfig)
                 Position = UDim2.new(0, 12, 0.5, 0),
                 AnchorPoint = Vector2.new(0, 0.5),
             })
+            Create("UICorner", { Parent = SecIcon, CornerRadius = UDim.new(1, 0) })
             TextXOffset = 28
         end
 
@@ -1468,7 +1475,7 @@ local function CreatePage(PageConfig)
             })
             
             if Icon then
-                Create("ImageLabel", {
+                local BtnIcon = Create("ImageLabel", {
                     Parent = ButtonText,
                     Image = GetIconUri(Icon),
                     ImageColor3 = Theme.Text,
@@ -1478,6 +1485,7 @@ local function CreatePage(PageConfig)
                     Position = UDim2.new(0, -12, 0.5, 0),
                     AnchorPoint = Vector2.new(1, 0.5),
                 })
+                Create("UICorner", { Parent = BtnIcon, CornerRadius = UDim.new(1, 0) })
             end
             
             ButtonFrame.MouseEnter:Connect(function()
@@ -3066,6 +3074,8 @@ local FloatIcon = Create("ImageLabel", {
     ScaleType = Enum.ScaleType.Fit,
     ZIndex = 128,
 })
+
+Create("UICorner", { Parent = FloatIcon, CornerRadius = UDim.new(1, 0) })
 
 local FloatTitle = Create("TextLabel", {
     Parent = FloatHeader,
