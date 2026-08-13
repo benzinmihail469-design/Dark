@@ -2085,7 +2085,7 @@ local function CreatePage(PageConfig)
     return PageData
 end
 
--- === ОБНОВЛЕННАЯ СИСТЕМА ФЛИНГА ===
+-- === ОБНОВЛЕННАЯ СИСТЕМА ФЛИНГА (ОРБИТАЛЬНОЕ "КОЛЕСО") ===
 local IsFlinging = false
 local function FlingPlayer(TargetPlayer)
     if IsFlinging or not TargetPlayer or TargetPlayer == LocalPlayer then return end
@@ -2105,7 +2105,7 @@ local function FlingPlayer(TargetPlayer)
 
     local OldCFrame = MyRoot.CFrame
 
-    -- Сохраняем CanCollide = true для HumanoidRootPart, чтобы передать импульс при физическом контакте
+    -- Держим CanCollide = true для HumanoidRootPart для передачи импульса
     local NoclipConn = RunService.Stepped:Connect(function()
         if MyChar then
             for _, Part in ipairs(MyChar:GetDescendants()) do
@@ -2126,27 +2126,36 @@ local function FlingPlayer(TargetPlayer)
     end)
 
     local StartTime = tick()
-    local Timeout = 2.0
+    local Timeout = 2.5
     local Angle = 0
+    local OrbitRadius = 2.2 -- Радиус вращения "колесом" вокруг цели
 
     local PhysicsConn
     PhysicsConn = RunService.Heartbeat:Connect(function(dt)
         if not IsFlinging or not TargetRoot or not TargetRoot.Parent or not MyRoot or not MyRoot.Parent or not MyHumanoid or MyHumanoid.Health <= 0 then return end
 
-        Angle = Angle + 100
-        
-        -- Выставляем высокую угловую и линейную скорость для передачи физического импульса
+        -- Динамическая скорость вращения по орбите
+        Angle = Angle + (dt * 35)
+
+        -- Огромная угловая и линейная скорость для разрушения физической стабильности цели
         MyRoot.AssemblyAngularVelocity = Vector3.new(99999, 99999, 99999)
         MyRoot.AssemblyLinearVelocity = Vector3.new(10000, 10000, 10000)
 
-        -- Динамическое упреждение позиционирования ходячих игроков (учитываем скорость цели + задержку сети)
+        -- Упреждение движения цели для точного перехвата на бегу
         local TargetVel = TargetRoot.AssemblyLinearVelocity
-        local PredictionFactor = 0.18
+        local PredictionFactor = 0.22
         local PredictedPos = TargetRoot.Position + (TargetVel * PredictionFactor)
 
-        -- Микро-смещение вокруг прогнозируемой позиции
-        local Offset = Vector3.new(math.sin(Angle) * 0.1, 0, math.cos(Angle) * 0.1)
-        MyRoot.CFrame = CFrame.new(PredictedPos + Offset) * CFrame.Angles(math.rad(Angle), math.rad(Angle), 0)
+        -- Орбитальное смещение вокруг игрока (вращение по кругу как колесо)
+        local Offset = Vector3.new(
+            math.cos(Angle) * OrbitRadius,
+            math.sin(Angle * 2) * 0.4, -- Микро-колебание по высоте
+            math.sin(Angle) * OrbitRadius
+        )
+
+        -- Быстрое 3D вращение персонажа во время полета по орбите
+        local SpinAngle = (Angle * 80) % 360
+        MyRoot.CFrame = CFrame.new(PredictedPos + Offset) * CFrame.Angles(math.rad(SpinAngle), math.rad(SpinAngle), math.rad(SpinAngle))
     end)
 
     while IsFlinging and TargetPlayer and TargetPlayer.Parent and TargetChar and TargetChar.Parent do
@@ -2154,8 +2163,8 @@ local function FlingPlayer(TargetPlayer)
         if TargetHumanoid and TargetHumanoid.Health <= 0 then break end
         if MyHumanoid and MyHumanoid.Health <= 0 then break end
         
-        -- Если цель подхвачена физикой и отлетела
-        if TargetRoot and TargetRoot.AssemblyLinearVelocity.Magnitude > 300 then
+        -- Проверка отлета цели
+        if TargetRoot and TargetRoot.AssemblyLinearVelocity.Magnitude > 250 then
             break
         end
 
@@ -2168,7 +2177,7 @@ local function FlingPlayer(TargetPlayer)
     if PhysicsConn then PhysicsConn:Disconnect() end
     if NoclipConn then NoclipConn:Disconnect() end
 
-    -- Сброс скоростей и безошибочное возвращение на исходное место
+    -- Сброс скоростей и возврат в исходную позицию
     if MyRoot then
         MyRoot.AssemblyLinearVelocity = Vector3.zero
         MyRoot.AssemblyAngularVelocity = Vector3.zero
