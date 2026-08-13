@@ -438,7 +438,7 @@ do
     end)
 end
 
--- ИКОНКА В ГЛАВНОМ ОКНЕ (С ЗАКРУГЛЕНИЕМ)
+-- ИКОНКА В ГЛАВНОМ ОКНЕ
 local Logo = Create("ImageLabel", {
     Parent = MainFrame,
     Name = "Logo",
@@ -450,8 +450,6 @@ local Logo = Create("ImageLabel", {
     ScaleType = Enum.ScaleType.Fit,
     ZIndex = 5,
 })
-
-Create("UICorner", { Parent = Logo, CornerRadius = UDim.new(0, 6) })
 
 Create("TextLabel", {
     Parent = MainFrame,
@@ -2859,103 +2857,73 @@ Create("UIGradient", {
     })
 })
 
--- ИКОНКА НА ПЛАВАЮЩЕЙ ПЛАШКЕ (С ЗАКРУГЛЕНИЕМ)
 local FloatIcon = Create("ImageLabel", {
     Parent = FloatHeader,
-    Name = "FloatIcon",
+    Name = "Icon",
     BackgroundTransparency = 1,
     Size = UDim2.new(0, 20, 0, 20),
-    Position = UDim2.new(0, 8, 0.5, 0),
+    Position = UDim2.new(0, 10, 0.5, 0),
     AnchorPoint = Vector2.new(0, 0.5),
     Image = DarkHubIcon,
     ScaleType = Enum.ScaleType.Fit,
     ZIndex = 128,
 })
 
-Create("UICorner", { Parent = FloatIcon, CornerRadius = UDim.new(0, 6) })
-
-Create("TextLabel", {
+local FloatTitle = Create("TextLabel", {
     Parent = FloatHeader,
-    Name = "FloatTitle",
+    Name = "Title",
     Text = "Dark Hub",
     TextColor3 = Theme.Text,
     BackgroundTransparency = 1,
     FontFace = FontSemiBold,
-    TextSize = 11,
-    Position = UDim2.new(0, 34, 0, 4),
-    Size = UDim2.new(0, 0, 0, 12),
+    TextSize = 12,
+    Position = UDim2.new(0, 36, 0.5, 0),
+    AnchorPoint = Vector2.new(0, 0.5),
+    Size = UDim2.new(0, 0, 0, 14),
     AutomaticSize = Enum.AutomaticSize.X,
     ZIndex = 128,
 })
 
-Create("TextLabel", {
-    Parent = FloatHeader,
-    Name = "FloatSubTitle",
-    Text = "Toggle Menu",
-    TextColor3 = Theme.Text,
-    TextTransparency = 0.4,
-    BackgroundTransparency = 1,
-    FontFace = FontRegular,
-    TextSize = 8,
-    Position = UDim2.new(0, 34, 0, 16),
-    Size = UDim2.new(0, 0, 0, 10),
-    AutomaticSize = Enum.AutomaticSize.X,
-    ZIndex = 128,
-})
+-- Логика перетаскивания и переключения плавающей кнопки
+local Dragging = false
+local DragInput, DragStart, StartPos
 
--- === ЛОГИКА ПЕРЕТАСКИВАНИЯ И ПЕРЕКЛЮЧЕНИЯ ВИДИМОСТИ ===
-local function MakeDraggable(TopBar, Frame)
-    local Dragging = false
-    local DragInput, DragStart, StartPos
-
-    TopBar.InputBegan:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-            Dragging = true
-            DragStart = Input.Position
-            StartPos = Frame.Position
-
-            Input.Changed:Connect(function()
-                if Input.UserInputState == Enum.UserInputState.End then
-                    Dragging = false
-                end
-            end)
-        end
-    end)
-
-    TopBar.InputChanged:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
-            DragInput = Input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(Input)
-        if Input == DragInput and Dragging then
-            local Delta = Input.Position - DragStart
-            Frame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
-        end
-    end)
+local function UpdateDrag(input)
+    local Delta = input.Position - DragStart
+    FloatHeader.Position = UDim2.new(
+        StartPos.X.Scale,
+        StartPos.X.Offset + Delta.X,
+        StartPos.Y.Scale,
+        StartPos.Y.Offset + Delta.Y
+    )
 end
 
-MakeDraggable(FloatHeader, FloatHeader)
-MakeDraggable(MainFrame, MainFrame)
+FloatHeader.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        Dragging = true
+        DragStart = input.Position
+        StartPos = FloatHeader.Position
 
-local ClickStartPos
-
-FloatHeader.InputBegan:Connect(function(Input)
-    if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-        ClickStartPos = Input.Position
-    end
-end)
-
-FloatHeader.InputEnded:Connect(function(Input)
-    if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-        if ClickStartPos then
-            local Dist = (Input.Position - ClickStartPos).Magnitude
-            if Dist < 5 then
-                MainFrame.Visible = not MainFrame.Visible
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                Dragging = false
             end
-        end
+        end)
     end
 end)
 
-return DarkHub
+FloatHeader.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        DragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == DragInput and Dragging then
+        UpdateDrag(input)
+    end
+end)
+
+FloatHeader.MouseButton1Down:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
