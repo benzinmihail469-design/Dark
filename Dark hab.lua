@@ -1755,11 +1755,16 @@ local function CreatePage(PageConfig)
             
             UserInputService.InputBegan:Connect(function(Input)
                 if IsOpen and (Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch) then
-                    if Input.Position.X >= DropdownList.AbsolutePosition.X and Input.Position.X <= DropdownList.AbsolutePosition.X + DropdownList.AbsoluteSize.X and
-                       Input.Position.Y >= DropdownList.AbsolutePosition.Y and Input.Position.Y <= DropdownList.AbsolutePosition.Y + DropdownList.AbsoluteSize.Y then
-                        return
+                    local mX, mY = Input.Position.X, Input.Position.Y
+                    local lPos, lSize = DropdownList.AbsolutePosition, DropdownList.AbsoluteSize
+                    local bPos, bSize = DropdownButton.AbsolutePosition, DropdownButton.AbsoluteSize
+
+                    local inList = (mX >= lPos.X and mX <= lPos.X + lSize.X and mY >= lPos.Y and mY <= lPos.Y + lSize.Y)
+                    local inBtn = (mX >= bPos.X and mX <= bPos.X + bSize.X and mY >= bPos.Y and mY <= bPos.Y + bSize.Y)
+
+                    if not inList and not inBtn then
+                        SetOpen(false)
                     end
-                    SetOpen(false)
                 end
             end)
             
@@ -2263,11 +2268,16 @@ local function CreatePage(PageConfig)
             
             UserInputService.InputBegan:Connect(function(Input)
                 if IsOpen and (Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch) then
-                    if Input.Position.X >= ColorPicker.AbsolutePosition.X and Input.Position.X <= ColorPicker.AbsolutePosition.X + ColorPicker.AbsoluteSize.X and
-                       Input.Position.Y >= ColorPicker.AbsolutePosition.Y and Input.Position.Y <= ColorPicker.AbsolutePosition.Y + ColorPicker.AbsoluteSize.Y then
-                        return
+                    local mX, mY = Input.Position.X, Input.Position.Y
+                    local lPos, lSize = ColorPicker.AbsolutePosition, ColorPicker.AbsoluteSize
+                    local bPos, bSize = ColorButton.AbsolutePosition, ColorButton.AbsoluteSize
+
+                    local inPicker = (mX >= lPos.X and mX <= lPos.X + lSize.X and mY >= lPos.Y and mY <= lPos.Y + lSize.Y)
+                    local inBtn = (mX >= bPos.X and mX <= bPos.X + bSize.X and mY >= bPos.Y and mY <= bPos.Y + bSize.Y)
+
+                    if not inPicker and not inBtn then
+                        SetOpen(false)
                     end
-                    SetOpen(false)
                 end
             end)
             
