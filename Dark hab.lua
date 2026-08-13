@@ -17,10 +17,7 @@ local IsMobile = UserInputService.TouchEnabled
 -- === ПЕРЕМЕННЫЕ ДЛЯ РОЛЕЙ И ESP ===
 local roleCache = {}
 _G.ESPEnabled = true
-_G.BoxESPEnabled = true
-_G.BoxColor = Color3.fromRGB(0, 255, 255)
-_G.ChamsEnabled = false
-_G.ChamsColor = Color3.fromRGB(0, 255, 0)
+_G.GunESPEnabled = false
 
 -- === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ПОЛУЧЕНИЯ РОЛЕЙ ===
 local function getPlayerRoleInfo(p)
@@ -40,9 +37,7 @@ local function getPlayerRoleInfo(p)
         return "LOBBY", Color3.fromRGB(180, 180, 180)
     elseif hasKnife or roleRaw == 'Murderer' then
         return "MURDERER", Color3.fromRGB(255, 35, 35)
-    elseif roleRaw == 'Hero' or (hasGun and roleRaw ~= 'Sheriff') then
-        return "HERO", Color3.fromRGB(255, 215, 0) -- Золотистый цвет для Героя
-    elseif hasGun or roleRaw == 'Sheriff' then
+    elseif hasGun or roleRaw == 'Sheriff' or roleRaw == 'Hero' then
         return "SHERIFF", Color3.fromRGB(0, 162, 255)
     else
         return "INNOCENT", Color3.fromRGB(0, 255, 128)
@@ -103,7 +98,7 @@ local function getSheriff()
     return nil
 end
 
--- === ОБНОВЛЕННАЯ СИСТЕМА ESP & CHAMS & BOX ESP ===
+-- === ОБНОВЛЕННАЯ СИСТЕМА ESP ИГРОКОВ ===
 local function applyPlayerESP(p)
     if not p or p == lp then
         return
@@ -119,14 +114,12 @@ local function applyPlayerESP(p)
             return
         end
 
-        -- Chams Highlight
         local highlight = char:FindFirstChild('ExodusESP') or Instance.new('Highlight')
         highlight.Name = 'ExodusESP'
         highlight.Parent = char
         highlight.FillTransparency = 0.5
         highlight.OutlineTransparency = 0
 
-        -- Billboard Label (Имя, Роль, Дистанция)
         local bill = head:FindFirstChild('ExodusBill') or Instance.new('BillboardGui')
         bill.Name = 'ExodusBill'
         bill.Parent = head
@@ -143,97 +136,33 @@ local function applyPlayerESP(p)
         label.TextSize = 12
         label.TextStrokeTransparency = 0
 
-        -- 2D Box ESP
-        local box = nil
-        local boxOutline = nil
-        if Drawing then
-            boxOutline = Drawing.new("Square")
-            boxOutline.Visible = false
-            boxOutline.Thickness = 3
-            boxOutline.Color = Color3.fromRGB(0, 0, 0)
-            boxOutline.Filled = false
-
-            box = Drawing.new("Square")
-            box.Visible = false
-            box.Thickness = 1
-            box.Filled = false
-        end
-
-        local cleanupCon
-        cleanupCon = char.AncestryChanged:Connect(function(_, parent)
-            if not parent then
-                if box then box:Remove() end
-                if boxOutline then boxOutline:Remove() end
-                if cleanupCon then cleanupCon:Disconnect() end
-            end
-        end)
-
         task.spawn(function()
             while char and char.Parent and p and p.Parent and p.Character == char do
-                local roleName, roleColor = getPlayerRoleInfo(p)
-
-                -- 1. Player ESP (Text)
                 if _G.ESPEnabled then
+                    highlight.Enabled = true
                     bill.Enabled = true
+
+                    local roleName, roleColor = getPlayerRoleInfo(p)
+
+                    -- Расчет дистанции
                     local distance = 0
                     if Camera and head then
                         distance = math.floor((head.Position - Camera.CFrame.Position).Magnitude)
                     end
+
+                    -- Применение визуалов
+                    highlight.FillColor = roleColor
+                    highlight.OutlineColor = roleColor
+
                     label.TextColor3 = roleColor
                     label.Text = string.format("[%s]\n%s\n[%dm]", roleName, p.DisplayName, distance)
                 else
+                    highlight.Enabled = false
                     bill.Enabled = false
                 end
 
-                -- 2. Chams
-                if _G.ChamsEnabled then
-                    highlight.Enabled = true
-                    highlight.FillColor = _G.ChamsColor or roleColor
-                    highlight.OutlineColor = _G.ChamsColor or roleColor
-                else
-                    highlight.Enabled = false
-                end
-
-                -- 3. Box ESP
-                if _G.BoxESPEnabled and box and Camera then
-                    local hrp = char:FindFirstChild("HumanoidRootPart")
-                    if hrp then
-                        local cframe, size = char:GetBoundingBox()
-                        local pos, onScreen = Camera:WorldToViewportPoint(cframe.Position)
-
-                        if onScreen then
-                            local sizeY = math.clamp(Camera:WorldToViewportPoint(cframe.Position + Vector3.new(0, size.Y / 2, 0)).Y - Camera:WorldToViewportPoint(cframe.Position - Vector3.new(0, size.Y / 2, 0)).Y, 10, 1000)
-                            local sizeX = math.clamp(sizeY / 1.6, 6, 600)
-
-                            local boxPos = Vector2.new(pos.X - sizeX / 2, pos.Y - sizeY / 2)
-                            local boxSize = Vector2.new(sizeX, sizeY)
-
-                            boxOutline.Position = boxPos
-                            boxOutline.Size = boxSize
-                            boxOutline.Visible = true
-
-                            box.Position = boxPos
-                            box.Size = boxSize
-                            box.Color = _G.BoxColor or roleColor
-                            box.Visible = true
-                        else
-                            box.Visible = false
-                            boxOutline.Visible = false
-                        end
-                    else
-                        box.Visible = false
-                        boxOutline.Visible = false
-                    end
-                elseif box then
-                    box.Visible = false
-                    boxOutline.Visible = false
-                end
-
-                task.wait(0.03)
+                task.wait(0.15)
             end
-
-            if box then box:Remove() end
-            if boxOutline then boxOutline:Remove() end
         end)
     end
 
@@ -243,11 +172,74 @@ local function applyPlayerESP(p)
     end
 end
 
--- Инициализация ESP
+-- Инициализация Player ESP
 for _, player in pairs(Players:GetPlayers()) do
     applyPlayerESP(player)
 end
 Players.PlayerAdded:Connect(applyPlayerESP)
+
+-- === СИСТЕМА ESP GUN (ВЫПАВШЕЕ ОРУЖИЕ) ===
+local function applyGunESP(gun)
+    if not gun then return end
+    if gun:FindFirstChild("ExodusGunESP") then return end
+
+    local handle = gun:IsA("BasePart") and gun or gun:FindFirstChild("Handle") or gun.PrimaryPart or gun:FindFirstChildWhichIsA("BasePart")
+    if not handle then return end
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ExodusGunESP"
+    highlight.Parent = gun
+    highlight.FillColor = Color3.fromRGB(255, 215, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.3
+    highlight.OutlineTransparency = 0
+
+    local bill = Instance.new("BillboardGui")
+    bill.Name = "ExodusGunBill"
+    bill.Parent = handle
+    bill.Adornee = handle
+    bill.Size = UDim2.new(0, 120, 0, 40)
+    bill.AlwaysOnTop = true
+    bill.ExtentsOffset = Vector3.new(0, 2, 0)
+
+    local label = Instance.new("TextLabel")
+    label.Parent = bill
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 12
+    label.TextColor3 = Color3.fromRGB(255, 215, 0)
+    label.TextStrokeTransparency = 0
+    label.Text = "[GUN]"
+
+    task.spawn(function()
+        while gun and gun.Parent do
+            if _G.GunESPEnabled then
+                highlight.Enabled = true
+                bill.Enabled = true
+                if Camera and handle then
+                    local dist = math.floor((handle.Position - Camera.CFrame.Position).Magnitude)
+                    label.Text = string.format("[GUN]\n[%dm]", dist)
+                end
+            else
+                highlight.Enabled = false
+                bill.Enabled = false
+            end
+            task.wait(0.2)
+        end
+    end)
+end
+
+local function checkAndApplyGun(obj)
+    if obj.Name == "GunDrop" or obj.Name == "NormalHandgun" then
+        applyGunESP(obj)
+    end
+end
+
+for _, obj in ipairs(workspace:GetDescendants()) do
+    checkAndApplyGun(obj)
+end
+workspace.DescendantAdded:Connect(checkAndApplyGun)
 
 -- Получение данных о ролях с сервера (частота опроса 0.5 сек)
 task.spawn(function()
@@ -2591,7 +2583,7 @@ RagebotSection:Toggle({Name = "Auto Wallbang", Default = true})
 local VisualsPage = CreatePage({Name = "Visuals", Icon = "122669828593160"})
 local VisualsSection = VisualsPage:CreateSection({Name = "Players"})
 
--- Подключение переключателей и кастомных цветов к глобальным переменным
+-- Подключение переключателя Player ESP к глобальной переменной _G.ESPEnabled
 VisualsSection:Toggle({
     Name = "Player ESP",
     Default = true,
@@ -2600,42 +2592,18 @@ VisualsSection:Toggle({
     end
 })
 
+-- Подключение переключателя ESP Gun
 VisualsSection:Toggle({
-    Name = "Box ESP",
-    Default = true,
+    Name = "ESP Gun",
+    Default = false,
     Callback = function(state)
-        _G.BoxESPEnabled = state
-    end
-})
-
-VisualsSection:Colorpicker({
-    Name = "Box Color",
-    Default = Color3.fromRGB(0, 255, 255),
-    Callback = function(color)
-        _G.BoxColor = color
+        _G.GunESPEnabled = state
     end
 })
 
 VisualsSection:Toggle({Name = "Snaplines", Default = false})
-VisualsSection:Dropdown({Name = "ESP Type", Items = {"Box", "Circle", "Glow"}, Default = "Box"})
 
 local VisualsSection2 = VisualsPage:CreateSection({Name = "World"})
-VisualsSection2:Toggle({
-    Name = "Chams",
-    Default = false,
-    Callback = function(state)
-        _G.ChamsEnabled = state
-    end
-})
-
-VisualsSection2:Colorpicker({
-    Name = "Chams Color",
-    Default = Color3.fromRGB(0, 255, 0),
-    Callback = function(color)
-        _G.ChamsColor = color
-    end
-})
-
 VisualsSection2:Slider({Name = "Brightness", Min = 0, Max = 100, Default = 50, Suffix = "%"})
 
 -- Movement
@@ -2941,18 +2909,22 @@ FloatHeader.InputBegan:Connect(function(input)
         DragStart = input.Position
         StartPos = FloatHeader.Position
 
-        local connection
-        connection = input.Changed:Connect(function()
+        input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 Dragging = false
-                if connection then connection:Disconnect() end
             end
         end)
     end
 end)
 
+FloatHeader.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        DragInput = input
+    end
+end)
+
 UserInputService.InputChanged:Connect(function(input)
-    if Dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+    if input == DragInput and Dragging then
         UpdateDrag(input)
     end
 end)
