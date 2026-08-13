@@ -9,12 +9,201 @@ local Lighting = game:GetService("Lighting")
 local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
+local lp = LocalPlayer
 local Camera = game:GetService("Workspace").CurrentCamera
 
 local IsMobile = UserInputService.TouchEnabled
 
--- Глобальная переменная состояния ESP
+-- === ПЕРЕМЕННЫЕ ДЛЯ РОЛЕЙ И ESP ===
+local roleCache = {}
 _G.ESPEnabled = true
+
+-- === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ПОЛУЧЕНИЯ РОЛЕЙ ===
+local function getMurderer()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= lp then
+            local backpack = p:FindFirstChild('Backpack')
+            local char = p.Character
+
+            if backpack and backpack:FindFirstChild('Knife') then
+                return p
+            end
+            if char and char:FindFirstChild('Knife') then
+                return p
+            end
+        end
+    end
+    for name, data in pairs(roleCache) do
+        if data.Role == 'Murderer' then
+            local p = Players:FindFirstChild(name)
+            if p then
+                return p
+            end
+        end
+    end
+
+    return nil
+end
+
+local function getSheriff()
+    if workspace:FindFirstChild('GunDrop', true) then
+        return nil
+    end
+
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= lp and p.Character then
+            local backpack = p:FindFirstChild('Backpack')
+            local char = p.Character
+            local hasGun = char:FindFirstChild('Gun') or (backpack and backpack:FindFirstChild('Gun'))
+
+            if hasGun then
+                return p
+            end
+        end
+    end
+    for name, data in pairs(roleCache) do
+        if data.Role == 'Sheriff' or data.Role == 'Hero' then
+            local p = Players:FindFirstChild(name)
+            if p then
+                return p
+            end
+        end
+    end
+
+    return nil
+end
+
+-- === СИСТЕМА ESP ===
+local function applyPlayerESP(p)
+    if not p or p == lp then
+        return
+    end
+
+    local function setup(char)
+        if not char then
+            return
+        end
+
+        local head = char:WaitForChild('Head', 10)
+        if not head then
+            return
+        end
+
+        local highlight = char:FindFirstChild('ExodusESP') or Instance.new('Highlight')
+        highlight.Name = 'ExodusESP'
+        highlight.Parent = char
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0
+
+        local bill = head:FindFirstChild('ExodusBill') or Instance.new('BillboardGui')
+        bill.Name = 'ExodusBill'
+        bill.Parent = head
+        bill.Adornee = head
+        bill.Size = UDim2.new(0, 150, 0, 50)
+        bill.AlwaysOnTop = true
+        bill.ExtentsOffset = Vector3.new(0, 3, 0)
+
+        local label = bill:FindFirstChild('TextLabel') or Instance.new('TextLabel')
+        label.Parent = bill
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 12
+        label.TextStrokeTransparency = 0
+
+        task.spawn(function()
+            while char and char.Parent and p and p.Parent and p.Character == char do
+                if _G.ESPEnabled then
+                    highlight.Enabled = true
+                    bill.Enabled = true
+
+                    local activeHero = nil
+
+                    for _, player in ipairs(Players:GetPlayers()) do
+                        if player and player.Character then
+                            local bp = player:FindFirstChild('Backpack')
+                            local charGun = player.Character:FindFirstChild('Gun')
+                            local backGun = bp and bp:FindFirstChild('Gun')
+
+                            if charGun or backGun then
+                                activeHero = player
+                                break
+                            end
+                        end
+                    end
+
+                    local backpack = p:FindFirstChild('Backpack')
+                    local hasKnife = (backpack and backpack:FindFirstChild('Knife')) or char:FindFirstChild('Knife')
+                    local hasGun = (backpack and backpack:FindFirstChild('Gun')) or char:FindFirstChild('Gun')
+                    local gunDropped = workspace:FindFirstChild('GunDrop', true)
+                    local pData = roleCache[p.Name]
+                    local role = (pData and type(pData) == 'table' and pData.Role) or 'Innocent'
+
+                    if hasKnife or role == 'Murderer' then
+                        local mColor = Color3.fromRGB(255, 0, 0)
+                        highlight.FillColor = mColor
+                        label.Text = 'MURDERER\n\u{25bc}'
+                        label.TextColor3 = mColor
+                    elseif hasGun then
+                        local sColor = Color3.fromRGB(0, 162, 255)
+                        highlight.FillColor = sColor
+                        label.Text = 'SHERIFF\n\u{25bc}'
+                        label.TextColor3 = sColor
+                    elseif role == 'Sheriff' or role == 'Hero' then
+                        if gunDropped or (activeHero and activeHero ~= p) then
+                            local iColor = Color3.fromRGB(0, 255, 0)
+                            highlight.FillColor = iColor
+                            label.Text = '\u{25bc}'
+                            label.TextColor3 = iColor
+                        else
+                            local sColor = Color3.fromRGB(0, 162, 255)
+                            highlight.FillColor = sColor
+                            label.Text = 'SHERIFF\n\u{25bc}'
+                            label.TextColor3 = sColor
+                        end
+                    else
+                        local iColor = Color3.fromRGB(0, 255, 0)
+                        highlight.FillColor = iColor
+                        label.Text = '\u{25bc}'
+                        label.TextColor3 = iColor
+                    end
+                else
+                    highlight.Enabled = false
+                    bill.Enabled = false
+                end
+
+                task.wait(0.5)
+            end
+        end)
+    end
+
+    p.CharacterAdded:Connect(setup)
+    if p.Character then
+        setup(p.Character)
+    end
+end
+
+-- Инициализация ESP
+for _, player in pairs(Players:GetPlayers()) do
+    applyPlayerESP(player)
+end
+Players.PlayerAdded:Connect(applyPlayerESP)
+
+-- Получение данных о ролях с сервера
+task.spawn(function()
+    while task.wait(1.5) do
+        local success, data = pcall(function()
+            local remote = game:GetService('ReplicatedStorage'):FindFirstChild('GetPlayerData', true)
+            if remote then
+                return remote:InvokeServer()
+            end
+        end)
+
+        if success and type(data) == 'table' then
+            roleCache = data
+        end
+    end
+end)
 
 -- === ОБНОВЛЕННЫЕ НАСТРОЙКИ РАЗМЕРОВ ГУИ ===
 local MainWidth = IsMobile and 530 or 570     -- Ширина главного окна
@@ -2122,141 +2311,6 @@ local function CreatePage(PageConfig)
 end
 
 -- =======================================================
--- === ФУНКЦИОНАЛ ИНТЕГРИРОВАННОЙ СИСТЕМЫ ESP ===
--- =======================================================
-local function applyPlayerESP(p)
-    if not p or p == LocalPlayer then
-        return
-    end
-
-    local function setup(char)
-        if not char then
-            return
-        end
-
-        local head = char:WaitForChild('Head', 10)
-
-        if not head then
-            return
-        end
-
-        local highlight = char:FindFirstChild('ExodusESP') or Instance.new('Highlight')
-
-        highlight.Name = 'ExodusESP'
-        highlight.Parent = char
-        highlight.FillTransparency = 0.5
-        highlight.OutlineTransparency = 0
-
-        local bill = head:FindFirstChild('ExodusBill') or Instance.new('BillboardGui')
-
-        bill.Name = 'ExodusBill'
-        bill.Parent = head
-        bill.Adornee = head
-        bill.Size = UDim2.new(0, 150, 0, 50)
-        bill.AlwaysOnTop = true
-        bill.ExtentsOffset = Vector3.new(0, 3, 0)
-
-        local label = bill:FindFirstChild('TextLabel') or Instance.new('TextLabel')
-
-        label.Parent = bill
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.BackgroundTransparency = 1
-        label.Font = Enum.Font.GothamBold
-        label.TextSize = 12
-        label.TextStrokeTransparency = 0
-
-        task.spawn(function()
-            while char and char.Parent and p and p.Parent and p.Character == char do
-                if _G.ESPEnabled then
-                    highlight.Enabled = true
-                    bill.Enabled = true
-
-                    local activeHero = nil
-
-                    for _, player in ipairs(Players:GetPlayers()) do
-                        if player and player.Character then
-                            local bp = player:FindFirstChild('Backpack')
-                            local charGun = player.Character:FindFirstChild('Gun')
-                            local backGun = bp and bp:FindFirstChild('Gun')
-
-                            if charGun or backGun then
-                                activeHero = player
-                                break
-                            end
-                        end
-                    end
-
-                    local backpack = p:FindFirstChild('Backpack')
-                    local hasKnife = (backpack and backpack:FindFirstChild('Knife')) or char:FindFirstChild('Knife')
-                    local hasGun = (backpack and backpack:FindFirstChild('Gun')) or char:FindFirstChild('Gun')
-                    local gunDropped = workspace:FindFirstChild('GunDrop', true)
-                    
-                    local currentRoleCache = _G.roleCache or (type(roleCache) == "table" and roleCache) or {}
-                    local pData = currentRoleCache[p.Name]
-                    local role = (pData and type(pData) == 'table' and pData.Role) or 'Innocent'
-
-                    if hasKnife or role == 'Murderer' then
-                        local mColor = Color3.fromRGB(255, 0, 0)
-
-                        highlight.FillColor = mColor
-                        label.Text = 'MURDERER\n\u{25bc}'
-                        label.TextColor3 = mColor
-                    elseif hasGun then
-                        local sColor = Color3.fromRGB(0, 162, 255)
-
-                        highlight.FillColor = sColor
-                        label.Text = 'SHERIFF\n\u{25bc}'
-                        label.TextColor3 = sColor
-                    elseif role == 'Sheriff' or role == 'Hero' then
-                        if gunDropped or (activeHero and activeHero ~= p) then
-                            local iColor = Color3.fromRGB(0, 255, 0)
-
-                            highlight.FillColor = iColor
-                            label.Text = '\u{25bc}'
-                            label.TextColor3 = iColor
-                        else
-                            local sColor = Color3.fromRGB(0, 162, 255)
-
-                            highlight.FillColor = sColor
-                            label.Text = 'SHERIFF\n\u{25bc}'
-                            label.TextColor3 = sColor
-                        end
-                    else
-                        local iColor = Color3.fromRGB(0, 255, 0)
-
-                        highlight.FillColor = iColor
-                        label.Text = '\u{25bc}'
-                        label.TextColor3 = iColor
-                    end
-                else
-                    highlight.Enabled = false
-                    bill.Enabled = false
-                end
-
-                task.wait(0.5)
-            end
-        end)
-    end
-
-    p.CharacterAdded:Connect(setup)
-
-    if p.Character then
-        setup(p.Character)
-    end
-end
-
--- Подключаем обработку ESP для всех созданных и будущих игроков
-for _, p in ipairs(Players:GetPlayers()) do
-    if p ~= LocalPlayer then
-        task.spawn(function()
-            applyPlayerESP(p)
-        end)
-    end
-end
-
-Players.PlayerAdded:Connect(applyPlayerESP)
-
--- =======================================================
 -- === АВТОНОМНАЯ СИСТЕМА FLING & ANTI-FLING ===
 -- =======================================================
 local antiFlingEnabled = false
@@ -2477,9 +2531,9 @@ RagebotSection:Toggle({Name = "Auto Wallbang", Default = true})
 local VisualsPage = CreatePage({Name = "Visuals", Icon = "122669828593160"})
 local VisualsSection = VisualsPage:CreateSection({Name = "Players"})
 
--- Привязанный переключатель ESP
+-- Подключение переключателя Player ESP к глобальной переменной _G.ESPEnabled
 VisualsSection:Toggle({
-    Name = "Player ESP", 
+    Name = "Player ESP",
     Default = true,
     Callback = function(state)
         _G.ESPEnabled = state
