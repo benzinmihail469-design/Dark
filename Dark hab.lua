@@ -2085,97 +2085,111 @@ local function CreatePage(PageConfig)
     return PageData
 end
 
--- === ИНТЕГРИРОВАННАЯ СИСТЕМА ФЛИНГА (ИЗ 2 ФАЙЛА) ===
-local FlingConnection = nil
-local TargetFlingPlayer = nil
+-- === МОЩНАЯ И ОБНОВЛЕННАЯ СИСТЕМА ФЛИНГА ===
+local IsFlinging = false
+local function FlingPlayer(TargetPlayer)
+    if IsFlinging or not TargetPlayer or TargetPlayer == LocalPlayer then return end
 
-local function StartFling(TargetPlayer)
-    if FlingConnection then
-        FlingConnection:Disconnect()
-        FlingConnection = nil
-    end
+    local MyChar = LocalPlayer.Character
+    local TargetChar = TargetPlayer.Character
+    if not MyChar or not TargetChar then return end
 
-    TargetFlingPlayer = TargetPlayer
-    if not TargetFlingPlayer then return end
+    local MyRoot = MyChar:FindFirstChild("HumanoidRootPart") or MyChar:FindFirstChild("Torso") or MyChar:FindFirstChild("UpperTorso")
+    local TargetRoot = TargetChar:FindFirstChild("HumanoidRootPart") or TargetChar:FindFirstChild("Torso") or TargetChar:FindFirstChild("UpperTorso")
+    local MyHumanoid = MyChar:FindFirstChildOfClass("Humanoid")
+    local TargetHumanoid = TargetChar:FindFirstChildOfClass("Humanoid")
 
-    local character = LocalPlayer.Character
-    if not character then return end
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if not hrp or not humanoid then return end
+    if not MyRoot or not TargetRoot or not MyHumanoid or MyHumanoid.Health <= 0 then return end
 
-    local TPos = Vector3.new()
-    local FPos = Vector3.new()
-    local InitialCFrame = hrp.CFrame
+    IsFlinging = true
 
-    -- Отключаем коллизии для безопасности нашего персонажа
-    local noclipConnection
-    noclipConnection = RunService.Stepped:Connect(function()
-        if character then
-            for _, v in ipairs(character:GetDescendants()) do
-                if v:IsA("BasePart") then
-                    v.CanCollide = false
+    local OldCFrame = MyRoot.CFrame
+
+    pcall(function()
+        MyHumanoid:ChangeState(Enum.HumanoidStateType.Physics)
+        MyHumanoid.Sit = false
+    end)
+
+    -- Отключаем коллизии для всех деталей КРОМЕ HumanoidRootPart, чтобы передавать физический импульс
+    local NoclipConn = RunService.Stepped:Connect(function()
+        if MyChar then
+            for _, Part in ipairs(MyChar:GetDescendants()) do
+                if Part:IsA("BasePart") then
+                    if Part == MyRoot then
+                        Part.CanCollide = true
+                    else
+                        Part.CanCollide = false
+                    end
                 end
             end
         end
     end)
 
-    pcall(function()
-        humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-        humanoid.Sit = false
+    -- Создаем BodyAngularVelocity для максимальной вращательной силы
+    local BAV = Instance.new("BodyAngularVelocity")
+    BAV.Name = "DarkFlingForce"
+    BAV.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    BAV.AngularVelocity = Vector3.new(0, 999999, 0)
+    BAV.Parent = MyRoot
+
+    local StartTime = tick()
+    local Timeout = 2.0
+    local Angle = 0
+
+    local PhysicsConn
+    PhysicsConn = RunService.Heartbeat:Connect(function(dt)
+        if not IsFlinging or not TargetRoot or not TargetRoot.Parent or not MyRoot or not MyRoot.Parent or not MyHumanoid or MyHumanoid.Health <= 0 then return end
+
+        Angle = Angle + 100
+        
+        -- Экстремальная угловая и линейная скорость
+        MyRoot.AssemblyAngularVelocity = Vector3.new(99999, 99999, 99999)
+        MyRoot.AssemblyLinearVelocity = Vector3.new(0, 500, 0)
+
+        -- Учитываем движение цели (предикшн)
+        local TargetVel = TargetRoot.AssemblyLinearVelocity
+        local PredictedCFrame = TargetRoot.CFrame + (TargetVel * dt * 2)
+
+        -- Микро-смещение вплотную к цели
+        local Offset = Vector3.new(math.sin(Angle) * 0.1, 0, math.cos(Angle) * 0.1)
+        MyRoot.CFrame = PredictedCFrame * CFrame.new(Offset)
     end)
 
-    local function getRoot(char)
-        return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+    while IsFlinging and TargetPlayer and TargetPlayer.Parent and TargetChar and TargetChar.Parent do
+        if tick() - StartTime >= Timeout then break end
+        if TargetHumanoid and TargetHumanoid.Health <= 0 then break end
+        if MyHumanoid and MyHumanoid.Health <= 0 then break end
+        
+        -- Если цель отлетела от взрывной физики
+        if TargetRoot and TargetRoot.AssemblyLinearVelocity.Magnitude > 300 then
+            task.wait(0.1)
+            break
+        end
+
+        TargetRoot = TargetChar:FindFirstChild("HumanoidRootPart") or TargetChar:FindFirstChild("Torso") or TargetChar:FindFirstChild("UpperTorso")
+        if not TargetRoot then break end
+
+        task.wait()
     end
 
-    local startTime = tick()
-    FlingConnection = RunService.Heartbeat:Connect(function(dt)
-        local targetChar = TargetFlingPlayer.Character
-        local myChar = LocalPlayer.Character
-        
-        if not targetChar or not myChar then
-            if FlingConnection then FlingConnection:Disconnect() FlingConnection = nil end
-            if noclipConnection then noclipConnection:Disconnect() end
-            return
-        end
+    if PhysicsConn then PhysicsConn:Disconnect() end
+    if NoclipConn then NoclipConn:Disconnect() end
+    if BAV then BAV:Destroy() end
 
-        local tRoot = getRoot(targetChar)
-        local myRoot = getRoot(myChar)
-        local myHum = myChar:FindFirstChildOfClass("Humanoid")
+    -- Безопасное гашение импульса и возврат на место
+    if MyRoot then
+        MyRoot.AssemblyLinearVelocity = Vector3.zero
+        MyRoot.AssemblyAngularVelocity = Vector3.zero
+        MyRoot.CFrame = OldCFrame
+    end
 
-        if not tRoot or not myRoot or not myHum or myHum.Health <= 0 then
-            if FlingConnection then FlingConnection:Disconnect() FlingConnection = nil end
-            if noclipConnection then noclipConnection:Disconnect() end
-            return
-        end
+    if MyHumanoid and MyHumanoid.Health > 0 then
+        pcall(function()
+            MyHumanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end)
+    end
 
-        -- Безопасная скорость вращения и линейный импульс для идеального флинга цели
-        myRoot.AssemblyAngularVelocity = Vector3.new(0, 15000, 0)
-        myRoot.AssemblyLinearVelocity = Vector3.new(0, 100, 0)
-
-        local targetVel = tRoot.AssemblyLinearVelocity
-        local predictedCFrame = tRoot.CFrame + (targetVel * dt)
-        
-        -- Хаотичное микро-смещение для надежного захвата физики цели
-        local angle = tick() * 50
-        local offset = Vector3.new(math.sin(angle) * 0.1, 0, math.cos(angle) * 0.1)
-        myRoot.CFrame = predictedCFrame * CFrame.new(offset)
-
-        -- Автоматический выход по таймауту (1.5 сек) или если цель отлетела
-        if tick() - startTime > 1.5 or tRoot.AssemblyLinearVelocity.Magnitude > 150 then
-            if FlingConnection then FlingConnection:Disconnect() FlingConnection = nil end
-            if noclipConnection then noclipConnection:Disconnect() end
-
-            myRoot.AssemblyLinearVelocity = Vector3.zero
-            myRoot.AssemblyAngularVelocity = Vector3.zero
-            myRoot.CFrame = InitialCFrame
-
-            pcall(function()
-                myHum:ChangeState(Enum.HumanoidStateType.GettingUp)
-            end)
-        end
-    end)
+    IsFlinging = false
 end
 
 -- === СОЗДАНИЕ СТРАНИЦ ===
@@ -2318,7 +2332,7 @@ local function RefreshFlingPlayerList()
 
             Card.Activated:Connect(function()
                 task.spawn(function()
-                    StartFling(Player)
+                    FlingPlayer(Player)
                 end)
             end)
         end
