@@ -384,6 +384,18 @@ local ThemesPresets = {
         Accent = Color3.fromRGB(236, 72, 153),
         AccentGradient = Color3.fromRGB(249, 115, 22),
     },
+    ["Custom Accent"] = {
+        Background = Color3.fromRGB(0, 0, 0),
+        Background2 = Color3.fromRGB(5, 5, 5),
+        SectionBackground = Color3.fromRGB(6, 6, 6),
+        SectionBackground2 = Color3.fromRGB(10, 10, 10),
+        SectionTop = Color3.fromRGB(16, 16, 16),
+        Element = Color3.fromRGB(12, 12, 12),
+        Outline = Color3.fromRGB(22, 22, 22),
+        Text = Color3.fromRGB(255, 255, 255),
+        Accent = Color3.fromRGB(0, 116, 224),
+        AccentGradient = Color3.fromRGB(0, 195, 255),
+    },
 }
 
 -- Шрифты
@@ -847,6 +859,11 @@ local function ApplyTheme(themeName)
     CreateTween(HeaderSearchContainer, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Element})
     CreateTween(CloseButton, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Element})
 
+    local FloatHeaderObj = Holder:FindFirstChild("DarkHubToggleHeader")
+    if FloatHeaderObj then
+        CreateTween(FloatHeaderObj, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
+    end
+
     for _, desc in ipairs(Holder:GetDescendants()) do
         if desc:IsA("UIGradient") and desc.Name == "AccentGradient" then
             if desc.Parent and desc.Parent.Name == "FloatStroke" then
@@ -861,12 +878,18 @@ local function ApplyTheme(themeName)
                     ColorSequenceKeypoint.new(1, Theme.AccentGradient)
                 })
             end
+        elseif desc.Name == "TabButton" then
+            CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent})
         elseif desc.Name == "SectionTopBg" then
             CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.SectionTop})
         elseif desc.Name == "SectionContent" then
             CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.SectionBackground})
-        elseif desc.Name == "AccentBar" or desc.Name == "FloatAccent" then
+        elseif desc.Name == "SectionFrame" then
+            CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.SectionBackground2})
+        elseif desc.Name == "AccentBar" then
             CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent})
+        elseif desc.Name == "FloatAccent" then
+            desc.BackgroundColor3 = Color3.new(1, 1, 1)
         elseif desc:IsA("UIStroke") and desc.Name ~= "StatusDotStroke" then
             CreateTween(desc, TweenInfo.new(0.3), {Color = Theme.Outline})
         end
@@ -972,6 +995,7 @@ local function CreatePage(PageConfig)
     
     local TabButton = Create("TextButton", {
         Parent = LeftTabs,
+        Name = "TabButton",
         Text = "",
         AutoButtonColor = false,
         BackgroundColor3 = Theme.Accent,
@@ -1154,6 +1178,7 @@ local function CreatePage(PageConfig)
         
         local SectionFrame = Create("Frame", {
             Parent = PageContent,
+            Name = "SectionFrame",
             BackgroundColor3 = Theme.SectionBackground2,
             BackgroundTransparency = 0.4,
             Size = UDim2.new(1, 0, 0, 0),
@@ -1963,7 +1988,7 @@ local function CreatePage(PageConfig)
             return { Set = SetValue, Get = function() return Value end }
         end
         
-        -- Colorpicker (Исправлено)
+        -- Colorpicker
         function SectionData:Colorpicker(Data)
             local ColorpickerName = Data.Name or "Colorpicker"
             local Flag = Data.Flag or "color_" .. (#Flags + 1)
@@ -2726,15 +2751,16 @@ themeDropdown = SettingsSection:Dropdown({
         if selected == "Custom Accent" then
             local customCol = customColorpicker and customColorpicker.Get() or Color3.fromRGB(0, 116, 224)
             local h, s, v = customCol:ToHSV()
+            local base = ThemesPresets["AMOLED Black"]
             ThemesPresets["Custom Accent"] = {
-                Background = Color3.fromRGB(5, 5, 5),
-                Background2 = Color3.fromRGB(10, 10, 10),
-                SectionBackground = Color3.fromRGB(12, 12, 12),
-                SectionBackground2 = Color3.fromRGB(16, 16, 16),
-                SectionTop = Color3.fromRGB(22, 22, 22),
-                Element = Color3.fromRGB(18, 18, 18),
-                Outline = Color3.fromRGB(30, 30, 30),
-                Text = Color3.fromRGB(255, 255, 255),
+                Background = base.Background,
+                Background2 = base.Background2,
+                SectionBackground = base.SectionBackground,
+                SectionBackground2 = base.SectionBackground2,
+                SectionTop = base.SectionTop,
+                Element = base.Element,
+                Outline = base.Outline,
+                Text = base.Text,
                 Accent = customCol,
                 AccentGradient = Color3.fromHSV((h + 0.05) % 1, s, v),
             }
@@ -2748,15 +2774,17 @@ customColorpicker = SettingsSection:Colorpicker({
     Default = Color3.fromRGB(0, 116, 224),
     Callback = function(col)
         local h, s, v = col:ToHSV()
+        local currentTheme = themeDropdown and themeDropdown.Get() or "AMOLED Black"
+        local base = ThemesPresets[currentTheme] or ThemesPresets["AMOLED Black"]
         ThemesPresets["Custom Accent"] = {
-            Background = Color3.fromRGB(5, 5, 5),
-            Background2 = Color3.fromRGB(10, 10, 10),
-            SectionBackground = Color3.fromRGB(12, 12, 12),
-            SectionBackground2 = Color3.fromRGB(16, 16, 16),
-            SectionTop = Color3.fromRGB(22, 22, 22),
-            Element = Color3.fromRGB(18, 18, 18),
-            Outline = Color3.fromRGB(30, 30, 30),
-            Text = Color3.fromRGB(255, 255, 255),
+            Background = base.Background,
+            Background2 = base.Background2,
+            SectionBackground = base.SectionBackground,
+            SectionBackground2 = base.SectionBackground2,
+            SectionTop = base.SectionTop,
+            Element = base.Element,
+            Outline = base.Outline,
+            Text = base.Text,
             Accent = col,
             AccentGradient = Color3.fromHSV((h + 0.05) % 1, s, v),
         }
