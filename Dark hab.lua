@@ -2571,13 +2571,9 @@ AimbotSection:Slider({Name = "Smoothness", Min = 0, Max = 100, Default = 50, Suf
 AimbotSection:Dropdown({Name = "Target", Items = {"Head", "Body", "Legs"}, Default = "Head"})
 AimbotSection:Keybind({Name = "Aimbot Key", Default = Enum.KeyCode.LeftShift})
 
--- Settings
+-- Settings (Функции Ragebot, Min Damage, Hit box и Auto Wall bang успешно удалены)
 local SettingsPage = CreatePage({Name = "settings", Icon = "123944728972740"})
 local SettingsSection = SettingsPage:CreateSection({Name = "Settings"})
-SettingsSection:Toggle({Name = "Enable Ragebot", Default = false})
-SettingsSection:Slider({Name = "Min Damage", Min = 0, Max = 100, Default = 70, Suffix = "%"})
-SettingsSection:Dropdown({Name = "Hitbox", Items = {"Head", "Body", "Legs"}, Default = "Head"})
-SettingsSection:Toggle({Name = "Auto Wallbang", Default = true})
 
 -- Visuals
 local VisualsPage = CreatePage({Name = "Visuals", Icon = "122669828593160"})
