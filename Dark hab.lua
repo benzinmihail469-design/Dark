@@ -2601,11 +2601,6 @@ VisualsSection:Toggle({
     end
 })
 
-VisualsSection:Toggle({Name = "Snaplines", Default = false})
-
-local VisualsSection2 = VisualsPage:CreateSection({Name = "World"})
-VisualsSection2:Slider({Name = "Brightness", Min = 0, Max = 100, Default = 50, Suffix = "%"})
-
 -- Movement
 local MovementPage = CreatePage({Name = "Movement", Icon = "101636617799068"})
 local MovementSection = MovementPage:CreateSection({Name = "Movement Options"})
