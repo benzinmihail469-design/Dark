@@ -122,12 +122,20 @@ local function applyPlayerESP(p)
                     local hasGun = (backpack and backpack:FindFirstChild('Gun')) or char:FindFirstChild('Gun')
                     local pData = roleCache[p.Name]
                     local roleRaw = (pData and type(pData) == 'table' and pData.Role) or ''
+                    local isKilled = (pData and type(pData) == 'table' and (pData.Killed == true or pData.Dead == true or pData.IsDead == true))
+                    local hum = char:FindFirstChildOfClass('Humanoid')
+                    
+                    -- Проверка на смерть или статус в лобби
+                    local isDead = (hum and hum.Health <= 0) or isKilled or roleRaw == 'Dead' or roleRaw == 'Lobby' or roleRaw == ''
 
                     local roleName = "LOBBY"
                     local roleColor = Color3.fromRGB(180, 180, 180)
 
-                    -- Определение роли и цвета
-                    if hasKnife or roleRaw == 'Murderer' then
+                    -- Определение роли и цвета с приоритетом проверки смерти
+                    if isDead then
+                        roleName = "LOBBY"
+                        roleColor = Color3.fromRGB(180, 180, 180)
+                    elseif hasKnife or roleRaw == 'Murderer' then
                         roleName = "MURDERER"
                         roleColor = Color3.fromRGB(255, 35, 35)
                     elseif hasGun or roleRaw == 'Sheriff' or roleRaw == 'Hero' then
@@ -136,9 +144,6 @@ local function applyPlayerESP(p)
                     elseif roleRaw == 'Innocent' then
                         roleName = "INNOCENT"
                         roleColor = Color3.fromRGB(0, 255, 128)
-                    elseif roleRaw == 'Lobby' or roleRaw == 'Dead' or roleRaw == '' then
-                        roleName = "LOBBY"
-                        roleColor = Color3.fromRGB(180, 180, 180)
                     else
                         roleName = "INNOCENT"
                         roleColor = Color3.fromRGB(0, 255, 128)
@@ -178,9 +183,9 @@ for _, player in pairs(Players:GetPlayers()) do
 end
 Players.PlayerAdded:Connect(applyPlayerESP)
 
--- Получение данных о ролях с сервера
+-- Получение данных о ролях с сервера (частота опроса 0.5 сек)
 task.spawn(function()
-    while task.wait(1.5) do
+    while task.wait(0.5) do
         local success, data = pcall(function()
             local remote = game:GetService('ReplicatedStorage'):FindFirstChild('GetPlayerData', true)
             if remote then
