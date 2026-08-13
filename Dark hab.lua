@@ -19,6 +19,30 @@ local roleCache = {}
 _G.ESPEnabled = true
 
 -- === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ПОЛУЧЕНИЯ РОЛЕЙ ===
+local function getPlayerRoleInfo(p)
+    if not p then return "LOBBY", Color3.fromRGB(180, 180, 180) end
+    local char = p.Character
+    local backpack = p:FindFirstChild('Backpack')
+    local hasKnife = (backpack and backpack:FindFirstChild('Knife')) or (char and char:FindFirstChild('Knife'))
+    local hasGun = (backpack and backpack:FindFirstChild('Gun')) or (char and char:FindFirstChild('Gun'))
+    local pData = roleCache[p.Name]
+    local roleRaw = (pData and type(pData) == 'table' and pData.Role) or ''
+    local isKilled = (pData and type(pData) == 'table' and (pData.Killed == true or pData.Dead == true or pData.IsDead == true))
+    local hum = char and char:FindFirstChildOfClass('Humanoid')
+
+    local isDead = not char or (hum and hum.Health <= 0) or isKilled or roleRaw == 'Dead' or roleRaw == 'Lobby' or roleRaw == ''
+
+    if isDead then
+        return "LOBBY", Color3.fromRGB(180, 180, 180)
+    elseif hasKnife or roleRaw == 'Murderer' then
+        return "MURDERER", Color3.fromRGB(255, 35, 35)
+    elseif hasGun or roleRaw == 'Sheriff' or roleRaw == 'Hero' then
+        return "SHERIFF", Color3.fromRGB(0, 162, 255)
+    else
+        return "INNOCENT", Color3.fromRGB(0, 255, 128)
+    end
+end
+
 local function getMurderer()
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= lp then
@@ -117,37 +141,7 @@ local function applyPlayerESP(p)
                     highlight.Enabled = true
                     bill.Enabled = true
 
-                    local backpack = p:FindFirstChild('Backpack')
-                    local hasKnife = (backpack and backpack:FindFirstChild('Knife')) or char:FindFirstChild('Knife')
-                    local hasGun = (backpack and backpack:FindFirstChild('Gun')) or char:FindFirstChild('Gun')
-                    local pData = roleCache[p.Name]
-                    local roleRaw = (pData and type(pData) == 'table' and pData.Role) or ''
-                    local isKilled = (pData and type(pData) == 'table' and (pData.Killed == true or pData.Dead == true or pData.IsDead == true))
-                    local hum = char:FindFirstChildOfClass('Humanoid')
-                    
-                    -- Проверка на смерть или статус в лобби
-                    local isDead = (hum and hum.Health <= 0) or isKilled or roleRaw == 'Dead' or roleRaw == 'Lobby' or roleRaw == ''
-
-                    local roleName = "LOBBY"
-                    local roleColor = Color3.fromRGB(180, 180, 180)
-
-                    -- Определение роли и цвета с приоритетом проверки смерти
-                    if isDead then
-                        roleName = "LOBBY"
-                        roleColor = Color3.fromRGB(180, 180, 180)
-                    elseif hasKnife or roleRaw == 'Murderer' then
-                        roleName = "MURDERER"
-                        roleColor = Color3.fromRGB(255, 35, 35)
-                    elseif hasGun or roleRaw == 'Sheriff' or roleRaw == 'Hero' then
-                        roleName = "SHERIFF"
-                        roleColor = Color3.fromRGB(0, 162, 255)
-                    elseif roleRaw == 'Innocent' then
-                        roleName = "INNOCENT"
-                        roleColor = Color3.fromRGB(0, 255, 128)
-                    else
-                        roleName = "INNOCENT"
-                        roleColor = Color3.fromRGB(0, 255, 128)
-                    end
+                    local roleName, roleColor = getPlayerRoleInfo(p)
 
                     -- Расчет дистанции
                     local distance = 0
@@ -2630,13 +2624,13 @@ local function RefreshFlingPlayerList()
                 Active = false,
             })
 
-            Create("TextLabel", {
+            local RoleLabel = Create("TextLabel", {
                 Parent = Card,
-                Text = "Lobby",
-                TextColor3 = Theme.Text,
-                TextTransparency = 0.5,
+                Text = "LOBBY",
+                TextColor3 = Color3.fromRGB(180, 180, 180),
+                TextTransparency = 0.2,
                 BackgroundTransparency = 1,
-                FontFace = FontRegular,
+                FontFace = FontSemiBold,
                 TextSize = 9,
                 Position = UDim2.new(0, 38, 0, 18),
                 Size = UDim2.new(1, -45, 0, 11),
@@ -2644,6 +2638,16 @@ local function RefreshFlingPlayerList()
                 TextTruncate = Enum.TextTruncate.AtEnd,
                 Active = false,
             })
+
+            -- Цикл динамического обновления ролей в списке
+            task.spawn(function()
+                while Card and Card.Parent do
+                    local roleName, roleColor = getPlayerRoleInfo(Player)
+                    RoleLabel.Text = roleName
+                    RoleLabel.TextColor3 = roleColor
+                    task.wait(0.5)
+                end
+            end)
 
             Card.MouseEnter:Connect(function()
                 CreateTween(Card, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
