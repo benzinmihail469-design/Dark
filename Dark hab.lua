@@ -349,6 +349,7 @@ local LeftTabs = Create("ScrollingFrame", {
     ScrollBarThickness = 0,
     CanvasSize = UDim2.new(0, 0, 0, 0),
     AutomaticCanvasSize = Enum.AutomaticSize.Y,
+    ZIndex = 7,
 })
 
 Create("UICorner", { Parent = LeftTabs, CornerRadius = UDim.new(0, 10) })
@@ -366,6 +367,20 @@ Create("UIPadding", {
     PaddingLeft = UDim.new(0, 4),
     PaddingRight = UDim.new(0, 4),
 })
+
+-- ИНДИКАТОР АКТИВНОЙ ВКЛАДКИ (Исправлена привязка)
+local ActiveIndicator = Create("Frame", {
+    Parent = LeftTabs,
+    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+    Size = UDim2.new(0, 3, 0, 19),
+    AnchorPoint = Vector2.new(0, 0.5),
+    Position = UDim2.new(0, 2, 0, 0),
+    Visible = false,
+    BorderSizePixel = 0,
+    ZIndex = 15,
+})
+
+Create("UICorner", { Parent = ActiveIndicator, CornerRadius = UDim.new(1, 0) })
 
 -- ПОДВАЛ (ПРОФИЛЬ ИГРОКА)
 local ProfileFooter = Create("Frame", {
@@ -451,19 +466,6 @@ local ArrowIcon = Create("ImageLabel", {
     ZIndex = 9,
 })
 
-local ActiveIndicator = Create("Frame", {
-    Parent = MainFrame,
-    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-    Size = UDim2.new(0, 3, 0, 19),
-    AnchorPoint = Vector2.new(0, 0.5),
-    Position = UDim2.new(0, 6, 0, 0),
-    Visible = false,
-    BorderSizePixel = 0,
-    ZIndex = 10,
-})
-
-Create("UICorner", { Parent = ActiveIndicator, CornerRadius = UDim.new(1, 0) })
-
 -- Контентная зона
 local Content = Create("Frame", {
     Parent = MainFrame,
@@ -509,6 +511,22 @@ Create("UIListLayout", {
 -- Страницы
 local Pages = {}
 local CurrentPage = nil
+
+-- Обновление позиции белой полоски
+local function UpdateIndicatorPosition(TabButton)
+    if not TabButton then return end
+    local TargetY = TabButton.Position.Y.Offset + (TabButton.Size.Y.Offset / 2)
+    local TargetPos = UDim2.new(0, 2, 0, TargetY)
+
+    if not ActiveIndicator.Visible then
+        ActiveIndicator.Position = TargetPos
+        ActiveIndicator.Visible = true
+    else
+        CreateTween(ActiveIndicator, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+            Position = TargetPos
+        })
+    end
+end
 
 -- Глобальная система поиска
 local function GlobalSearch(Query)
@@ -587,6 +605,7 @@ local function CreatePage(PageConfig)
         Size = UDim2.new(1, 0, 0, 32),
         BorderSizePixel = 0,
         ClipsDescendants = true,
+        ZIndex = 8,
     })
     
     Create("UICorner", { Parent = TabButton, CornerRadius = UDim.new(0, 8) })
@@ -599,6 +618,7 @@ local function CreatePage(PageConfig)
         Size = UDim2.new(0, 16, 0, 16),
         Position = UDim2.new(0, 12, 0.5, 0),
         AnchorPoint = Vector2.new(0, 0.5),
+        ZIndex = 9,
     })
     
     local TabLabel = Create("TextLabel", {
@@ -613,6 +633,7 @@ local function CreatePage(PageConfig)
         AnchorPoint = Vector2.new(0, 0.5),
         Size = UDim2.new(1, -52, 0, 14),
         TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 9,
     })
     
     local DotsContainer = Create("Frame", {
@@ -622,6 +643,7 @@ local function CreatePage(PageConfig)
         AnchorPoint = Vector2.new(1, 0.5),
         Size = UDim2.new(0, 3, 0, 13),
         BorderSizePixel = 0,
+        ZIndex = 9,
     })
 
     Create("UIListLayout", {
@@ -640,6 +662,7 @@ local function CreatePage(PageConfig)
             Size = UDim2.new(0, 3, 0, 3),
             BorderSizePixel = 0,
             LayoutOrder = i,
+            ZIndex = 9,
         })
         Create("UICorner", { Parent = Dot, CornerRadius = UDim.new(1, 0) })
     end
@@ -735,19 +758,7 @@ local function CreatePage(PageConfig)
             PageData.TabLabel.FontFace = FontSemiBold
             CurrentPage = PageData
 
-            task.defer(function()
-                local TargetY = TabButton.AbsolutePosition.Y - MainFrame.AbsolutePosition.Y + (TabButton.AbsoluteSize.Y / 2)
-                local TargetPos = UDim2.new(0, 6, 0, TargetY)
-
-                if not ActiveIndicator.Visible then
-                    ActiveIndicator.Position = TargetPos
-                    ActiveIndicator.Visible = true
-                else
-                    CreateTween(ActiveIndicator, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-                        Position = TargetPos
-                    })
-                end
-            end)
+            UpdateIndicatorPosition(TabButton)
         else
             PageData.Active = false
             PageData.Frame.Visible = false
@@ -2324,7 +2335,7 @@ MovementSection:Toggle({Name = "Auto Strafe", Default = false})
 MovementSection:Slider({Name = "Strafe Speed", Min = 0, Max = 100, Default = 60, Suffix = "%"})
 
 -- === ВКЛАДКА FLING PLAYERS ===
-local FlingIcon = "10709781323"
+local FlingIcon = "10709781323" -- Установлена подходящая иконка Fling (UserX)
 local FlingPage = CreatePage({Name = "Fling Players", Icon = FlingIcon})
 local FlingSection = FlingPage:CreateSection({
     Name = "Fling Players", 
