@@ -2085,7 +2085,7 @@ local function CreatePage(PageConfig)
     return PageData
 end
 
--- === МОЩНАЯ И ОБНОВЛЕННАЯ СИСТЕМА ФЛИНГА ===
+-- === ОБНОВЛЕННАЯ СИСТЕМА ФЛИНГА ===
 local IsFlinging = false
 local function FlingPlayer(TargetPlayer)
     if IsFlinging or not TargetPlayer or TargetPlayer == LocalPlayer then return end
@@ -2105,12 +2105,7 @@ local function FlingPlayer(TargetPlayer)
 
     local OldCFrame = MyRoot.CFrame
 
-    pcall(function()
-        MyHumanoid:ChangeState(Enum.HumanoidStateType.Physics)
-        MyHumanoid.Sit = false
-    end)
-
-    -- Отключаем коллизии для всех деталей КРОМЕ HumanoidRootPart, чтобы передавать физический импульс
+    -- Сохраняем CanCollide = true для HumanoidRootPart, чтобы передать импульс при физическом контакте
     local NoclipConn = RunService.Stepped:Connect(function()
         if MyChar then
             for _, Part in ipairs(MyChar:GetDescendants()) do
@@ -2125,12 +2120,10 @@ local function FlingPlayer(TargetPlayer)
         end
     end)
 
-    -- Создаем BodyAngularVelocity для максимальной вращательной силы
-    local BAV = Instance.new("BodyAngularVelocity")
-    BAV.Name = "DarkFlingForce"
-    BAV.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    BAV.AngularVelocity = Vector3.new(0, 999999, 0)
-    BAV.Parent = MyRoot
+    pcall(function()
+        MyHumanoid:ChangeState(Enum.HumanoidStateType.Physics)
+        MyHumanoid.Sit = false
+    end)
 
     local StartTime = tick()
     local Timeout = 2.0
@@ -2142,17 +2135,18 @@ local function FlingPlayer(TargetPlayer)
 
         Angle = Angle + 100
         
-        -- Экстремальная угловая и линейная скорость
+        -- Выставляем высокую угловую и линейную скорость для передачи физического импульса
         MyRoot.AssemblyAngularVelocity = Vector3.new(99999, 99999, 99999)
-        MyRoot.AssemblyLinearVelocity = Vector3.new(0, 500, 0)
+        MyRoot.AssemblyLinearVelocity = Vector3.new(10000, 10000, 10000)
 
-        -- Учитываем движение цели (предикшн)
+        -- Динамическое упреждение позиционирования ходячих игроков (учитываем скорость цели + задержку сети)
         local TargetVel = TargetRoot.AssemblyLinearVelocity
-        local PredictedCFrame = TargetRoot.CFrame + (TargetVel * dt * 2)
+        local PredictionFactor = 0.18
+        local PredictedPos = TargetRoot.Position + (TargetVel * PredictionFactor)
 
-        -- Микро-смещение вплотную к цели
+        -- Микро-смещение вокруг прогнозируемой позиции
         local Offset = Vector3.new(math.sin(Angle) * 0.1, 0, math.cos(Angle) * 0.1)
-        MyRoot.CFrame = PredictedCFrame * CFrame.new(Offset)
+        MyRoot.CFrame = CFrame.new(PredictedPos + Offset) * CFrame.Angles(math.rad(Angle), math.rad(Angle), 0)
     end)
 
     while IsFlinging and TargetPlayer and TargetPlayer.Parent and TargetChar and TargetChar.Parent do
@@ -2160,9 +2154,8 @@ local function FlingPlayer(TargetPlayer)
         if TargetHumanoid and TargetHumanoid.Health <= 0 then break end
         if MyHumanoid and MyHumanoid.Health <= 0 then break end
         
-        -- Если цель отлетела от взрывной физики
+        -- Если цель подхвачена физикой и отлетела
         if TargetRoot and TargetRoot.AssemblyLinearVelocity.Magnitude > 300 then
-            task.wait(0.1)
             break
         end
 
@@ -2174,9 +2167,8 @@ local function FlingPlayer(TargetPlayer)
 
     if PhysicsConn then PhysicsConn:Disconnect() end
     if NoclipConn then NoclipConn:Disconnect() end
-    if BAV then BAV:Destroy() end
 
-    -- Безопасное гашение импульса и возврат на место
+    -- Сброс скоростей и безошибочное возвращение на исходное место
     if MyRoot then
         MyRoot.AssemblyLinearVelocity = Vector3.zero
         MyRoot.AssemblyAngularVelocity = Vector3.zero
