@@ -438,7 +438,7 @@ do
     end)
 end
 
--- ИКОНКА В ГЛАВНОМ ОКНЕ (С ЗАКРУГЛЕНИЕМ)
+-- ИКОНКА В ГЛАВНОМ ОКНЕ
 local Logo = Create("ImageLabel", {
     Parent = MainFrame,
     Name = "Logo",
@@ -450,8 +450,6 @@ local Logo = Create("ImageLabel", {
     ScaleType = Enum.ScaleType.Fit,
     ZIndex = 5,
 })
-
-Create("UICorner", { Parent = Logo, CornerRadius = UDim.new(0, 6) })
 
 Create("TextLabel", {
     Parent = MainFrame,
@@ -2804,7 +2802,7 @@ task.defer(function()
     UpdateActiveIndicator(true)
 end)
 
--- === ЗАГОЛОВОК-ТУГГЛ (DARK HUB) ===
+-- === ЗАГОЛОВОК-ТУГГЛ (DARK HUB) С ИНДИКАТОРОМ СОСТОЯНИЯ И АНИМАЦИЕЙ ===
 local FloatHeader = Create("TextButton", {
     Parent = Holder,
     Name = "DarkHubToggleHeader",
@@ -2812,7 +2810,7 @@ local FloatHeader = Create("TextButton", {
     AutoButtonColor = false,
     BackgroundColor3 = Theme.Background,
     BackgroundTransparency = 0.08,
-    Size = UDim2.new(0, 138, 0, 32),
+    Size = UDim2.new(0, 148, 0, 32),
     Position = UDim2.new(0, IsMobile and 50 or 20, 0, IsMobile and 50 or 20),
     BorderSizePixel = 0,
     ZIndex = 127,
@@ -2859,103 +2857,129 @@ Create("UIGradient", {
     })
 })
 
--- ИКОНКА НА ПЛАВАЮЩЕЙ ПЛАШКЕ (С ЗАКРУГЛЕНИЕМ)
 local FloatIcon = Create("ImageLabel", {
     Parent = FloatHeader,
-    Name = "FloatIcon",
+    Name = "Icon",
     BackgroundTransparency = 1,
     Size = UDim2.new(0, 20, 0, 20),
-    Position = UDim2.new(0, 8, 0.5, 0),
+    Position = UDim2.new(0, 10, 0.5, 0),
     AnchorPoint = Vector2.new(0, 0.5),
     Image = DarkHubIcon,
     ScaleType = Enum.ScaleType.Fit,
     ZIndex = 128,
 })
 
-Create("UICorner", { Parent = FloatIcon, CornerRadius = UDim.new(0, 6) })
-
-Create("TextLabel", {
+local FloatTitle = Create("TextLabel", {
     Parent = FloatHeader,
-    Name = "FloatTitle",
+    Name = "Title",
     Text = "Dark Hub",
     TextColor3 = Theme.Text,
     BackgroundTransparency = 1,
     FontFace = FontSemiBold,
-    TextSize = 11,
-    Position = UDim2.new(0, 34, 0, 4),
-    Size = UDim2.new(0, 0, 0, 12),
+    TextSize = 12,
+    Position = UDim2.new(0, 36, 0.5, 0),
+    AnchorPoint = Vector2.new(0, 0.5),
+    Size = UDim2.new(0, 0, 0, 14),
     AutomaticSize = Enum.AutomaticSize.X,
     ZIndex = 128,
 })
 
-Create("TextLabel", {
+-- === КРУГЛЕШОК ИНДИКАТОРА (ЗЕЛЕНЫЙ = GUI ОТКРЫТ, КРАСНЫЙ = GUI ЗАКРЫТ) ===
+local StatusDot = Create("Frame", {
     Parent = FloatHeader,
-    Name = "FloatSubTitle",
-    Text = "Toggle Menu",
-    TextColor3 = Theme.Text,
-    TextTransparency = 0.4,
-    BackgroundTransparency = 1,
-    FontFace = FontRegular,
-    TextSize = 8,
-    Position = UDim2.new(0, 34, 0, 16),
-    Size = UDim2.new(0, 0, 0, 10),
-    AutomaticSize = Enum.AutomaticSize.X,
+    Name = "StatusDot",
+    BackgroundColor3 = MainFrame.Visible and Color3.fromRGB(0, 255, 128) or Color3.fromRGB(255, 45, 45),
+    Size = UDim2.new(0, 8, 0, 8),
+    Position = UDim2.new(1, -12, 0.5, 0),
+    AnchorPoint = Vector2.new(1, 0.5),
+    BorderSizePixel = 0,
     ZIndex = 128,
 })
 
--- === ЛОГИКА ПЕРЕТАСКИВАНИЯ И ПЕРЕКЛЮЧЕНИЯ ВИДИМОСТИ ===
-local function MakeDraggable(TopBar, Frame)
-    local Dragging = false
-    local DragInput, DragStart, StartPos
+Create("UICorner", { Parent = StatusDot, CornerRadius = UDim.new(1, 0) })
 
-    TopBar.InputBegan:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-            Dragging = true
-            DragStart = Input.Position
-            StartPos = Frame.Position
+local StatusDotStroke = Create("UIStroke", {
+    Parent = StatusDot,
+    Color = StatusDot.BackgroundColor3,
+    Transparency = 0.4,
+    Thickness = 1.5,
+})
 
-            Input.Changed:Connect(function()
-                if Input.UserInputState == Enum.UserInputState.End then
-                    Dragging = false
-                end
-            end)
-        end
-    end)
+local function UpdateStatusDot()
+    local isOpen = MainFrame.Visible
+    local targetColor = isOpen and Color3.fromRGB(0, 255, 128) or Color3.fromRGB(255, 45, 45)
 
-    TopBar.InputChanged:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
-            DragInput = Input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(Input)
-        if Input == DragInput and Dragging then
-            local Delta = Input.Position - DragStart
-            Frame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
-        end
-    end)
+    CreateTween(StatusDot, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+        BackgroundColor3 = targetColor
+    })
+    CreateTween(StatusDotStroke, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+        Color = targetColor
+    })
 end
 
-MakeDraggable(FloatHeader, FloatHeader)
-MakeDraggable(MainFrame, MainFrame)
+-- Автоматическое обновление индикатора при изменении видимости MainFrame
+MainFrame:GetPropertyChangedSignal("Visible"):Connect(UpdateStatusDot)
 
-local ClickStartPos
+-- Логика перетаскивания и переключения плавающей кнопки
+local Dragging = false
+local DragInput, DragStart, StartPos
 
-FloatHeader.InputBegan:Connect(function(Input)
-    if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-        ClickStartPos = Input.Position
-    end
-end)
+local function UpdateDrag(input)
+    local Delta = input.Position - DragStart
+    FloatHeader.Position = UDim2.new(
+        StartPos.X.Scale,
+        StartPos.X.Offset + Delta.X,
+        StartPos.Y.Scale,
+        StartPos.Y.Offset + Delta.Y
+    )
+end
 
-FloatHeader.InputEnded:Connect(function(Input)
-    if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-        if ClickStartPos then
-            local Dist = (Input.Position - ClickStartPos).Magnitude
-            if Dist < 5 then
-                MainFrame.Visible = not MainFrame.Visible
+FloatHeader.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        Dragging = true
+        DragStart = input.Position
+        StartPos = FloatHeader.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                Dragging = false
             end
-        end
+        end)
     end
 end)
 
-return DarkHub
+FloatHeader.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        DragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == DragInput and Dragging then
+        UpdateDrag(input)
+    end
+end)
+
+-- Переключение с анимацией нажатия (Spring / Bounce)
+local isClickAnimating = false
+FloatHeader.MouseButton1Down:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+
+    if not isClickAnimating then
+        isClickAnimating = true
+        local normalSize = UDim2.new(0, 148, 0, 32)
+        local pressedSize = UDim2.new(0, 140, 0, 28)
+
+        CreateTween(FloatHeader, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = pressedSize
+        })
+
+        task.delay(0.08, function()
+            CreateTween(FloatHeader, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = normalSize
+            })
+            task.wait(0.25)
+            isClickAnimating = false
+        end)
+    end
+end)
