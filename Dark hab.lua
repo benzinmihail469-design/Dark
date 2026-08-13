@@ -592,6 +592,7 @@ Create("UICorner", { Parent = CloseAccent, CornerRadius = UDim.new(0, 6) })
 
 local CloseGradient = Create("UIGradient", {
     Parent = CloseAccent,
+    Name = "AccentGradient",
     Rotation = -115,
     Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Theme.Accent),
@@ -847,11 +848,19 @@ local function ApplyTheme(themeName)
     CreateTween(CloseButton, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Element})
 
     for _, desc in ipairs(Holder:GetDescendants()) do
-        if desc:IsA("UIGradient") then
-            desc.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Theme.Accent),
-                ColorSequenceKeypoint.new(1, Theme.AccentGradient)
-            })
+        if desc:IsA("UIGradient") and desc.Name == "AccentGradient" then
+            if desc.Parent and desc.Parent.Name == "FloatStroke" then
+                desc.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Theme.Accent),
+                    ColorSequenceKeypoint.new(0.5, Theme.Outline),
+                    ColorSequenceKeypoint.new(1, Theme.AccentGradient)
+                })
+            else
+                desc.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Theme.Accent),
+                    ColorSequenceKeypoint.new(1, Theme.AccentGradient)
+                })
+            end
         elseif desc.Name == "SectionTopBg" then
             CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.SectionTop})
         elseif desc.Name == "SectionContent" then
@@ -1312,6 +1321,7 @@ local function CreatePage(PageConfig)
             
             Create("UIGradient", {
                 Parent = Accent,
+                Name = "AccentGradient",
                 Rotation = -115,
                 Color = ColorSequence.new({
                     ColorSequenceKeypoint.new(0, Theme.Accent),
@@ -1414,6 +1424,7 @@ local function CreatePage(PageConfig)
             
             Create("UIGradient", {
                 Parent = Accent,
+                Name = "AccentGradient",
                 Rotation = -115,
                 Color = ColorSequence.new({
                     ColorSequenceKeypoint.new(0, Theme.Accent),
@@ -1545,6 +1556,7 @@ local function CreatePage(PageConfig)
             
             Create("UIGradient", {
                 Parent = SliderFill,
+                Name = "AccentGradient",
                 Rotation = -102,
                 Color = ColorSequence.new({
                     ColorSequenceKeypoint.new(0, Theme.Accent),
@@ -1951,7 +1963,7 @@ local function CreatePage(PageConfig)
             return { Set = SetValue, Get = function() return Value end }
         end
         
-        -- Colorpicker
+        -- Colorpicker (Исправлено)
         function SectionData:Colorpicker(Data)
             local ColorpickerName = Data.Name or "Colorpicker"
             local Flag = Data.Flag or "color_" .. (#Flags + 1)
@@ -2020,7 +2032,7 @@ local function CreatePage(PageConfig)
             local ColorPicker = Create("Frame", {
                 Parent = Holder,
                 BackgroundColor3 = Theme.Background,
-                Size = UDim2.new(0, 150, 0, 160),
+                Size = UDim2.new(0, 160, 0, 170),
                 Visible = false,
                 BorderSizePixel = 0,
                 ZIndex = 100,
@@ -2050,11 +2062,14 @@ local function CreatePage(PageConfig)
                 ZIndex = 102,
             })
             
+            Create("UICorner", { Parent = SatOverlay, CornerRadius = UDim.new(0, 5) })
+            
             Create("UIGradient", {
                 Parent = SatOverlay,
+                Name = "SatGradient",
                 Transparency = NumberSequence.new({
-                    NumberSequenceKeypoint.new(0, 1),
-                    NumberSequenceKeypoint.new(1, 0),
+                    NumberSequenceKeypoint.new(0, 0),
+                    NumberSequenceKeypoint.new(1, 1),
                 })
             })
             
@@ -2066,8 +2081,11 @@ local function CreatePage(PageConfig)
                 ZIndex = 103,
             })
             
+            Create("UICorner", { Parent = ValOverlay, CornerRadius = UDim.new(0, 5) })
+            
             Create("UIGradient", {
                 Parent = ValOverlay,
+                Name = "ValGradient",
                 Rotation = 90,
                 Transparency = NumberSequence.new({
                     NumberSequenceKeypoint.new(0, 1),
@@ -2078,8 +2096,8 @@ local function CreatePage(PageConfig)
             local Cursor = Create("Frame", {
                 Parent = Palette,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(0, 5, 0, 5),
-                Position = UDim2.new(0.8, -2, 0.2, -2),
+                Size = UDim2.new(0, 6, 0, 6),
+                Position = UDim2.new(0, 0, 0, 0),
                 BorderSizePixel = 0,
                 ZIndex = 104,
             })
@@ -2092,45 +2110,40 @@ local function CreatePage(PageConfig)
                 Text = "",
                 AutoButtonColor = false,
                 BackgroundColor3 = Color3.new(1, 1, 1),
-                Size = UDim2.new(1, -12, 0, 5),
-                Position = UDim2.new(0, 6, 1, -50),
+                Size = UDim2.new(1, -12, 0, 8),
+                Position = UDim2.new(0, 6, 1, -48),
                 BorderSizePixel = 0,
                 ZIndex = 101,
             })
             
             Create("UICorner", { Parent = HueSlider, CornerRadius = UDim.new(1, 0) })
             
-            local HueGradient = Create("Frame", {
-                Parent = HueSlider,
-                Size = UDim2.new(1, 0, 1, 0),
-                BorderSizePixel = 0,
-                ZIndex = 102,
-            })
-            
             Create("UIGradient", {
-                Parent = HueGradient,
+                Parent = HueSlider,
+                Name = "HueGradient",
                 Color = ColorSequence.new({
-                    ColorSequenceKeypoint.new(0, Color3.new(1, 0, 0)),
-                    ColorSequenceKeypoint.new(0.17, Color3.new(1, 1, 0)),
-                    ColorSequenceKeypoint.new(0.33, Color3.new(0, 1, 0)),
-                    ColorSequenceKeypoint.new(0.5, Color3.new(0, 1, 1)),
-                    ColorSequenceKeypoint.new(0.67, Color3.new(0, 0, 1)),
-                    ColorSequenceKeypoint.new(0.83, Color3.new(1, 0, 1)),
-                    ColorSequenceKeypoint.new(1, Color3.new(1, 0, 0)),
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+                    ColorSequenceKeypoint.new(0.167, Color3.fromRGB(255, 255, 0)),
+                    ColorSequenceKeypoint.new(0.333, Color3.fromRGB(0, 255, 0)),
+                    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+                    ColorSequenceKeypoint.new(0.667, Color3.fromRGB(0, 0, 255)),
+                    ColorSequenceKeypoint.new(0.833, Color3.fromRGB(255, 0, 255)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0)),
                 })
             })
             
             local HueCursor = Create("Frame", {
                 Parent = HueSlider,
                 BackgroundColor3 = Color3.new(1, 1, 1),
-                Size = UDim2.new(0, 5, 0, 8),
-                Position = UDim2.new(0.5, -2, 0.5, -4),
-                AnchorPoint = Vector2.new(0, 0.5),
+                Size = UDim2.new(0, 5, 0, 10),
+                Position = UDim2.new(0, 0, 0.5, 0),
+                AnchorPoint = Vector2.new(0.5, 0.5),
                 BorderSizePixel = 0,
                 ZIndex = 103,
             })
             
             Create("UICorner", { Parent = HueCursor, CornerRadius = UDim.new(1, 0) })
+            Create("UIStroke", { Parent = HueCursor, Color = Color3.new(0, 0, 0), Thickness = 1 })
             
             local HexInput = Create("TextBox", {
                 Parent = ColorPicker,
@@ -2166,7 +2179,7 @@ local function CreatePage(PageConfig)
             })
             
             local Color = Default
-            local Hue, Sat, Val = 0, 1, 1
+            local Hue, Sat, Val = Default:ToHSV()
             local IsOpen = false
             local DraggingPalette = false
             local DraggingHue = false
@@ -2183,11 +2196,16 @@ local function CreatePage(PageConfig)
                 Flags[Flag] = Color
                 Callback(Color)
             end
+
+            local function SyncCursors()
+                Cursor.Position = UDim2.new(math.clamp(Sat, 0, 1), -3, math.clamp(1 - Val, 0, 1), -3)
+                HueCursor.Position = UDim2.new(math.clamp(Hue, 0, 1), 0, 0.5, 0)
+            end
             
             local function UpdatePosition()
                 local Pos = ColorButton.AbsolutePosition
                 local Size = ColorButton.AbsoluteSize
-                ColorPicker.Position = UDim2.new(0, Pos.X - 70, 0, Pos.Y + Size.Y + 3)
+                ColorPicker.Position = UDim2.new(0, Pos.X - 85, 0, Pos.Y + Size.Y + 3)
                 ColorPicker.Visible = IsOpen
             end
             
@@ -2208,7 +2226,7 @@ local function CreatePage(PageConfig)
                     local Y = math.clamp((Input.Position.Y - Palette.AbsolutePosition.Y) / Palette.AbsoluteSize.Y, 0, 1)
                     Sat = X
                     Val = 1 - Y
-                    Cursor.Position = UDim2.new(X, -2, Y, -2)
+                    Cursor.Position = UDim2.new(X, -3, Y, -3)
                     UpdateColor()
                 end
             end)
@@ -2224,7 +2242,7 @@ local function CreatePage(PageConfig)
                     DraggingHue = true
                     local X = math.clamp((Input.Position.X - HueSlider.AbsolutePosition.X) / HueSlider.AbsoluteSize.X, 0, 1)
                     Hue = X
-                    HueCursor.Position = UDim2.new(X, -2, 0.5, -4)
+                    HueCursor.Position = UDim2.new(X, 0, 0.5, 0)
                     UpdateColor()
                 end
             end)
@@ -2241,13 +2259,13 @@ local function CreatePage(PageConfig)
                     local Y = math.clamp((Input.Position.Y - Palette.AbsolutePosition.Y) / Palette.AbsoluteSize.Y, 0, 1)
                     Sat = X
                     Val = 1 - Y
-                    Cursor.Position = UDim2.new(X, -2, Y, -2)
+                    Cursor.Position = UDim2.new(X, -3, Y, -3)
                     UpdateColor()
                 end
                 if DraggingHue and (Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch) then
                     local X = math.clamp((Input.Position.X - HueSlider.AbsolutePosition.X) / HueSlider.AbsoluteSize.X, 0, 1)
                     Hue = X
-                    HueCursor.Position = UDim2.new(X, -2, 0.5, -4)
+                    HueCursor.Position = UDim2.new(X, 0, 0.5, 0)
                     UpdateColor()
                 end
             end)
@@ -2258,8 +2276,7 @@ local function CreatePage(PageConfig)
                 if Success then
                     local H, S, V = NewColor:ToHSV()
                     Hue, Sat, Val = H, S, V
-                    Cursor.Position = UDim2.new(Sat, -2, 1 - Val, -2)
-                    HueCursor.Position = UDim2.new(Hue, -2, 0.5, -4)
+                    SyncCursors()
                     UpdateColor()
                 end
             end)
@@ -2281,13 +2298,14 @@ local function CreatePage(PageConfig)
                 end
             end)
             
+            SyncCursors()
             UpdateColor()
+            
             SetFlags[Flag] = function(NewColor)
                 if type(NewColor) == "Color3" then
                     local H, S, V = NewColor:ToHSV()
                     Hue, Sat, Val = H, S, V
-                    Cursor.Position = UDim2.new(Sat, -2, 1 - Val, -2)
-                    HueCursor.Position = UDim2.new(Hue, -2, 0.5, -4)
+                    SyncCursors()
                     UpdateColor()
                 end
             end
@@ -2986,6 +3004,7 @@ Create("UICorner", { Parent = FloatHeader, CornerRadius = UDim.new(0, 8) })
 
 local FloatStroke = Create("UIStroke", {
     Parent = FloatHeader,
+    Name = "FloatStroke",
     Color = Theme.Outline,
     Thickness = 1.2,
     ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
@@ -2993,6 +3012,7 @@ local FloatStroke = Create("UIStroke", {
 
 Create("UIGradient", {
     Parent = FloatStroke,
+    Name = "AccentGradient",
     Rotation = 45,
     Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Theme.Accent),
@@ -3016,6 +3036,7 @@ Create("UICorner", { Parent = FloatAccent, CornerRadius = UDim.new(1, 0) })
 
 Create("UIGradient", {
     Parent = FloatAccent,
+    Name = "AccentGradient",
     Rotation = 90,
     Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Theme.Accent),
