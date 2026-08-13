@@ -384,18 +384,6 @@ local ThemesPresets = {
         Accent = Color3.fromRGB(236, 72, 153),
         AccentGradient = Color3.fromRGB(249, 115, 22),
     },
-    ["Custom Accent"] = {
-        Background = Color3.fromRGB(5, 5, 5),
-        Background2 = Color3.fromRGB(10, 10, 10),
-        SectionBackground = Color3.fromRGB(12, 12, 12),
-        SectionBackground2 = Color3.fromRGB(16, 16, 16),
-        SectionTop = Color3.fromRGB(22, 22, 22),
-        Element = Color3.fromRGB(18, 18, 18),
-        Outline = Color3.fromRGB(30, 30, 30),
-        Text = Color3.fromRGB(255, 255, 255),
-        Accent = Color3.fromRGB(0, 116, 224),
-        AccentGradient = Color3.fromRGB(0, 195, 255),
-    },
 }
 
 -- Шрифты
@@ -837,7 +825,7 @@ Create("UIListLayout", {
 local Pages = {}
 local CurrentPage = nil
 
--- ФУНКЦИЯ ДИНАМИЧЕСКОЙ СМЕНЫ ТЕМЫ (ОБНОВЛЕННАЯ ДЛЯ CUSTOM ACCENT COLOR)
+-- ФУНКЦИЯ ДИНАМИЧЕСКОЙ СМЕНЫ ТЕМЫ
 local function ApplyTheme(themeName)
     local t = ThemesPresets[themeName]
     if not t then return end
@@ -2763,15 +2751,9 @@ local customColorpicker
 
 themeDropdown = SettingsSection:Dropdown({
     Name = "Ui Theme",
-    Items = {"AMOLED Black", "Dark Blue", "Crimson Red", "Emerald Green", "Purple Velvet", "Cyberpunk", "Custom Accent"},
+    Items = {"AMOLED Black", "Dark Blue", "Crimson Red", "Emerald Green", "Purple Velvet", "Cyberpunk"},
     Default = "AMOLED Black",
     Callback = function(selected)
-        if selected == "Custom Accent" then
-            local customCol = customColorpicker and customColorpicker.Get() or Color3.fromRGB(0, 116, 224)
-            local h, s, v = customCol:ToHSV()
-            ThemesPresets["Custom Accent"].Accent = customCol
-            ThemesPresets["Custom Accent"].AccentGradient = Color3.fromHSV((h + 0.05) % 1, s, v)
-        end
         ApplyTheme(selected)
     end
 })
@@ -2781,12 +2763,15 @@ customColorpicker = SettingsSection:Colorpicker({
     Default = Color3.fromRGB(0, 116, 224),
     Callback = function(col)
         local h, s, v = col:ToHSV()
-        ThemesPresets["Custom Accent"].Accent = col
-        ThemesPresets["Custom Accent"].AccentGradient = Color3.fromHSV((h + 0.05) % 1, s, v)
+        local accentGrad = Color3.fromHSV((h + 0.05) % 1, s, v)
 
-        if themeDropdown and themeDropdown.Get() == "Custom Accent" then
-            ApplyTheme("Custom Accent")
+        local currentTheme = themeDropdown and themeDropdown.Get() or "AMOLED Black"
+        if ThemesPresets[currentTheme] then
+            ThemesPresets[currentTheme].Accent = col
+            ThemesPresets[currentTheme].AccentGradient = accentGrad
         end
+
+        ApplyTheme(currentTheme)
     end
 })
 
