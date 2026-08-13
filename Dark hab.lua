@@ -73,7 +73,7 @@ local function getSheriff()
     return nil
 end
 
--- === СИСТЕМА ESP ===
+-- === ОБНОВЛЕННАЯ СИСТЕМА ESP ===
 local function applyPlayerESP(p)
     if not p or p == lp then
         return
@@ -99,7 +99,7 @@ local function applyPlayerESP(p)
         bill.Name = 'ExodusBill'
         bill.Parent = head
         bill.Adornee = head
-        bill.Size = UDim2.new(0, 150, 0, 50)
+        bill.Size = UDim2.new(0, 180, 0, 60)
         bill.AlwaysOnTop = true
         bill.ExtentsOffset = Vector3.new(0, 3, 0)
 
@@ -117,62 +117,51 @@ local function applyPlayerESP(p)
                     highlight.Enabled = true
                     bill.Enabled = true
 
-                    local activeHero = nil
-
-                    for _, player in ipairs(Players:GetPlayers()) do
-                        if player and player.Character then
-                            local bp = player:FindFirstChild('Backpack')
-                            local charGun = player.Character:FindFirstChild('Gun')
-                            local backGun = bp and bp:FindFirstChild('Gun')
-
-                            if charGun or backGun then
-                                activeHero = player
-                                break
-                            end
-                        end
-                    end
-
                     local backpack = p:FindFirstChild('Backpack')
                     local hasKnife = (backpack and backpack:FindFirstChild('Knife')) or char:FindFirstChild('Knife')
                     local hasGun = (backpack and backpack:FindFirstChild('Gun')) or char:FindFirstChild('Gun')
-                    local gunDropped = workspace:FindFirstChild('GunDrop', true)
                     local pData = roleCache[p.Name]
-                    local role = (pData and type(pData) == 'table' and pData.Role) or 'Innocent'
+                    local roleRaw = (pData and type(pData) == 'table' and pData.Role) or ''
 
-                    if hasKnife or role == 'Murderer' then
-                        local mColor = Color3.fromRGB(255, 0, 0)
-                        highlight.FillColor = mColor
-                        label.Text = 'MURDERER\n\u{25bc}'
-                        label.TextColor3 = mColor
-                    elseif hasGun then
-                        local sColor = Color3.fromRGB(0, 162, 255)
-                        highlight.FillColor = sColor
-                        label.Text = 'SHERIFF\n\u{25bc}'
-                        label.TextColor3 = sColor
-                    elseif role == 'Sheriff' or role == 'Hero' then
-                        if gunDropped or (activeHero and activeHero ~= p) then
-                            local iColor = Color3.fromRGB(0, 255, 0)
-                            highlight.FillColor = iColor
-                            label.Text = '\u{25bc}'
-                            label.TextColor3 = iColor
-                        else
-                            local sColor = Color3.fromRGB(0, 162, 255)
-                            highlight.FillColor = sColor
-                            label.Text = 'SHERIFF\n\u{25bc}'
-                            label.TextColor3 = sColor
-                        end
+                    local roleName = "LOBBY"
+                    local roleColor = Color3.fromRGB(180, 180, 180)
+
+                    -- Определение роли и цвета
+                    if hasKnife or roleRaw == 'Murderer' then
+                        roleName = "MURDERER"
+                        roleColor = Color3.fromRGB(255, 35, 35)
+                    elseif hasGun or roleRaw == 'Sheriff' or roleRaw == 'Hero' then
+                        roleName = "SHERIFF"
+                        roleColor = Color3.fromRGB(0, 162, 255)
+                    elseif roleRaw == 'Innocent' then
+                        roleName = "INNOCENT"
+                        roleColor = Color3.fromRGB(0, 255, 128)
+                    elseif roleRaw == 'Lobby' or roleRaw == 'Dead' or roleRaw == '' then
+                        roleName = "LOBBY"
+                        roleColor = Color3.fromRGB(180, 180, 180)
                     else
-                        local iColor = Color3.fromRGB(0, 255, 0)
-                        highlight.FillColor = iColor
-                        label.Text = '\u{25bc}'
-                        label.TextColor3 = iColor
+                        roleName = "INNOCENT"
+                        roleColor = Color3.fromRGB(0, 255, 128)
                     end
+
+                    -- Расчет дистанции
+                    local distance = 0
+                    if Camera and head then
+                        distance = math.floor((head.Position - Camera.CFrame.Position).Magnitude)
+                    end
+
+                    -- Применение визуалов
+                    highlight.FillColor = roleColor
+                    highlight.OutlineColor = roleColor
+
+                    label.TextColor3 = roleColor
+                    label.Text = string.format("[%s]\n%s\n[%dm]", roleName, p.DisplayName, distance)
                 else
                     highlight.Enabled = false
                     bill.Enabled = false
                 end
 
-                task.wait(0.5)
+                task.wait(0.15)
             end
         end)
     end
@@ -2784,7 +2773,9 @@ local FloatAccent = Create("Frame", {
     BorderSizePixel = 0,
     ZIndex = 128,
 })
+
 Create("UICorner", { Parent = FloatAccent, CornerRadius = UDim.new(1, 0) })
+
 Create("UIGradient", {
     Parent = FloatAccent,
     Rotation = 90,
@@ -2794,65 +2785,53 @@ Create("UIGradient", {
     })
 })
 
-local FloatLogo = Create("ImageLabel", {
+local FloatIcon = Create("ImageLabel", {
     Parent = FloatHeader,
-    Image = DarkHubIcon,
-    ImageColor3 = Color3.new(1, 1, 1),
+    Name = "Icon",
     BackgroundTransparency = 1,
-    Size = UDim2.new(0, 18, 0, 18),
+    Size = UDim2.new(0, 20, 0, 20),
     Position = UDim2.new(0, 10, 0.5, 0),
     AnchorPoint = Vector2.new(0, 0.5),
+    Image = DarkHubIcon,
     ScaleType = Enum.ScaleType.Fit,
     ZIndex = 128,
 })
 
 local FloatTitle = Create("TextLabel", {
     Parent = FloatHeader,
+    Name = "Title",
     Text = "Dark Hub",
     TextColor3 = Theme.Text,
     BackgroundTransparency = 1,
     FontFace = FontSemiBold,
-    TextSize = 11,
-    Position = UDim2.new(0, 34, 0.5, 0),
+    TextSize = 12,
+    Position = UDim2.new(0, 36, 0.5, 0),
     AnchorPoint = Vector2.new(0, 0.5),
-    Size = UDim2.new(0, 0, 0, 12),
+    Size = UDim2.new(0, 0, 0, 14),
     AutomaticSize = Enum.AutomaticSize.X,
     ZIndex = 128,
 })
 
-local StatusContainer = Create("Frame", {
-    Parent = FloatHeader,
-    BackgroundColor3 = Theme.SectionBackground2,
-    BackgroundTransparency = 0.2,
-    Size = UDim2.new(0, 14, 0, 14),
-    Position = UDim2.new(1, -8, 0.5, 0),
-    AnchorPoint = Vector2.new(1, 0.5),
-    BorderSizePixel = 0,
-    ZIndex = 128,
-})
-Create("UICorner", { Parent = StatusContainer, CornerRadius = UDim.new(1, 0) })
-
-local StatusDot = Create("Frame", {
-    Parent = StatusContainer,
-    BackgroundColor3 = Color3.fromRGB(0, 230, 120),
-    Size = UDim2.new(0, 6, 0, 6),
-    Position = UDim2.new(0.5, 0, 0.5, 0),
-    AnchorPoint = Vector2.new(0.5, 0.5),
-    BorderSizePixel = 0,
-    ZIndex = 129,
-})
-Create("UICorner", { Parent = StatusDot, CornerRadius = UDim.new(1, 0) })
-
--- Перетаскивание плашки
+-- Логика перетаскивания и переключения плавающей кнопки
 local Dragging = false
 local DragInput, DragStart, StartPos
+
+local function UpdateDrag(input)
+    local Delta = input.Position - DragStart
+    FloatHeader.Position = UDim2.new(
+        StartPos.X.Scale,
+        StartPos.X.Offset + Delta.X,
+        StartPos.Y.Scale,
+        StartPos.Y.Offset + Delta.Y
+    )
+end
 
 FloatHeader.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         Dragging = true
         DragStart = input.Position
         StartPos = FloatHeader.Position
-        
+
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 Dragging = false
@@ -2869,41 +2848,10 @@ end)
 
 UserInputService.InputChanged:Connect(function(input)
     if input == DragInput and Dragging then
-        local Delta = input.Position - DragStart
-        FloatHeader.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
+        UpdateDrag(input)
     end
-end)
-
-FloatHeader.MouseEnter:Connect(function()
-    CreateTween(FloatHeader, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-        BackgroundColor3 = Color3.fromRGB(12, 12, 12)
-    })
-    CreateTween(FloatStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-        Thickness = 1.8
-    })
-end)
-
-FloatHeader.MouseLeave:Connect(function()
-    CreateTween(FloatHeader, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-        BackgroundColor3 = Theme.Background
-    })
-    CreateTween(FloatStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-        Thickness = 1.2
-    })
 end)
 
 FloatHeader.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
-    if MainFrame.Visible then
-        StatusDot.BackgroundColor3 = Color3.fromRGB(0, 230, 120)
-        CreateTween(StatusDot, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, 6, 0, 6)
-        })
-        UpdateActiveIndicator(true)
-    else
-        StatusDot.BackgroundColor3 = Color3.fromRGB(255, 75, 75)
-        CreateTween(StatusDot, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, 4, 0, 4)
-        })
-    end
 end)
