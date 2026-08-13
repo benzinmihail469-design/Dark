@@ -2571,13 +2571,8 @@ AimbotSection:Slider({Name = "Smoothness", Min = 0, Max = 100, Default = 50, Suf
 AimbotSection:Dropdown({Name = "Target", Items = {"Head", "Body", "Legs"}, Default = "Head"})
 AimbotSection:Keybind({Name = "Aimbot Key", Default = Enum.KeyCode.LeftShift})
 
--- Ragebot
-local RagebotPage = CreatePage({Name = "Ragebot", Icon = "123944728972740"})
-local RagebotSection = RagebotPage:CreateSection({Name = "Ragebot Settings"})
-RagebotSection:Toggle({Name = "Enable Ragebot", Default = false})
-RagebotSection:Slider({Name = "Min Damage", Min = 0, Max = 100, Default = 70, Suffix = "%"})
-RagebotSection:Dropdown({Name = "Hitbox", Items = {"Head", "Body", "Legs"}, Default = "Head"})
-RagebotSection:Toggle({Name = "Auto Wallbang", Default = true})
+-- Settings (Пустая вкладка)
+local SettingsPage = CreatePage({Name = "settings", Icon = "123944728972740"})
 
 -- Visuals
 local VisualsPage = CreatePage({Name = "Visuals", Icon = "122669828593160"})
@@ -2782,7 +2777,7 @@ ConfigsSection:Button({Name = "Load", Callback = function()
     if Selected and #Selected > 0 and _G.ConfigsData then
         local Data = _G.ConfigsData[Selected[1]]
         if Data then
-            local Decoded = HttpService:JSONDecode(Data)
+            local Decoded = HttpService:JSONEncode(Data)
             for Flag, Value in pairs(Decoded) do
                 if SetFlags[Flag] then
                     SetFlags[Flag](Value)
@@ -2793,193 +2788,8 @@ ConfigsSection:Button({Name = "Load", Callback = function()
 end})
 
 -- Активация первой страницы и привязка индикатора
-if Pages[1] then
-    Pages[1]:SetActive(true)
+if #Pages > 0 then
+    Pages[1].SetActive(true)
 end
 
-task.defer(function()
-    task.wait(0.1)
-    UpdateActiveIndicator(true)
-end)
-
--- === ЗАГОЛОВОК-ТУГГЛ (DARK HUB) С ИНДИКАТОРОМ СОСТОЯНИЯ И АНИМАЦИЕЙ ===
-local FloatHeader = Create("TextButton", {
-    Parent = Holder,
-    Name = "DarkHubToggleHeader",
-    Text = "",
-    AutoButtonColor = false,
-    BackgroundColor3 = Theme.Background,
-    BackgroundTransparency = 0.08,
-    Size = UDim2.new(0, 148, 0, 32),
-    Position = UDim2.new(0, IsMobile and 50 or 20, 0, IsMobile and 50 or 20),
-    BorderSizePixel = 0,
-    ZIndex = 127,
-    ClipsDescendants = false,
-})
-
-Create("UICorner", { Parent = FloatHeader, CornerRadius = UDim.new(0, 8) })
-
-local FloatStroke = Create("UIStroke", {
-    Parent = FloatHeader,
-    Color = Theme.Outline,
-    Thickness = 1.2,
-    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-})
-
-Create("UIGradient", {
-    Parent = FloatStroke,
-    Rotation = 45,
-    Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Theme.Accent),
-        ColorSequenceKeypoint.new(0.5, Theme.Outline),
-        ColorSequenceKeypoint.new(1, Theme.AccentGradient),
-    })
-})
-
-local FloatAccent = Create("Frame", {
-    Parent = FloatHeader,
-    BackgroundColor3 = Color3.new(1, 1, 1),
-    Size = UDim2.new(0, 3, 0, 18),
-    Position = UDim2.new(0, 0, 0.5, 0),
-    AnchorPoint = Vector2.new(0, 0.5),
-    BorderSizePixel = 0,
-    ZIndex = 128,
-})
-
-Create("UICorner", { Parent = FloatAccent, CornerRadius = UDim.new(1, 0) })
-
-Create("UIGradient", {
-    Parent = FloatAccent,
-    Rotation = 90,
-    Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Theme.Accent),
-        ColorSequenceKeypoint.new(1, Theme.AccentGradient),
-    })
-})
-
-local FloatIcon = Create("ImageLabel", {
-    Parent = FloatHeader,
-    Name = "Icon",
-    BackgroundTransparency = 1,
-    Size = UDim2.new(0, 20, 0, 20),
-    Position = UDim2.new(0, 10, 0.5, 0),
-    AnchorPoint = Vector2.new(0, 0.5),
-    Image = DarkHubIcon,
-    ScaleType = Enum.ScaleType.Fit,
-    ZIndex = 128,
-})
-
-local FloatTitle = Create("TextLabel", {
-    Parent = FloatHeader,
-    Name = "Title",
-    Text = "Dark Hub",
-    TextColor3 = Theme.Text,
-    BackgroundTransparency = 1,
-    FontFace = FontSemiBold,
-    TextSize = 12,
-    Position = UDim2.new(0, 36, 0.5, 0),
-    AnchorPoint = Vector2.new(0, 0.5),
-    Size = UDim2.new(0, 0, 0, 14),
-    AutomaticSize = Enum.AutomaticSize.X,
-    ZIndex = 128,
-})
-
--- === КРУГЛЕШОК ИНДИКАТОРА (ЗЕЛЕНЫЙ = GUI ОТКРЫТ, КРАСНЫЙ = GUI ЗАКРЫТ) ===
-local StatusDot = Create("Frame", {
-    Parent = FloatHeader,
-    Name = "StatusDot",
-    BackgroundColor3 = MainFrame.Visible and Color3.fromRGB(0, 255, 128) or Color3.fromRGB(255, 45, 45),
-    Size = UDim2.new(0, 8, 0, 8),
-    Position = UDim2.new(1, -12, 0.5, 0),
-    AnchorPoint = Vector2.new(1, 0.5),
-    BorderSizePixel = 0,
-    ZIndex = 128,
-})
-
-Create("UICorner", { Parent = StatusDot, CornerRadius = UDim.new(1, 0) })
-
-local StatusDotStroke = Create("UIStroke", {
-    Parent = StatusDot,
-    Color = StatusDot.BackgroundColor3,
-    Transparency = 0.4,
-    Thickness = 1.5,
-})
-
-local function UpdateStatusDot()
-    local isOpen = MainFrame.Visible
-    local targetColor = isOpen and Color3.fromRGB(0, 255, 128) or Color3.fromRGB(255, 45, 45)
-
-    CreateTween(StatusDot, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-        BackgroundColor3 = targetColor
-    })
-    CreateTween(StatusDotStroke, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-        Color = targetColor
-    })
-end
-
--- Автоматическое обновление индикатора при изменении видимости MainFrame
-MainFrame:GetPropertyChangedSignal("Visible"):Connect(UpdateStatusDot)
-
--- Логика перетаскивания и переключения плавающей кнопки
-local Dragging = false
-local DragInput, DragStart, StartPos
-
-local function UpdateDrag(input)
-    local Delta = input.Position - DragStart
-    FloatHeader.Position = UDim2.new(
-        StartPos.X.Scale,
-        StartPos.X.Offset + Delta.X,
-        StartPos.Y.Scale,
-        StartPos.Y.Offset + Delta.Y
-    )
-end
-
-FloatHeader.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        Dragging = true
-        DragStart = input.Position
-        StartPos = FloatHeader.Position
-
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                Dragging = false
-            end
-        end)
-    end
-end)
-
-FloatHeader.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        DragInput = input
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input == DragInput and Dragging then
-        UpdateDrag(input)
-    end
-end)
-
--- Переключение с анимацией нажатия (Spring / Bounce)
-local isClickAnimating = false
-FloatHeader.MouseButton1Down:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-
-    if not isClickAnimating then
-        isClickAnimating = true
-        local normalSize = UDim2.new(0, 148, 0, 32)
-        local pressedSize = UDim2.new(0, 140, 0, 28)
-
-        CreateTween(FloatHeader, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = pressedSize
-        })
-
-        task.delay(0.08, function()
-            CreateTween(FloatHeader, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Size = normalSize
-            })
-            task.wait(0.25)
-            isClickAnimating = false
-        end)
-    end
-end)
+return DarkHub
