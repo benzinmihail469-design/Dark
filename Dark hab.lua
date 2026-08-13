@@ -385,13 +385,13 @@ local ThemesPresets = {
         AccentGradient = Color3.fromRGB(249, 115, 22),
     },
     ["Custom Accent"] = {
-        Background = Color3.fromRGB(0, 0, 0),
-        Background2 = Color3.fromRGB(5, 5, 5),
-        SectionBackground = Color3.fromRGB(6, 6, 6),
-        SectionBackground2 = Color3.fromRGB(10, 10, 10),
-        SectionTop = Color3.fromRGB(16, 16, 16),
-        Element = Color3.fromRGB(12, 12, 12),
-        Outline = Color3.fromRGB(22, 22, 22),
+        Background = Color3.fromRGB(5, 5, 5),
+        Background2 = Color3.fromRGB(10, 10, 10),
+        SectionBackground = Color3.fromRGB(12, 12, 12),
+        SectionBackground2 = Color3.fromRGB(16, 16, 16),
+        SectionTop = Color3.fromRGB(22, 22, 22),
+        Element = Color3.fromRGB(18, 18, 18),
+        Outline = Color3.fromRGB(30, 30, 30),
         Text = Color3.fromRGB(255, 255, 255),
         Accent = Color3.fromRGB(0, 116, 224),
         AccentGradient = Color3.fromRGB(0, 195, 255),
@@ -563,6 +563,7 @@ Create("TextLabel", {
 -- КНОПКА ЗАКРЫТИЯ
 local CloseButton = Create("TextButton", {
     Parent = MainFrame,
+    Name = "ElementBG",
     Text = "",
     AutoButtonColor = false,
     BackgroundColor3 = Theme.Element,
@@ -635,7 +636,7 @@ end)
 -- ПОЛЕ ПОИСКА В ШАПКЕ
 local HeaderSearchContainer = Create("Frame", {
     Parent = MainFrame,
-    Name = "HeaderSearch",
+    Name = "ElementBG",
     BackgroundColor3 = Theme.Element,
     BackgroundTransparency = 0.2,
     Position = UDim2.new(1, -40, 0, 5),
@@ -836,7 +837,7 @@ Create("UIListLayout", {
 local Pages = {}
 local CurrentPage = nil
 
--- ФУНКЦИЯ ДИНАМИЧЕСКОЙ СМЕНЫ ТЕМЫ
+-- ФУНКЦИЯ ДИНАМИЧЕСКОЙ СМЕНЫ ТЕМЫ (ОБНОВЛЕННАЯ ДЛЯ CUSTOM ACCENT COLOR)
 local function ApplyTheme(themeName)
     local t = ThemesPresets[themeName]
     if not t then return end
@@ -859,9 +860,9 @@ local function ApplyTheme(themeName)
     CreateTween(HeaderSearchContainer, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Element})
     CreateTween(CloseButton, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Element})
 
-    local FloatHeaderObj = Holder:FindFirstChild("DarkHubToggleHeader")
-    if FloatHeaderObj then
-        CreateTween(FloatHeaderObj, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
+    local FloatHeader = Holder:FindFirstChild("DarkHubToggleHeader")
+    if FloatHeader then
+        CreateTween(FloatHeader, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
     end
 
     for _, desc in ipairs(Holder:GetDescendants()) do
@@ -878,18 +879,22 @@ local function ApplyTheme(themeName)
                     ColorSequenceKeypoint.new(1, Theme.AccentGradient)
                 })
             end
-        elseif desc.Name == "TabButton" then
-            CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent})
         elseif desc.Name == "SectionTopBg" then
             CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.SectionTop})
         elseif desc.Name == "SectionContent" then
             CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.SectionBackground})
         elseif desc.Name == "SectionFrame" then
             CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.SectionBackground2})
-        elseif desc.Name == "AccentBar" then
+        elseif desc.Name == "SectionTop" then
+            CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Outline})
+        elseif desc.Name == "TabButton" then
             CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent})
-        elseif desc.Name == "FloatAccent" then
-            desc.BackgroundColor3 = Color3.new(1, 1, 1)
+        elseif desc.Name == "AccentBar" or desc.Name == "FloatAccent" then
+            CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent})
+        elseif desc.Name == "ElementBG" then
+            CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Element})
+        elseif desc.Name == "DropdownList" or desc.Name == "ColorPicker" then
+            CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
         elseif desc:IsA("UIStroke") and desc.Name ~= "StatusDotStroke" then
             CreateTween(desc, TweenInfo.new(0.3), {Color = Theme.Outline})
         end
@@ -1191,6 +1196,7 @@ local function CreatePage(PageConfig)
         
         local SectionTop = Create("Frame", {
             Parent = SectionFrame,
+            Name = "SectionTop",
             BackgroundColor3 = Theme.Outline,
             BackgroundTransparency = 0.5,
             Size = UDim2.new(1, 0, 0, 26),
@@ -1324,6 +1330,7 @@ local function CreatePage(PageConfig)
             
             local Indicator = Create("Frame", {
                 Parent = ToggleFrame,
+                Name = "ElementBG",
                 BackgroundColor3 = Theme.Element,
                 Size = UDim2.new(0, 14, 0, 14),
                 Position = UDim2.new(0, 0, 0.5, 0),
@@ -1427,6 +1434,7 @@ local function CreatePage(PageConfig)
             
             local ButtonFrame = Create("TextButton", {
                 Parent = SectionContent,
+                Name = "ElementBG",
                 Text = "",
                 AutoButtonColor = false,
                 BackgroundColor3 = Theme.Element,
@@ -1560,6 +1568,7 @@ local function CreatePage(PageConfig)
             
             local SliderBar = Create("TextButton", {
                 Parent = SliderFrame,
+                Name = "ElementBG",
                 Text = "",
                 AutoButtonColor = false,
                 BackgroundColor3 = Theme.Element,
@@ -1669,6 +1678,7 @@ local function CreatePage(PageConfig)
             
             local DropdownButton = Create("TextButton", {
                 Parent = DropdownFrame,
+                Name = "ElementBG",
                 Text = "",
                 AutoButtonColor = false,
                 BackgroundColor3 = Theme.Element,
@@ -1706,6 +1716,7 @@ local function CreatePage(PageConfig)
             
             local DropdownList = Create("Frame", {
                 Parent = Holder,
+                Name = "DropdownList",
                 BackgroundColor3 = Theme.Background,
                 Size = UDim2.new(0, 100, 0, 100),
                 Visible = false,
@@ -1848,6 +1859,7 @@ local function CreatePage(PageConfig)
             
             local KeybindButton = Create("TextButton", {
                 Parent = KeybindFrame,
+                Name = "ElementBG",
                 Text = "",
                 AutoButtonColor = false,
                 BackgroundColor3 = Theme.Element,
@@ -1952,6 +1964,7 @@ local function CreatePage(PageConfig)
             
             local TextboxInput = Create("TextBox", {
                 Parent = TextboxFrame,
+                Name = "ElementBG",
                 Text = "",
                 PlaceholderText = Placeholder,
                 TextColor3 = Theme.Text,
@@ -2018,6 +2031,7 @@ local function CreatePage(PageConfig)
             
             local ColorButton = Create("TextButton", {
                 Parent = ColorFrame,
+                Name = "ElementBG",
                 Text = "",
                 AutoButtonColor = false,
                 BackgroundColor3 = Theme.Element,
@@ -2056,6 +2070,7 @@ local function CreatePage(PageConfig)
             
             local ColorPicker = Create("Frame", {
                 Parent = Holder,
+                Name = "ColorPicker",
                 BackgroundColor3 = Theme.Background,
                 Size = UDim2.new(0, 160, 0, 170),
                 Visible = false,
@@ -2172,6 +2187,7 @@ local function CreatePage(PageConfig)
             
             local HexInput = Create("TextBox", {
                 Parent = ColorPicker,
+                Name = "ElementBG",
                 Text = "#" .. Default:ToHex(),
                 TextColor3 = Theme.Text,
                 BackgroundColor3 = Theme.Element,
@@ -2370,6 +2386,7 @@ local function CreatePage(PageConfig)
             
             local SearchBox = Create("TextBox", {
                 Parent = ListboxFrame,
+                Name = "ElementBG",
                 Text = "",
                 PlaceholderText = "Search...",
                 TextColor3 = Theme.Text,
@@ -2389,6 +2406,7 @@ local function CreatePage(PageConfig)
             
             local ListContainer = Create("Frame", {
                 Parent = ListboxFrame,
+                Name = "ElementBG",
                 BackgroundColor3 = Theme.Element,
                 Size = UDim2.new(1, 0, 0, 0),
                 Position = UDim2.new(0, 0, 0, 36),
@@ -2751,19 +2769,8 @@ themeDropdown = SettingsSection:Dropdown({
         if selected == "Custom Accent" then
             local customCol = customColorpicker and customColorpicker.Get() or Color3.fromRGB(0, 116, 224)
             local h, s, v = customCol:ToHSV()
-            local base = ThemesPresets["AMOLED Black"]
-            ThemesPresets["Custom Accent"] = {
-                Background = base.Background,
-                Background2 = base.Background2,
-                SectionBackground = base.SectionBackground,
-                SectionBackground2 = base.SectionBackground2,
-                SectionTop = base.SectionTop,
-                Element = base.Element,
-                Outline = base.Outline,
-                Text = base.Text,
-                Accent = customCol,
-                AccentGradient = Color3.fromHSV((h + 0.05) % 1, s, v),
-            }
+            ThemesPresets["Custom Accent"].Accent = customCol
+            ThemesPresets["Custom Accent"].AccentGradient = Color3.fromHSV((h + 0.05) % 1, s, v)
         end
         ApplyTheme(selected)
     end
@@ -2774,20 +2781,9 @@ customColorpicker = SettingsSection:Colorpicker({
     Default = Color3.fromRGB(0, 116, 224),
     Callback = function(col)
         local h, s, v = col:ToHSV()
-        local currentTheme = themeDropdown and themeDropdown.Get() or "AMOLED Black"
-        local base = ThemesPresets[currentTheme] or ThemesPresets["AMOLED Black"]
-        ThemesPresets["Custom Accent"] = {
-            Background = base.Background,
-            Background2 = base.Background2,
-            SectionBackground = base.SectionBackground,
-            SectionBackground2 = base.SectionBackground2,
-            SectionTop = base.SectionTop,
-            Element = base.Element,
-            Outline = base.Outline,
-            Text = base.Text,
-            Accent = col,
-            AccentGradient = Color3.fromHSV((h + 0.05) % 1, s, v),
-        }
+        ThemesPresets["Custom Accent"].Accent = col
+        ThemesPresets["Custom Accent"].AccentGradient = Color3.fromHSV((h + 0.05) % 1, s, v)
+
         if themeDropdown and themeDropdown.Get() == "Custom Accent" then
             ApplyTheme("Custom Accent")
         end
@@ -2863,6 +2859,7 @@ local function RefreshFlingPlayerList()
         if Player ~= LocalPlayer then
             local Card = Create("TextButton", {
                 Parent = PlayerListContainer,
+                Name = "ElementBG",
                 Text = "",
                 AutoButtonColor = false,
                 BackgroundColor3 = Theme.Element,
@@ -2901,6 +2898,7 @@ local function RefreshFlingPlayerList()
 
             local RoleLabel = Create("TextLabel", {
                 Parent = Card,
+                Name = "RoleLabel",
                 Text = "LOBBY",
                 TextColor3 = Color3.fromRGB(180, 180, 180),
                 TextTransparency = 0.2,
