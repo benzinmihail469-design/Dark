@@ -2749,7 +2749,7 @@ AimbotSection:Slider({Name = "Smoothness", Min = 0, Max = 100, Default = 50, Suf
 AimbotSection:Dropdown({Name = "Target", Items = {"Head", "Body", "Legs"}, Default = "Head"})
 AimbotSection:Keybind({Name = "Aimbot Key", Default = Enum.KeyCode.LeftShift})
 
--- Settings (Вкладка настроек с выбором темы и кастомного цвета)
+-- Settings (Вкладка настроек с выбором темы, цвета и изменением размера GUI)
 local SettingsPage = CreatePage({Name = "settings", Icon = "123944728972740"})
 local SettingsSection = SettingsPage:CreateSection({Name = "Theme Settings", Description = "Customize GUI colors"})
 
@@ -2779,6 +2779,37 @@ customColorpicker = SettingsSection:Colorpicker({
         end
 
         ApplyTheme(currentTheme)
+    end
+})
+
+-- Добавленная функция изменения размера GUI во вкладку Settings
+local SizeSection = SettingsPage:CreateSection({Name = "UI Size Settings", Description = "Change interface scale"})
+
+-- Базовые стандартные размеры для расчёта масштаба
+local BaseWidth = MainWidth
+local BaseHeight = MainHeight
+local BaseSidebarWidth = SidebarWidth
+
+SizeSection:Slider({
+    Name = "UI Size",
+    Min = 400,
+    Max = 800,
+    Default = MainWidth,
+    Suffix = "px",
+    Decimals = 1,
+    Callback = function(newWidth)
+        -- Вычисляем высоту пропорционально (сохраняя исходное соотношение сторон)
+        local ratio = MainHeight / MainWidth
+        local newHeight = math.floor(newWidth * ratio)
+        local newSidebar = math.floor(SidebarWidth * (newWidth / MainWidth))
+
+        MainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
+        LeftTabs.Size = UDim2.new(0, newSidebar, 1, -(HeaderHeight + FooterHeight))
+        ProfileFooter.Size = UDim2.new(0, newSidebar, 0, FooterHeight)
+        Content.Position = UDim2.new(0, newSidebar, 0, HeaderHeight)
+        Content.Size = UDim2.new(1, -newSidebar, 1, -HeaderHeight)
+        
+        UpdateActiveIndicator(true)
     end
 })
 
