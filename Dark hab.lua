@@ -2357,7 +2357,7 @@ MovementSection:Toggle({Name = "Auto Strafe", Default = false})
 MovementSection:Slider({Name = "Strafe Speed", Min = 0, Max = 100, Default = 60, Suffix = "%"})
 
 -- === ВКЛАДКА FLING PLAYERS ===
-local FlingIcon = "10709781323" -- Подходящая иконка таргетинга / игрока
+local FlingIcon = "110220024060608" -- Подходящая иконка таргетинга / игрока
 local FlingPage = CreatePage({Name = "Fling Players", Icon = FlingIcon})
 local FlingSection = FlingPage:CreateSection({
     Name = "Fling Players", 
