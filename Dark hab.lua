@@ -144,13 +144,11 @@ local function applyPlayerESP(p)
 
                     local roleName, roleColor = getPlayerRoleInfo(p)
 
-                    -- Расчет дистанции
                     local distance = 0
                     if Camera and head then
                         distance = math.floor((head.Position - Camera.CFrame.Position).Magnitude)
                     end
 
-                    -- Применение визуалов
                     highlight.FillColor = roleColor
                     highlight.OutlineColor = roleColor
 
@@ -172,7 +170,6 @@ local function applyPlayerESP(p)
     end
 end
 
--- Инициализация Player ESP
 for _, player in pairs(Players:GetPlayers()) do
     applyPlayerESP(player)
 end
@@ -241,7 +238,6 @@ for _, obj in ipairs(workspace:GetDescendants()) do
 end
 workspace.DescendantAdded:Connect(checkAndApplyGun)
 
--- Получение данных о ролях с сервера (частота опроса 0.5 сек)
 task.spawn(function()
     while task.wait(0.5) do
         local success, data = pcall(function()
@@ -264,7 +260,6 @@ local SidebarWidth = IsMobile and 140 or 150  -- Ширина боковой п�
 local HeaderHeight = 36                       -- Высота шапки
 local FooterHeight = 42                       -- Высота подвала с профилем
 
--- Функция авто-форматирования ID иконки
 local function GetIconUri(Icon)
     if not Icon or Icon == "" then return "" end
     local StrIcon = tostring(Icon)
@@ -278,10 +273,8 @@ local function GetIconUri(Icon)
     return StrIcon
 end
 
--- Иконка для Dark Hub рядом с заголовком
 local DarkHubIcon = GetIconUri("91508433366374")
 
--- Вспомогательные функции
 local function Create(Class, Properties)
     local Instance = Instance.new(Class)
     for Property, Value in pairs(Properties) do
@@ -296,7 +289,6 @@ local function CreateTween(Instance, Info, Goal)
     return Tween
 end
 
--- Функция очистки строк
 local function CleanString(Str)
     if not Str then return "" end
     local Cleaned = string.lower(tostring(Str))
@@ -304,7 +296,7 @@ local function CleanString(Str)
     return Cleaned
 end
 
--- Цветовая схема (AMOLED Black)
+-- Цветовая схема
 local Theme = {
     Background = Color3.fromRGB(0, 0, 0),
     Background2 = Color3.fromRGB(5, 5, 5),
@@ -330,6 +322,37 @@ local Holder = Create("ScreenGui", {
     DisplayOrder = 2,
     ResetOnSpawn = false,
 })
+
+-- Функция динамической смены темы UI
+local Pages = {}
+local function UpdateThemeColors(accent, accentGradient)
+    Theme.Accent = accent
+    Theme.AccentGradient = accentGradient
+
+    for _, desc in ipairs(Holder:GetDescendants()) do
+        if desc:IsA("UIGradient") then
+            local p = desc.Parent
+            if p then
+                if p.Name == "FloatStroke" then
+                    desc.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, accent),
+                        ColorSequenceKeypoint.new(0.5, Theme.Outline),
+                        ColorSequenceKeypoint.new(1, accentGradient),
+                    })
+                elseif p.Name == "CloseAccent" or p.Name == "Accent" or p.Name == "SliderFill" or p.Name == "FloatAccent" then
+                    desc.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, accent),
+                        ColorSequenceKeypoint.new(1, accentGradient),
+                    })
+                end
+            end
+        elseif desc:IsA("Frame") and desc.Name == "AccentBar" then
+            desc.BackgroundColor3 = accent
+        elseif desc:IsA("TextButton") and desc.Parent and desc.Parent.Name == "LeftTabs" then
+            desc.BackgroundColor3 = accent
+        end
+    end
+end
 
 -- Контейнер для уведомлений
 local NotificationHolder = Create("Frame", {
@@ -513,6 +536,7 @@ local CloseText = Create("TextLabel", {
 
 local CloseAccent = Create("Frame", {
     Parent = CloseButton,
+    Name = "CloseAccent",
     BackgroundColor3 = Color3.new(1, 1, 1),
     BackgroundTransparency = 1,
     Size = UDim2.new(0, 0, 0, 0),
@@ -584,6 +608,7 @@ local HeaderSearchInput = Create("TextBox", {
 -- Левая панель вкладок (Сайдбар)
 local LeftTabs = Create("ScrollingFrame", {
     Parent = MainFrame,
+    Name = "LeftTabs",
     BackgroundColor3 = Theme.Background,
     BackgroundTransparency = 0.1,
     Size = UDim2.new(0, SidebarWidth, 1, -FooterHeight),
@@ -752,7 +777,6 @@ Create("UIListLayout", {
 })
 
 -- Страницы
-local Pages = {}
 local CurrentPage = nil
 
 -- Обновление позиции белой полоски
@@ -1069,6 +1093,7 @@ local function CreatePage(PageConfig)
         
         local AccentBar = Create("Frame", {
             Parent = SectionTopBg,
+            Name = "AccentBar",
             BackgroundColor3 = Theme.Accent,
             Size = UDim2.new(0, 2, 0, 10),
             Position = UDim2.new(0, 6, 0.5, 0),
@@ -1121,6 +1146,7 @@ local function CreatePage(PageConfig)
         
         local SectionContent = Create("Frame", {
             Parent = SectionFrame,
+            Name = "SectionContent",
             BackgroundColor3 = Theme.SectionBackground,
             BackgroundTransparency = 0.4,
             Position = UDim2.new(0, 1, 0, 27),
@@ -1189,6 +1215,7 @@ local function CreatePage(PageConfig)
             
             local Accent = Create("Frame", {
                 Parent = Indicator,
+                Name = "Accent",
                 BackgroundColor3 = Color3.new(1, 1, 1),
                 BackgroundTransparency = 1,
                 Size = UDim2.new(0, 0, 0, 0),
@@ -1291,6 +1318,7 @@ local function CreatePage(PageConfig)
             
             local Accent = Create("Frame", {
                 Parent = ButtonFrame,
+                Name = "Accent",
                 BackgroundColor3 = Color3.new(1, 1, 1),
                 BackgroundTransparency = 1,
                 Size = UDim2.new(0, 0, 0, 0),
@@ -1424,6 +1452,7 @@ local function CreatePage(PageConfig)
             
             local SliderFill = Create("Frame", {
                 Parent = SliderBar,
+                Name = "SliderFill",
                 BackgroundColor3 = Color3.new(1, 1, 1),
                 Size = UDim2.new(0.5, 0, 1, 0),
                 BorderSizePixel = 0,
@@ -2571,15 +2600,36 @@ AimbotSection:Slider({Name = "Smoothness", Min = 0, Max = 100, Default = 50, Suf
 AimbotSection:Dropdown({Name = "Target", Items = {"Head", "Body", "Legs"}, Default = "Head"})
 AimbotSection:Keybind({Name = "Aimbot Key", Default = Enum.KeyCode.LeftShift})
 
--- Settings (Функции Ragebot, Min Damage, Hit box и Auto Wall bang успешно удалены)
+-- Settings (Добавлена функция Ui Theme)
 local SettingsPage = CreatePage({Name = "settings", Icon = "123944728972740"})
 local SettingsSection = SettingsPage:CreateSection({Name = "Settings"})
+
+local Themes = {
+    ["Default (AMOLED)"] = {Accent = Color3.fromRGB(0, 116, 224), Gradient = Color3.fromRGB(0, 195, 255)},
+    ["Purple Neon"]      = {Accent = Color3.fromRGB(140, 0, 255), Gradient = Color3.fromRGB(255, 0, 200)},
+    ["Blood Red"]        = {Accent = Color3.fromRGB(220, 20, 60), Gradient = Color3.fromRGB(255, 70, 70)},
+    ["Emerald Green"]    = {Accent = Color3.fromRGB(0, 200, 100), Gradient = Color3.fromRGB(0, 255, 170)},
+    ["Ocean Blue"]       = {Accent = Color3.fromRGB(0, 150, 255), Gradient = Color3.fromRGB(0, 230, 255)},
+    ["Sunset Orange"]    = {Accent = Color3.fromRGB(255, 100, 0), Gradient = Color3.fromRGB(255, 180, 0)},
+    ["Cyber Yellow"]     = {Accent = Color3.fromRGB(255, 200, 0), Gradient = Color3.fromRGB(255, 240, 100)},
+}
+
+SettingsSection:Dropdown({
+    Name = "Ui Theme",
+    Items = {"Default (AMOLED)", "Purple Neon", "Blood Red", "Emerald Green", "Ocean Blue", "Sunset Orange", "Cyber Yellow"},
+    Default = "Default (AMOLED)",
+    Callback = function(selected)
+        local themeData = Themes[selected]
+        if themeData then
+            UpdateThemeColors(themeData.Accent, themeData.Gradient)
+        end
+    end
+})
 
 -- Visuals
 local VisualsPage = CreatePage({Name = "Visuals", Icon = "122669828593160"})
 local VisualsSection = VisualsPage:CreateSection({Name = "Players"})
 
--- Подключение переключателя Player ESP к глобальной переменной _G.ESPEnabled
 VisualsSection:Toggle({
     Name = "Player ESP",
     Default = true,
@@ -2588,7 +2638,6 @@ VisualsSection:Toggle({
     end
 })
 
--- Подключение переключателя ESP Gun
 VisualsSection:Toggle({
     Name = "ESP Gun",
     Default = false,
@@ -2613,7 +2662,6 @@ local FlingSection = FlingPage:CreateSection({
     Icon = FlingIcon
 })
 
--- Переключатель Anti-Fling
 FlingSection:Toggle({
     Name = "Anti-Fling Protection",
     Default = false,
@@ -2698,7 +2746,6 @@ local function RefreshFlingPlayerList()
                 Active = false,
             })
 
-            -- Цикл динамического обновления ролей в списке
             task.spawn(function()
                 while Card and Card.Parent do
                     local roleName, roleColor = getPlayerRoleInfo(Player)
@@ -2817,6 +2864,7 @@ Create("UICorner", { Parent = FloatHeader, CornerRadius = UDim.new(0, 8) })
 
 local FloatStroke = Create("UIStroke", {
     Parent = FloatHeader,
+    Name = "FloatStroke",
     Color = Theme.Outline,
     Thickness = 1.2,
     ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
@@ -2834,6 +2882,7 @@ Create("UIGradient", {
 
 local FloatAccent = Create("Frame", {
     Parent = FloatHeader,
+    Name = "FloatAccent",
     BackgroundColor3 = Color3.new(1, 1, 1),
     Size = UDim2.new(0, 3, 0, 18),
     Position = UDim2.new(0, 0, 0.5, 0),
@@ -2913,10 +2962,9 @@ local function UpdateStatusDot()
     })
 end
 
--- Автоматическое обновление индикатора при изменении видимости MainFrame
 MainFrame:GetPropertyChangedSignal("Visible"):Connect(UpdateStatusDot)
 
--- Логика перетаскивания и переключения плавающей кнопки
+-- === ЛОГИКА ПЕРЕТАСКИВАНИЯ И ПЕРЕКЛЮЧЕНИЯ ПЛАВАЮЩЕЙ КНОПКИ ===
 local Dragging = false
 local DragInput, DragStart, StartPos
 
@@ -2956,26 +3004,8 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Переключение с анимацией нажатия (Spring / Bounce)
-local isClickAnimating = false
-FloatHeader.MouseButton1Down:Connect(function()
+FloatHeader.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
-
-    if not isClickAnimating then
-        isClickAnimating = true
-        local normalSize = UDim2.new(0, 148, 0, 32)
-        local pressedSize = UDim2.new(0, 140, 0, 28)
-
-        CreateTween(FloatHeader, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = pressedSize
-        })
-
-        task.delay(0.08, function()
-            CreateTween(FloatHeader, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Size = normalSize
-            })
-            task.wait(0.25)
-            isClickAnimating = false
-        end)
-    end
 end)
+
+return DarkHub
