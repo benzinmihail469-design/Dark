@@ -506,7 +506,7 @@ do
     end)
 end
 
--- ИКОНКА В ГЛАВНОМ ОКНЕ (КРУГЛАЯ)
+-- ИКОНКА В ГЛАВНОМ ОКНЕ
 local Logo = Create("ImageLabel", {
     Parent = MainFrame,
     Name = "Logo",
@@ -518,8 +518,7 @@ local Logo = Create("ImageLabel", {
     ScaleType = Enum.ScaleType.Fit,
     ZIndex = 5,
 })
-
-Create("UICorner", { Parent = Logo, CornerRadius = UDim.new(1, 0) })
+Create("UICorner", { Parent = Logo, CornerRadius = UDim.new(0, 6) })
 
 Create("TextLabel", {
     Parent = MainFrame,
@@ -653,7 +652,7 @@ local HeaderSearchInput = Create("TextBox", {
     ZIndex = 6,
 })
 
--- Левая панель вкладок (Сайдбар) - Начинается СТРОГО под шапкой
+-- Левая панель вкладок (Сайдбар)
 local LeftTabs = Create("ScrollingFrame", {
     Parent = MainFrame,
     BackgroundColor3 = Theme.Background,
@@ -766,8 +765,7 @@ local ArrowIcon = Create("ImageLabel", {
     Rotation = -90,
     ZIndex = 9,
 })
-
-Create("UICorner", { Parent = ArrowIcon, CornerRadius = UDim.new(1, 0) })
+Create("UICorner", { Parent = ArrowIcon, CornerRadius = UDim.new(0, 3) })
 
 -- ИНДИКАТОР АКТИВНОЙ ВКЛАДКИ (БЕЛАЯ ПОЛОСКА)
 local ActiveIndicator = Create("Frame", {
@@ -1013,8 +1011,7 @@ local function CreatePage(PageConfig)
         Position = UDim2.new(0, 12, 0.5, 0),
         AnchorPoint = Vector2.new(0, 0.5),
     })
-
-    Create("UICorner", { Parent = TabIcon, CornerRadius = UDim.new(1, 0) })
+    Create("UICorner", { Parent = TabIcon, CornerRadius = UDim.new(0, 4) })
     
     local TabLabel = Create("TextLabel", {
         Parent = TabButton,
@@ -1224,7 +1221,7 @@ local function CreatePage(PageConfig)
         
         local TextXOffset = 14
         if SectionIcon then
-            local SecIcon = Create("ImageLabel", {
+            local SecImg = Create("ImageLabel", {
                 Parent = SectionTopBg,
                 Image = GetIconUri(SectionIcon),
                 ImageColor3 = Theme.Text,
@@ -1233,7 +1230,7 @@ local function CreatePage(PageConfig)
                 Position = UDim2.new(0, 12, 0.5, 0),
                 AnchorPoint = Vector2.new(0, 0.5),
             })
-            Create("UICorner", { Parent = SecIcon, CornerRadius = UDim.new(1, 0) })
+            Create("UICorner", { Parent = SecImg, CornerRadius = UDim.new(0, 3) })
             TextXOffset = 28
         end
 
@@ -1366,6 +1363,7 @@ local function CreatePage(PageConfig)
                 Position = UDim2.new(0.5, 0, 0.5, 0),
                 AnchorPoint = Vector2.new(0.5, 0.5),
             })
+            Create("UICorner", { Parent = CheckImage, CornerRadius = UDim.new(0, 2) })
             
             Create("TextLabel", {
                 Parent = ToggleFrame,
@@ -1485,7 +1483,7 @@ local function CreatePage(PageConfig)
                     Position = UDim2.new(0, -12, 0.5, 0),
                     AnchorPoint = Vector2.new(1, 0.5),
                 })
-                Create("UICorner", { Parent = BtnIcon, CornerRadius = UDim.new(1, 0) })
+                Create("UICorner", { Parent = BtnIcon, CornerRadius = UDim.new(0, 3) })
             end
             
             ButtonFrame.MouseEnter:Connect(function()
@@ -1700,7 +1698,7 @@ local function CreatePage(PageConfig)
                 TextXAlignment = Enum.TextXAlignment.Left,
             })
             
-            Create("ImageLabel", {
+            local DropIcon = Create("ImageLabel", {
                 Parent = DropdownButton,
                 Image = GetIconUri("123317177279443"),
                 ImageColor3 = Color3.fromRGB(141, 141, 150),
@@ -1709,6 +1707,7 @@ local function CreatePage(PageConfig)
                 Position = UDim2.new(1, -6, 0.5, 0),
                 AnchorPoint = Vector2.new(1, 0.5),
             })
+            Create("UICorner", { Parent = DropIcon, CornerRadius = UDim.new(0, 2) })
             
             local DropdownList = Create("Frame", {
                 Parent = Holder,
@@ -3074,8 +3073,7 @@ local FloatIcon = Create("ImageLabel", {
     ScaleType = Enum.ScaleType.Fit,
     ZIndex = 128,
 })
-
-Create("UICorner", { Parent = FloatIcon, CornerRadius = UDim.new(1, 0) })
+Create("UICorner", { Parent = FloatIcon, CornerRadius = UDim.new(0, 4) })
 
 local FloatTitle = Create("TextLabel", {
     Parent = FloatHeader,
