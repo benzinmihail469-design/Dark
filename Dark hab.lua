@@ -20,30 +20,29 @@ _G.ESPEnabled = true
 _G.GunESPEnabled = false
 
 -- ==========================================
--- ===  ЛОГИКА RENDER / SCREEN STRETCH    ===
+-- ===         ЛОГИКА FOV / КАМЕРЫ        ===
 -- ==========================================
+local FOVEnabled = false
+local CustomFOV = 90
+local StandardFOV = 70
 
-local ScreenStretchEnabled = false
-local ScreenStretchFactor = 0.70 -- Значение по умолчанию (0.70 = классический растяг 4:3 / 16:10)
-local DefaultFOV = 70
-
-local function updateScreenStretch()
-    if ScreenStretchEnabled then
-        RunService:BindToRenderStep("DarkHub_ScreenStretch", Enum.RenderPriority.Camera.Value + 1, function()
+local function updateFOV()
+    if FOVEnabled then
+        RunService:BindToRenderStep("DarkHub_FOVChanger", Enum.RenderPriority.Camera.Value + 1, function()
             local currentCam = workspace.CurrentCamera
             if currentCam then
-                -- Вычисляем растянутый угол обзора (FOV) на основе фактора
-                currentCam.FieldOfView = math.clamp(DefaultFOV / ScreenStretchFactor, 30, 120)
+                currentCam.FieldOfView = CustomFOV
             end
         end)
     else
-        RunService:UnbindFromRenderStep("DarkHub_ScreenStretch")
+        RunService:UnbindFromRenderStep("DarkHub_FOVChanger")
         local currentCam = workspace.CurrentCamera
         if currentCam then
-            currentCam.FieldOfView = DefaultFOV
+            currentCam.FieldOfView = StandardFOV
         end
     end
 end
+
 
 
 -- === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ПОЛУЧЕНИЯ РОЛЕЙ ===
@@ -3026,33 +3025,35 @@ SizeSection:Slider({
         UpdateActiveIndicator(true)
     end
 })
+ 
 
--- Переключатель включения/выключения растяга
+-- Переключатель включения FOV
 RenderSection:Toggle({
-    Name = "Screen Stretch",
-    Flag = "screen_stretch_enabled",
+    Name = "Custom FOV",
+    Flag = "fov_changer_enabled",
     Default = false,
     Callback = function(Value)
-        ScreenStretchEnabled = Value
-        updateScreenStretch()
+        FOVEnabled = Value
+        updateFOV()
     end
 })
 
--- Слайдер настройки силы растяжения (0.50 - 1.50)
+-- Слайдер выбора угла обзора (от 30 до 120)
 RenderSection:Slider({
-    Name = "Stretch Factor",
-    Flag = "screen_stretch_factor",
-    Min = 0.50,
-    Max = 1.30,
-    Default = 0.70,
-    Decimals = 2,
+    Name = "FOV Value",
+    Flag = "fov_changer_value",
+    Min = 30,
+    Max = 120,
+    Default = 90,
+    Decimals = 0,
     Callback = function(Value)
-        ScreenStretchFactor = Value
-        if ScreenStretchEnabled then
-            updateScreenStretch()
+        CustomFOV = Value
+        if FOVEnabled then
+            updateFOV()
         end
     end
 })
+
 
 
 
