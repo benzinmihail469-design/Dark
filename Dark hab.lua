@@ -3036,17 +3036,7 @@ FOVSection:Slider({
     end
 })
 
--- Кнопка сброса FOV
-FOVSection:Button({
-    Name = "Reset FOV to Default",
-    Callback = function()
-        FOVEnabled = false
-        FOVValue = 70
-        updateFOV()
-        -- Обновляем слайдер в UI (если есть доступ)
-        task.wait(0.1)
-    end
-})
+
 
 -- Visuals
 local VisualsPage = CreatePage({Name = "Visuals", Icon = "122669828593160"})
