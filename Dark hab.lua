@@ -3035,16 +3035,34 @@ SizeSection:Slider({
 -- ===    UI ЭЛЕМЕНТЫ ДЛЯ SCREEN STRETCH  ===
 -- ==========================================
 
--- Включение / Выключение растяга экрана
-SettingsSection:Toggle("Screen Stretch", false, function(state)
-    ScreenStretchEnabled = state
-    updateScreenStretch()
-end)
 
--- Слайдер настройки силы растяга (от 10 до 100%, где 70% - стандартный растяг, 100% - обычный экран)
-SettingsSection:Slider("Stretch Value", 10, 100, 70, function(value)
-    ScreenStretchFactor = value / 100
-end)
+-- Включение / выключение FOV
+Section:Toggle({
+    Name = "Custom FOV / Stretch",
+    Flag = "fov_toggle",
+    Default = false,
+    Callback = function(Value)
+        FOVEnabled = Value
+        updateFOV()
+    end
+})
+
+-- Ползунок настройки угла обзора (FOV)
+Section:Slider({
+    Name = "FOV Value",
+    Flag = "fov_value",
+    Min = 50,
+    Max = 120,
+    Default = 90,
+    Decimals = 0,
+    Callback = function(Value)
+        CustomFOV = Value
+        if FOVEnabled and workspace.CurrentCamera then
+            workspace.CurrentCamera.FieldOfView = CustomFOV
+        end
+    end
+})
+
 
 
 -- Visuals
