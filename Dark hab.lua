@@ -828,31 +828,16 @@ local Pages = {}
 local CurrentPage = nil
 
 -- ФУНКЦИЯ ДИНАМИЧЕСКОЙ СМЕНЫ ТЕМЫ
-local function ApplyTheme(themeName)
-    local t = ThemesPresets[themeName]
-    if not t then return end
+local isCustomAccent = false
 
-    Theme.Background = t.Background
-    Theme.Background2 = t.Background2
-    Theme.SectionBackground = t.SectionBackground
-    Theme.SectionBackground2 = t.SectionBackground2
-    Theme.SectionTop = t.SectionTop
-    Theme.Element = t.Element
-    Theme.Outline = t.Outline
-    Theme.Text = t.Text
-    Theme.Accent = t.Accent
-    Theme.AccentGradient = t.AccentGradient
-
-    CreateTween(MainFrame, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
-    CreateTween(LeftTabs, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
-    CreateTween(Content, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
-    CreateTween(ProfileFooter, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
-    CreateTween(HeaderSearchContainer, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Element})
-    CreateTween(CloseButton, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Element})
-
-    local FloatHeader = Holder:FindFirstChild("DarkHubToggleHeader")
-    if FloatHeader then
-        CreateTween(FloatHeader, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
+-- ФУНКЦИЯ ОБНОВЛЕНИЯ ТОЛЬКО АКЦЕНТНОГО ЦВЕТА (CUSTOM ACCENT)
+local function ApplyAccentColor(color, gradientColor)
+    Theme.Accent = color
+    if not gradientColor then
+        local h, s, v = color:ToHSV()
+        Theme.AccentGradient = Color3.fromHSV(h, math.clamp(s - 0.2, 0, 1), math.clamp(v + 0.1, 0, 1))
+    else
+        Theme.AccentGradient = gradientColor
     end
 
     for _, desc in ipairs(Holder:GetDescendants()) do
@@ -869,7 +854,50 @@ local function ApplyTheme(themeName)
                     ColorSequenceKeypoint.new(1, Theme.AccentGradient)
                 })
             end
-        elseif desc.Name == "SectionTopBg" then
+        elseif desc.Name == "TabButton" and desc.BackgroundTransparency < 1 then
+            CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent})
+        elseif desc.Name == "AccentBar" or desc.Name == "FloatAccent" then
+            CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent})
+        elseif desc.Name == "SliderFill" then
+            CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent})
+        end
+    end
+end
+
+-- ФУНКЦИЯ ДИНАМИЧЕСКОЙ СМЕНЫ ТЕМЫ (ФОНА, ЭЛЕМЕНТОВ И СЕКЦИЙ)
+local function ApplyTheme(themeName)
+    local t = ThemesPresets[themeName]
+    if not t then return end
+
+    Theme.Background = t.Background
+    Theme.Background2 = t.Background2
+    Theme.SectionBackground = t.SectionBackground
+    Theme.SectionBackground2 = t.SectionBackground2
+    Theme.SectionTop = t.SectionTop
+    Theme.Element = t.Element
+    Theme.Outline = t.Outline
+    Theme.Text = t.Text
+
+    -- Если пользователь еще НЕ выбрал свой Custom Accent Color, используем акцент пресета
+    if not isCustomAccent then
+        Theme.Accent = t.Accent
+        Theme.AccentGradient = t.AccentGradient
+    end
+
+    CreateTween(MainFrame, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
+    CreateTween(LeftTabs, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
+    CreateTween(Content, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
+    CreateTween(ProfileFooter, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
+    CreateTween(HeaderSearchContainer, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Element})
+    CreateTween(CloseButton, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Element})
+
+    local FloatHeader = Holder:FindFirstChild("DarkHubToggleHeader")
+    if FloatHeader then
+        CreateTween(FloatHeader, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Background})
+    end
+
+    for _, desc in ipairs(Holder:GetDescendants()) do
+        if desc.Name == "SectionTopBg" then
             CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.SectionTop})
         elseif desc.Name == "SectionContent" then
             CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.SectionBackground})
@@ -877,10 +905,6 @@ local function ApplyTheme(themeName)
             CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.SectionBackground2})
         elseif desc.Name == "SectionTop" then
             CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Outline})
-        elseif desc.Name == "TabButton" then
-            CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent})
-        elseif desc.Name == "AccentBar" or desc.Name == "FloatAccent" then
-            CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent})
         elseif desc.Name == "ElementBG" then
             CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Element})
         elseif desc.Name == "DropdownList" or desc.Name == "ColorPicker" then
@@ -889,7 +913,12 @@ local function ApplyTheme(themeName)
             CreateTween(desc, TweenInfo.new(0.3), {Color = Theme.Outline})
         end
     end
+
+    -- Принудительно применяем акцентные цвета ко всем элементам интерфейса
+    ApplyAccentColor(Theme.Accent, Theme.AccentGradient)
 end
+
+
 
 -- Обновление позиции белой полоски
 local function UpdateActiveIndicator(instant)
