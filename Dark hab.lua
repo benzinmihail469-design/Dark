@@ -1515,7 +1515,7 @@ local function CreatePage(PageConfig)
             return ButtonFrame
         end
         
-        -- Slider (КРАСИВАЯ ВЕРСИЯ С СТИЛЬНОЙ РУЧКОЙ)
+        -- Slider (ИСПРАВЛЕННАЯ ВЕРСИЯ - КРАСИВАЯ РУЧКА ПРИКРЕПЛЕНА К СЛАЙДЕРУ)
         function SectionData:Slider(Data)
             local SliderName = Data.Name or "Slider"
             local Flag = Data.Flag or "slider_" .. (#Flags + 1)
@@ -1576,6 +1576,7 @@ local function CreatePage(PageConfig)
                 Size = UDim2.new(1, 0, 0, 10),
                 Position = UDim2.new(0, 0, 1, -10),
                 BorderSizePixel = 0,
+                ClipsDescendants = false,
             })
             
             -- Фон слайдера
@@ -1612,23 +1613,36 @@ local function CreatePage(PageConfig)
                 Rotation = 90,
             })
             
-            -- Стильная круглая ручка с эффектом свечения
+            -- === КРАСИВАЯ РУЧКА С ЭФФЕКТАМИ ===
+            -- Основная ручка
             local Thumb = Create("Frame", {
-                Parent = SliderBar,
+                Parent = SliderTrack,
                 BackgroundColor3 = Theme.Text,
-                Size = UDim2.new(0, 16, 0, 16),
-                Position = UDim2.new(0, -8, 0.5, -8),
+                Size = UDim2.new(0, 18, 0, 18),
+                Position = UDim2.new(0, -9, 0.5, -9),
                 AnchorPoint = Vector2.new(0, 0),
                 BorderSizePixel = 0,
                 ZIndex = 2,
             })
             Create("UICorner", { Parent = Thumb, CornerRadius = UDim.new(1, 0) })
             
+            -- Внешнее свечение (большое)
+            local ThumbGlow = Create("Frame", {
+                Parent = Thumb,
+                BackgroundColor3 = Theme.Accent,
+                BackgroundTransparency = 0.25,
+                Size = UDim2.new(2.2, 0, 2.2, 0),
+                Position = UDim2.new(-0.6, 0, -0.6, 0),
+                BorderSizePixel = 0,
+                ZIndex = 0,
+            })
+            Create("UICorner", { Parent = ThumbGlow, CornerRadius = UDim.new(1, 0) })
+            
             -- Внутренний круг с градиентом
             local ThumbInner = Create("Frame", {
                 Parent = Thumb,
                 BackgroundColor3 = Theme.Accent,
-                Size = UDim2.new(0.7, 0, 0.7, 0),
+                Size = UDim2.new(0.65, 0, 0.65, 0),
                 Position = UDim2.new(0.5, 0, 0.5, 0),
                 AnchorPoint = Vector2.new(0.5, 0.5),
                 BorderSizePixel = 0,
@@ -1636,25 +1650,35 @@ local function CreatePage(PageConfig)
             })
             Create("UICorner", { Parent = ThumbInner, CornerRadius = UDim.new(1, 0) })
             
-            -- Внешнее свечение ручки
-            local ThumbGlow = Create("Frame", {
-                Parent = Thumb,
-                BackgroundColor3 = Theme.Accent,
-                BackgroundTransparency = 0.3,
-                Size = UDim2.new(1.8, 0, 1.8, 0),
-                Position = UDim2.new(-0.4, 0, -0.4, 0),
-                BorderSizePixel = 0,
-                ZIndex = 0,
+            -- Градиент для внутреннего круга
+            local InnerGradient = Create("UIGradient", {
+                Parent = ThumbInner,
+                Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Theme.Accent),
+                    ColorSequenceKeypoint.new(1, Theme.AccentGradient),
+                }),
+                Rotation = 45,
             })
-            Create("UICorner", { Parent = ThumbGlow, CornerRadius = UDim.new(1, 0) })
             
             -- Обводка ручки
             local ThumbStroke = Create("UIStroke", {
                 Parent = Thumb,
                 Color = Theme.Accent,
-                Thickness = 1.5,
-                Transparency = 0.5,
+                Thickness = 2,
+                Transparency = 0.4,
             })
+            
+            -- Блик на ручке
+            local ThumbHighlight = Create("Frame", {
+                Parent = Thumb,
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                BackgroundTransparency = 0.6,
+                Size = UDim2.new(0.3, 0, 0.3, 0),
+                Position = UDim2.new(0.15, 0, 0.15, 0),
+                BorderSizePixel = 0,
+                ZIndex = 4,
+            })
+            Create("UICorner", { Parent = ThumbHighlight, CornerRadius = UDim.new(1, 0) })
             
             -- Кнопка-невидимка для перетаскивания
             local DragButton = Create("TextButton", {
@@ -1678,11 +1702,11 @@ local function CreatePage(PageConfig)
             
             local function UpdateSlider(percent)
                 local width = GetSliderWidth()
-                local thumbSize = Thumb.AbsoluteSize.X or 16
+                local thumbSize = Thumb.AbsoluteSize.X or 18
                 
                 percent = math.clamp(percent, 0, 1)
                 
-                -- Позиция ручки
+                -- Позиция ручки (центр ручки на проценте)
                 local posX = percent * width - thumbSize / 2
                 Thumb.Position = UDim2.new(0, posX, 0.5, -thumbSize / 2)
                 
@@ -1705,7 +1729,8 @@ local function CreatePage(PageConfig)
             end
             
             local function UpdateFromMouse(input)
-                if not SliderBar or not SliderBar.AbsoluteSize then return end                local barPos = SliderBar.AbsolutePosition.X
+                if not SliderBar or not SliderBar.AbsoluteSize then return end
+                local barPos = SliderBar.AbsolutePosition.X
                 local barWidth = SliderBar.AbsoluteSize.X
                 if barWidth <= 0 then return end
                 
@@ -1720,12 +1745,30 @@ local function CreatePage(PageConfig)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     Sliding = true
                     UpdateFromMouse(input)
+                    
+                    -- Анимация при нажатии (увеличение)
+                    CreateTween(Thumb, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                        Size = UDim2.new(0, 20, 0, 20),
+                    })
+                    CreateTween(ThumbGlow, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                        Size = UDim2.new(2.4, 0, 2.4, 0),
+                        Position = UDim2.new(-0.7, 0, -0.7, 0),
+                    })
                 end
             end)
             
             DragButton.InputEnded:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     Sliding = false
+                    
+                    -- Возврат размера
+                    CreateTween(Thumb, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                        Size = UDim2.new(0, 18, 0, 18),
+                    })
+                    CreateTween(ThumbGlow, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                        Size = UDim2.new(2.2, 0, 2.2, 0),
+                        Position = UDim2.new(-0.6, 0, -0.6, 0),
+                    })
                 end
             end)
             
@@ -1741,6 +1784,14 @@ local function CreatePage(PageConfig)
             local function OnInputEnded(input)
                 if Sliding and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
                     Sliding = false
+                    -- Возврат размера
+                    CreateTween(Thumb, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                        Size = UDim2.new(0, 18, 0, 18),
+                    })
+                    CreateTween(ThumbGlow, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                        Size = UDim2.new(2.2, 0, 2.2, 0),
+                        Position = UDim2.new(-0.6, 0, -0.6, 0),
+                    })
                 end
             end
             
