@@ -1515,7 +1515,7 @@ local function CreatePage(PageConfig)
             return ButtonFrame
         end
         
-        -- Slider (ИСПРАВЛЕННАЯ ВЕРСИЯ - РУЧКА ПРИКРЕПЛЕНА К СЛАЙДЕРУ)
+        -- Slider (КРАСИВАЯ ВЕРСИЯ С СТИЛЬНОЙ РУЧКОЙ)
         function SectionData:Slider(Data)
             local SliderName = Data.Name or "Slider"
             local Flag = Data.Flag or "slider_" .. (#Flags + 1)
@@ -1529,7 +1529,7 @@ local function CreatePage(PageConfig)
             local SliderFrame = Create("Frame", {
                 Parent = SectionContent,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, 0, 0, 30),
+                Size = UDim2.new(1, 0, 0, 32),
                 BorderSizePixel = 0,
             })
             
@@ -1537,7 +1537,7 @@ local function CreatePage(PageConfig)
             local LabelFrame = Create("Frame", {
                 Parent = SliderFrame,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, 0, 0, 16),
+                Size = UDim2.new(1, 0, 0, 18),
                 BorderSizePixel = 0,
             })
             
@@ -1583,7 +1583,7 @@ local function CreatePage(PageConfig)
                 Parent = SliderTrack,
                 Name = "ElementBG",
                 BackgroundColor3 = Theme.Element,
-                BackgroundTransparency = 0.5,
+                BackgroundTransparency = 0.4,
                 Size = UDim2.new(1, 0, 1, 0),
                 Position = UDim2.new(0, 0, 0.5, 0),
                 AnchorPoint = Vector2.new(0, 0.5),
@@ -1592,7 +1592,7 @@ local function CreatePage(PageConfig)
             })
             Create("UICorner", { Parent = SliderBar, CornerRadius = UDim.new(1, 0) })
             
-            -- Заполнение (привязано к левому краю)
+            -- Заполнение с градиентом
             local SliderFill = Create("Frame", {
                 Parent = SliderBar,
                 BackgroundColor3 = Theme.Accent,
@@ -1602,38 +1602,61 @@ local function CreatePage(PageConfig)
             })
             Create("UICorner", { Parent = SliderFill, CornerRadius = UDim.new(1, 0) })
             
-            -- Ручка (Thumb) - привязана к SliderBar
+            -- Градиент для заполнения
+            local FillGradient = Create("UIGradient", {
+                Parent = SliderFill,
+                Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Theme.Accent),
+                    ColorSequenceKeypoint.new(1, Theme.AccentGradient),
+                }),
+                Rotation = 90,
+            })
+            
+            -- Стильная круглая ручка с эффектом свечения
             local Thumb = Create("Frame", {
                 Parent = SliderBar,
                 BackgroundColor3 = Theme.Text,
-                Size = UDim2.new(0, 14, 0, 14),
-                Position = UDim2.new(0, -7, 0.5, -7),
+                Size = UDim2.new(0, 16, 0, 16),
+                Position = UDim2.new(0, -8, 0.5, -8),
                 AnchorPoint = Vector2.new(0, 0),
                 BorderSizePixel = 0,
                 ZIndex = 2,
             })
             Create("UICorner", { Parent = Thumb, CornerRadius = UDim.new(1, 0) })
             
-            -- Обводка ручки
-            local ThumbStroke = Create("UIStroke", {
+            -- Внутренний круг с градиентом
+            local ThumbInner = Create("Frame", {
                 Parent = Thumb,
-                Color = Theme.Accent,
-                Thickness = 1.5,
+                BackgroundColor3 = Theme.Accent,
+                Size = UDim2.new(0.7, 0, 0.7, 0),
+                Position = UDim2.new(0.5, 0, 0.5, 0),
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                BorderSizePixel = 0,
+                ZIndex = 3,
             })
+            Create("UICorner", { Parent = ThumbInner, CornerRadius = UDim.new(1, 0) })
             
-            -- Блик на ручке
+            -- Внешнее свечение ручки
             local ThumbGlow = Create("Frame", {
                 Parent = Thumb,
                 BackgroundColor3 = Theme.Accent,
-                BackgroundTransparency = 0.4,
-                Size = UDim2.new(1.6, 0, 1.6, 0),
-                Position = UDim2.new(-0.3, 0, -0.3, 0),
+                BackgroundTransparency = 0.3,
+                Size = UDim2.new(1.8, 0, 1.8, 0),
+                Position = UDim2.new(-0.4, 0, -0.4, 0),
                 BorderSizePixel = 0,
                 ZIndex = 0,
             })
             Create("UICorner", { Parent = ThumbGlow, CornerRadius = UDim.new(1, 0) })
             
-            -- Кнопка-невидимка для перетаскивания (поверх всего трека)
+            -- Обводка ручки
+            local ThumbStroke = Create("UIStroke", {
+                Parent = Thumb,
+                Color = Theme.Accent,
+                Thickness = 1.5,
+                Transparency = 0.5,
+            })
+            
+            -- Кнопка-невидимка для перетаскивания
             local DragButton = Create("TextButton", {
                 Parent = SliderTrack,
                 Text = "",
@@ -1649,20 +1672,17 @@ local function CreatePage(PageConfig)
             local Value = Default
             local Sliding = false
             
-            -- Получаем ширину слайдера
             local function GetSliderWidth()
                 return SliderBar.AbsoluteSize.X or 100
             end
             
-            -- Обновление позиции ручки и заполнения
             local function UpdateSlider(percent)
                 local width = GetSliderWidth()
-                local thumbSize = Thumb.AbsoluteSize.X or 14
+                local thumbSize = Thumb.AbsoluteSize.X or 16
                 
-                -- Ограничиваем процент
                 percent = math.clamp(percent, 0, 1)
                 
-                -- Позиция ручки (центр ручки на проценте)
+                -- Позиция ручки
                 local posX = percent * width - thumbSize / 2
                 Thumb.Position = UDim2.new(0, posX, 0.5, -thumbSize / 2)
                 
@@ -1677,20 +1697,15 @@ local function CreatePage(PageConfig)
                 
                 local percent = (Value - Min) / (Max - Min)
                 
-                -- Обновляем UI
                 UpdateSlider(percent)
-                
-                -- Обновляем текст
                 ValueText.Text = tostring(Value) .. Suffix
                 
-                -- Сохраняем и вызываем колбэк
                 Flags[Flag] = Value
                 Callback(Value)
             end
             
             local function UpdateFromMouse(input)
-                if not SliderBar or not SliderBar.AbsoluteSize then return end
-                local barPos = SliderBar.AbsolutePosition.X
+                if not SliderBar or not SliderBar.AbsoluteSize then return end                local barPos = SliderBar.AbsolutePosition.X
                 local barWidth = SliderBar.AbsoluteSize.X
                 if barWidth <= 0 then return end
                 
@@ -1723,7 +1738,6 @@ local function CreatePage(PageConfig)
             
             UserInputService.InputChanged:Connect(OnInputChanged)
             
-            -- Сброс при потере фокуса
             local function OnInputEnded(input)
                 if Sliding and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
                     Sliding = false
@@ -1743,7 +1757,6 @@ local function CreatePage(PageConfig)
             SliderBar:GetPropertyChangedSignal("AbsoluteSize"):Connect(OnSizeChanged)
             MainFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(OnSizeChanged)
             
-            -- Устанавливаем начальное значение
             SetValue(Default)
             SetFlags[Flag] = function(val) SetValue(val) end
             
