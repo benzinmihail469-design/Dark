@@ -3027,6 +3027,22 @@ SizeSection:Slider({
     end
 })
 
+-- ==========================================
+-- ===    UI ЭЛЕМЕНТЫ ДЛЯ SCREEN STRETCH  ===
+-- ==========================================
+
+-- Включение / Выключение растяга экрана
+SettingsSection:Toggle("Screen Stretch", false, function(state)
+    ScreenStretchEnabled = state
+    updateScreenStretch()
+end)
+
+-- Слайдер настройки силы растяга (от 10 до 100%, где 70% - стандартный растяг, 100% - обычный экран)
+SettingsSection:Slider("Stretch Value", 10, 100, 70, function(value)
+    ScreenStretchFactor = value / 100
+end)
+
+
 -- Visuals
 local VisualsPage = CreatePage({Name = "Visuals", Icon = "122669828593160"})
 local VisualsSection = VisualsPage:CreateSection({Name = "Players"})
