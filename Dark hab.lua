@@ -1,3 +1,4 @@
+
 local DarkHub = {} -- Dark Hub UI (Pulse Hub Styled Sizes - Compact)
 
 local Players = game:GetService("Players")
@@ -2944,7 +2945,6 @@ local SettingsPage = CreatePage({Name = "settings", Icon = "123944728972740"})
 local SettingsSection = SettingsPage:CreateSection({Name = "Theme Settings", Description = "Customize GUI colors"})
 
 local themeDropdown
-local customColorpicker
 
 themeDropdown = SettingsSection:Dropdown({
     Name = "Ui Theme",
@@ -2952,23 +2952,6 @@ themeDropdown = SettingsSection:Dropdown({
     Default = "AMOLED Black",
     Callback = function(selected)
         ApplyTheme(selected)
-    end
-})
-
-customColorpicker = SettingsSection:Colorpicker({
-    Name = "Custom Accent Color",
-    Default = Color3.fromRGB(0, 116, 224),
-    Callback = function(col)
-        local h, s, v = col:ToHSV()
-        local accentGrad = Color3.fromHSV((h + 0.05) % 1, s, v)
-
-        local currentTheme = themeDropdown and themeDropdown.Get() or "AMOLED Black"
-        if ThemesPresets[currentTheme] then
-            ThemesPresets[currentTheme].Accent = col
-            ThemesPresets[currentTheme].AccentGradient = accentGrad
-        end
-
-        ApplyTheme(currentTheme)
     end
 })
 
