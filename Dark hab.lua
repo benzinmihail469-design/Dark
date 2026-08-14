@@ -19,36 +19,35 @@ local roleCache = {}
 _G.ESPEnabled = true
 _G.GunESPEnabled = false
 
-
 -- ==========================================
--- ===        ЛОГИКА CAMERA / FOV         ===
+-- ===  ЛОГИКА RENDER / FOV STRETCH      ===
 -- ==========================================
 local FOVEnabled = false
-local CustomFOV = 90 -- Стандартный FOV в Roblox = 70. 90-110 дает отличный эффекты растяжения
+local FOVValue = 70 -- Значение по умолчанию (70 = стандартный FOV)
+local originalFOV = Camera.FieldOfView
 local fovConnection = nil
 
 local function updateFOV()
     if FOVEnabled then
         if not fovConnection then
             fovConnection = RunService.RenderStepped:Connect(function()
-                local currentCam = workspace.CurrentCamera
-                if currentCam then
-                    currentCam.FieldOfView = CustomFOV
+                if FOVEnabled and Camera then
+                    -- Плавно изменяем FOV для эффекта "растянутого" экрана
+                    Camera.FieldOfView = FOVValue
                 end
             end)
         end
+        -- Применяем сразу
+        Camera.FieldOfView = FOVValue
     else
         if fovConnection then
             fovConnection:Disconnect()
             fovConnection = nil
         end
-        if workspace.CurrentCamera then
-            workspace.CurrentCamera.FieldOfView = 70 -- Сброс на стандартный FOV
-        end
+        -- Возвращаем стандартный FOV
+        Camera.FieldOfView = originalFOV
     end
 end
-
-
 
 -- === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ПОЛУЧЕНИЯ РОЛЕЙ ===
 local function getPlayerRoleInfo(p)
@@ -861,8 +860,6 @@ local CurrentPage = nil
 -- ФУНКЦИЯ ДИНАМИЧЕСКОЙ СМЕНЫ ТЕМЫ
 local isCustomAccent = false
 
--- ФУНКЦИЯ ОБНОВЛЕНИЯ ТОЛЬКО АКЦЕНТНОГО ЦВЕТА (CUSTOM ACCENT)
--- ФУНКЦИЯ ОБНОВЛЕНИЯ ТОЛЬКО АКЦЕНТНОГО ЦВЕТА (CUSTOM ACCENT)
 local function ApplyAccentColor(color, gradientColor)
     Theme.Accent = color
     if not gradientColor then
@@ -912,7 +909,6 @@ local function ApplyTheme(themeName)
     Theme.Outline = t.Outline
     Theme.Text = t.Text
 
-    -- Если пользователь еще НЕ выбрал свой Custom Accent Color, используем акцент пресета
     if not isCustomAccent then
         Theme.Accent = t.Accent
         Theme.AccentGradient = t.AccentGradient
@@ -948,7 +944,6 @@ local function ApplyTheme(themeName)
         end
     end
 
-    -- Принудительно применяем акцентные цвета ко всем элементам интерфейса
     ApplyAccentColor(Theme.Accent, Theme.AccentGradient)
 end
 
@@ -1578,11 +1573,7 @@ local function CreatePage(PageConfig)
             return ButtonFrame
         end
         
-        -- Slider (ИСПРАВЛЕННАЯ ВЕРСИЯ - КРАСИВАЯ РУЧКА ПРИКРЕПЛЕНА К СЛАЙДЕРУ)
-        
-            -- Slider (ИСПРАВЛЕННАЯ ВЕРСИЯ - КРУГЛЯШОК НАМЕРТВО ПРИВЯЗАН К ПОЛОСЕ)
-
-                 -- Slider (ИСПРАВЛЕННАЯ ВЕРСИЯ С ПОДДЕРЖКОЙ СМЕНЫ ЦВЕТА ТЕМЫ)
+        -- Slider
         function SectionData:Slider(Data)
             local SliderName = Data.Name or "Slider"
             local Flag = Data.Flag or "slider_" .. (#Flags + 1)
@@ -1840,27 +1831,8 @@ local function CreatePage(PageConfig)
             }
         end
 
-    
-    
-     
-     
-   
-    
-    
-        
-        
-    
-    
-
-                
-            
-            
-        
-       
-       
-         -- Dropdown
-      
-         function SectionData:Dropdown(Data)
+        -- Dropdown
+        function SectionData:Dropdown(Data)
             local DropdownName = Data.Name or "Dropdown"
             local Flag = Data.Flag or "dropdown_" .. (#Flags + 1)
             local Items = Data.Items or {"Option 1", "Option 2", "Option 3"}
@@ -3032,38 +3004,49 @@ SizeSection:Slider({
 })
 
 -- ==========================================
--- ===    UI ЭЛЕМЕНТЫ ДЛЯ SCREEN STRETCH  ===
+-- ===    UI ЭЛЕМЕНТЫ ДЛЯ FOV STRETCH    ===
 -- ==========================================
 
+-- Добавляем секцию для FOV настроек
+local FOVSection = SettingsPage:CreateSection({Name = "FOV Settings", Description = "Adjust camera field of view"})
 
--- Включение / выключение FOV
-Section:Toggle({
-    Name = "Custom FOV / Stretch",
-    Flag = "fov_toggle",
+-- Включение / Выключение FOV
+FOVSection:Toggle({
+    Name = "FOV Stretch",
     Default = false,
-    Callback = function(Value)
-        FOVEnabled = Value
+    Callback = function(state)
+        FOVEnabled = state
         updateFOV()
     end
 })
 
--- Ползунок настройки угла обзора (FOV)
-Section:Slider({
+-- Слайдер настройки FOV (от 40 до 150 градусов)
+FOVSection:Slider({
     Name = "FOV Value",
-    Flag = "fov_value",
-    Min = 50,
-    Max = 120,
-    Default = 90,
-    Decimals = 0,
-    Callback = function(Value)
-        CustomFOV = Value
-        if FOVEnabled and workspace.CurrentCamera then
-            workspace.CurrentCamera.FieldOfView = CustomFOV
+    Min = 40,
+    Max = 150,
+    Default = 70,
+    Suffix = "°",
+    Decimals = 1,
+    Callback = function(value)
+        FOVValue = value
+        if FOVEnabled then
+            Camera.FieldOfView = value
         end
     end
 })
 
-
+-- Кнопка сброса FOV
+FOVSection:Button({
+    Name = "Reset FOV to Default",
+    Callback = function()
+        FOVEnabled = false
+        FOVValue = 70
+        updateFOV()
+        -- Обновляем слайдер в UI (если есть доступ)
+        task.wait(0.1)
+    end
+})
 
 -- Visuals
 local VisualsPage = CreatePage({Name = "Visuals", Icon = "122669828593160"})
