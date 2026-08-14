@@ -22,25 +22,25 @@ _G.GunESPEnabled = false
 -- ==========================================
 -- ===  ЛОГИКА RENDER / SCREEN STRETCH    ===
 -- ==========================================
+
 local ScreenStretchEnabled = false
 local ScreenStretchFactor = 0.70 -- Значение по умолчанию (0.70 = классический растяг 4:3 / 16:10)
-local stretchConnection = nil
+local DefaultFOV = 70
 
 local function updateScreenStretch()
     if ScreenStretchEnabled then
-        if not stretchConnection then
-            stretchConnection = RunService.RenderStepped:Connect(function()
-                local currentCam = workspace.CurrentCamera
-                if ScreenStretchEnabled and currentCam then
-                    -- Изменяем матрицу CFrame камеры для эффекта растянутого разрешения
-                    currentCam.CFrame = currentCam.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, ScreenStretchFactor, 0, 0, 0, 1)
-                end
-            end)
-        end
+        RunService:BindToRenderStep("DarkHub_ScreenStretch", Enum.RenderPriority.Camera.Value + 1, function()
+            local currentCam = workspace.CurrentCamera
+            if currentCam then
+                -- Вычисляем растянутый угол обзора (FOV) на основе фактора
+                currentCam.FieldOfView = math.clamp(DefaultFOV / ScreenStretchFactor, 30, 120)
+            end
+        end)
     else
-        if stretchConnection then
-            stretchConnection:Disconnect()
-            stretchConnection = nil
+        RunService:UnbindFromRenderStep("DarkHub_ScreenStretch")
+        local currentCam = workspace.CurrentCamera
+        if currentCam then
+            currentCam.FieldOfView = DefaultFOV
         end
     end
 end
