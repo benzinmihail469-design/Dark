@@ -831,6 +831,7 @@ local CurrentPage = nil
 local isCustomAccent = false
 
 -- ФУНКЦИЯ ОБНОВЛЕНИЯ ТОЛЬКО АКЦЕНТНОГО ЦВЕТА (CUSTOM ACCENT)
+-- ФУНКЦИЯ ОБНОВЛЕНИЯ ТОЛЬКО АКЦЕНТНОГО ЦВЕТА (CUSTOM ACCENT)
 local function ApplyAccentColor(color, gradientColor)
     Theme.Accent = color
     if not gradientColor then
@@ -856,13 +857,15 @@ local function ApplyAccentColor(color, gradientColor)
             end
         elseif desc.Name == "TabButton" and desc.BackgroundTransparency < 1 then
             CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent})
-        elseif desc.Name == "AccentBar" or desc.Name == "FloatAccent" then
+        elseif desc.Name == "AccentBar" or desc.Name == "FloatAccent" or desc.Name == "SliderFill" or desc.Name == "ThumbGlow" or desc.Name == "ThumbInner" then
             CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent})
-        elseif desc.Name == "SliderFill" then
-            CreateTween(desc, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent})
+        elseif desc.Name == "ThumbStroke" and desc:IsA("UIStroke") then
+            CreateTween(desc, TweenInfo.new(0.3), {Color = Theme.Accent})
         end
     end
 end
+
+
 
 -- ФУНКЦИЯ ДИНАМИЧЕСКОЙ СМЕНЫ ТЕМЫ (ФОНА, ЭЛЕМЕНТОВ И СЕКЦИЙ)
 local function ApplyTheme(themeName)
