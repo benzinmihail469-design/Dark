@@ -1515,7 +1515,7 @@ local function CreatePage(PageConfig)
             return ButtonFrame
         end
         
-        -- Slider
+        -- Slider (УЛУЧШЕННАЯ ВЕРСИЯ С ПЛАВНЫМ ПЕРЕДВИЖЕНИЕМ)
         function SectionData:Slider(Data)
             local SliderName = Data.Name or "Slider"
             local Flag = Data.Flag or "slider_" .. (#Flags + 1)
@@ -1592,19 +1592,49 @@ local function CreatePage(PageConfig)
                 })
             })
             
+            -- КРУГЛАЯ РУЧКА ДЛЯ ПЛАВНОГО ПЕРЕДВИЖЕНИЯ
+            local Handle = Create("Frame", {
+                Parent = SliderBar,
+                BackgroundColor3 = Theme.Text,
+                Size = UDim2.new(0, 12, 0, 12),
+                Position = UDim2.new(0.5, -6, 0.5, -6),
+                AnchorPoint = Vector2.new(0, 0),
+                BorderSizePixel = 0,
+                ZIndex = 10,
+            })
+            Create("UICorner", { Parent = Handle, CornerRadius = UDim.new(1, 0) })
+            
+            Create("UIStroke", {
+                Parent = Handle,
+                Color = Theme.Accent,
+                Thickness = 1.5,
+            })
+            
             local Value = Default
             local Sliding = false
+            local LastUpdate = 0
             
             local function SetValue(NewValue)
-                Value = math.clamp(NewValue, Min, Max)
-                if Decimals then
-                    Value = math.floor(Value / Decimals + 0.5) * Decimals
-                    Value = math.round(Value * (1 / Decimals)) / (1 / Decimals)
-                end
+                -- Округление с учетом Decimals
+                local multiplier = 1 / Decimals
+                NewValue = math.clamp(NewValue, Min, Max)
+                NewValue = math.floor(NewValue * multiplier + 0.5) / multiplier
                 
+                Value = NewValue
                 local Percent = (Value - Min) / (Max - Min)
-                SliderFill.Size = UDim2.new(Percent, 0, 1, 0)
-                ValueText.Text = tostring(Value) .. Suffix
+                
+                -- Плавное обновление ползунка
+                CreateTween(SliderFill, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Size = UDim2.new(Percent, 0, 1, 0)
+                })
+                
+                -- Плавное обновление ручки
+                CreateTween(Handle, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Position = UDim2.new(Percent, -6, 0.5, -6)
+                })
+                
+                local displayValue = string.format("%." .. tostring(#tostring(Decimals):match("%.(%d+)")) .. "f", Value)
+                ValueText.Text = displayValue .. Suffix
                 
                 Flags[Flag] = Value
                 Callback(Value)
@@ -1612,7 +1642,8 @@ local function CreatePage(PageConfig)
             
             local function UpdateFromInput(Input)
                 local X = math.clamp((Input.Position.X - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X, 0, 1)
-                SetValue(Min + (Max - Min) * X)
+                local newValue = Min + (Max - Min) * X
+                SetValue(newValue)
             end
             
             SliderBar.InputBegan:Connect(function(Input)
@@ -1628,11 +1659,33 @@ local function CreatePage(PageConfig)
                 end
             end)
             
+            -- Для перетаскивания ручки
+            Handle.InputBegan:Connect(function(Input)
+                if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+                    Sliding = true
+                    UpdateFromInput(Input)
+                end
+            end)
+            
+            Handle.InputEnded:Connect(function(Input)
+                if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+                    Sliding = false
+                end
+            end)
+            
             UserInputService.InputChanged:Connect(function(Input)
                 if Sliding and (Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch) then
                     UpdateFromInput(Input)
                 end
             end)
+            
+            -- Устанавливаем начальное значение с правильной позицией ручки
+            local initialPercent = (Default - Min) / (Max - Min)
+            SliderFill.Size = UDim2.new(initialPercent, 0, 1, 0)
+            Handle.Position = UDim2.new(initialPercent, -6, 0.5, -6)
+            Value = Default
+            ValueText.Text = tostring(Default) .. Suffix
+            Flags[Flag] = Default
             
             SetValue(Default)
             SetFlags[Flag] = SetValue
