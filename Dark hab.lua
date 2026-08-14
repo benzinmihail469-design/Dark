@@ -105,7 +105,7 @@ local function getSheriff()
         return nil
     end
 
-    for _, p in pairs(Players:GetPlayers()) do
+    for _, p in ipairs(Players:GetPlayers()) do
         if p ~= lp and p.Character then
             local backpack = p:FindFirstChild('Backpack')
             local char = p.Character
@@ -3035,8 +3035,6 @@ FOVSection:Slider({
         end
     end
 })
-
-
 
 -- Visuals
 local VisualsPage = CreatePage({Name = "Visuals", Icon = "122669828593160"})
