@@ -1515,7 +1515,7 @@ local function CreatePage(PageConfig)
             return ButtonFrame
         end
         
-        -- Slider (УЛУЧШЕННАЯ ВЕРСИЯ С ПЛАВНЫМ ПЕРЕДВИЖЕНИЕМ)
+        -- Slider (УЛУЧШЕННАЯ ВЕРСИЯ С ПЛАВНЫМ ПЕРЕМЕЩЕНИЕМ)
         function SectionData:Slider(Data)
             local SliderName = Data.Name or "Slider"
             local Flag = Data.Flag or "slider_" .. (#Flags + 1)
@@ -1529,50 +1529,78 @@ local function CreatePage(PageConfig)
             local SliderFrame = Create("Frame", {
                 Parent = SectionContent,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, 0, 0, 24),
+                Size = UDim2.new(1, 0, 0, 28),
+                BorderSizePixel = 0,
+            })
+            
+            local LabelFrame = Create("Frame", {
+                Parent = SliderFrame,
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 14),
                 BorderSizePixel = 0,
             })
             
             Create("TextLabel", {
-                Parent = SliderFrame,
+                Parent = LabelFrame,
                 Text = SliderName,
                 TextColor3 = Theme.Text,
                 TextTransparency = 0.3,
                 BackgroundTransparency = 1,
                 FontFace = FontRegular,
                 TextSize = 11,
-                Position = UDim2.new(0, 0, 0, 0),
+                Position = UDim2.new(0, 0, 0.5, 0),
+                AnchorPoint = Vector2.new(0, 0.5),
                 Size = UDim2.new(0, 0, 0, 12),
                 AutomaticSize = Enum.AutomaticSize.X,
             })
             
             local ValueText = Create("TextLabel", {
-                Parent = SliderFrame,
+                Parent = LabelFrame,
                 Text = tostring(Default) .. Suffix,
                 TextColor3 = Theme.Text,
                 TextTransparency = 0.3,
                 BackgroundTransparency = 1,
                 FontFace = FontRegular,
                 TextSize = 11,
-                Position = UDim2.new(1, 0, 0, 0),
-                AnchorPoint = Vector2.new(1, 0),
+                Position = UDim2.new(1, 0, 0.5, 0),
+                AnchorPoint = Vector2.new(1, 0.5),
                 Size = UDim2.new(0, 0, 0, 12),
                 AutomaticSize = Enum.AutomaticSize.X,
             })
             
-            local SliderBar = Create("TextButton", {
+            -- Контейнер для слайдера с отступами
+            local SliderContainer = Create("Frame", {
                 Parent = SliderFrame,
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 8),
+                Position = UDim2.new(0, 0, 1, -4),
+                AnchorPoint = Vector2.new(0, 1),
+                BorderSizePixel = 0,
+            })
+            
+            local SliderBar = Create("TextButton", {
+                Parent = SliderContainer,
                 Name = "ElementBG",
                 Text = "",
                 AutoButtonColor = false,
                 BackgroundColor3 = Theme.Element,
-                Position = UDim2.new(0, 0, 1, -4),
-                Size = UDim2.new(1, 0, 0, 5),
+                Size = UDim2.new(1, 0, 1, 0),
                 BorderSizePixel = 0,
             })
             
             Create("UICorner", { Parent = SliderBar, CornerRadius = UDim.new(1, 0) })
             
+            -- Фон слайдера с прозрачностью
+            local SliderBg = Create("Frame", {
+                Parent = SliderBar,
+                BackgroundColor3 = Theme.SectionBackground2,
+                BackgroundTransparency = 0.5,
+                Size = UDim2.new(1, 0, 1, 0),
+                BorderSizePixel = 0,
+            })
+            Create("UICorner", { Parent = SliderBg, CornerRadius = UDim.new(1, 0) })
+            
+            -- Заполнение
             local SliderFill = Create("Frame", {
                 Parent = SliderBar,
                 BackgroundColor3 = Color3.new(1, 1, 1),
@@ -1592,60 +1620,91 @@ local function CreatePage(PageConfig)
                 })
             })
             
-            -- КРУГЛАЯ РУЧКА ДЛЯ ПЛАВНОГО ПЕРЕДВИЖЕНИЯ
-            local Handle = Create("Frame", {
+            -- Круглая ручка (Thumb) для более плавного управления
+            local Thumb = Create("Frame", {
                 Parent = SliderBar,
                 BackgroundColor3 = Theme.Text,
                 Size = UDim2.new(0, 12, 0, 12),
                 Position = UDim2.new(0.5, -6, 0.5, -6),
                 AnchorPoint = Vector2.new(0, 0),
                 BorderSizePixel = 0,
-                ZIndex = 10,
+                ZIndex = 2,
             })
-            Create("UICorner", { Parent = Handle, CornerRadius = UDim.new(1, 0) })
+            Create("UICorner", { Parent = Thumb, CornerRadius = UDim.new(1, 0) })
             
+            -- Обводка ручки
             Create("UIStroke", {
-                Parent = Handle,
+                Parent = Thumb,
                 Color = Theme.Accent,
                 Thickness = 1.5,
             })
             
+            -- Тень ручки
+            local ThumbGlow = Create("Frame", {
+                Parent = Thumb,
+                BackgroundColor3 = Theme.Accent,
+                BackgroundTransparency = 0.5,
+                Size = UDim2.new(1.6, 0, 1.6, 0),
+                Position = UDim2.new(-0.3, 0, -0.3, 0),
+                BorderSizePixel = 0,
+                ZIndex = 0,
+            })
+            Create("UICorner", { Parent = ThumbGlow, CornerRadius = UDim.new(1, 0) })
+            
             local Value = Default
             local Sliding = false
-            local LastUpdate = 0
+            local SlideConnection = nil
             
+            -- Функция плавного обновления значения
             local function SetValue(NewValue)
-                -- Округление с учетом Decimals
-                local multiplier = 1 / Decimals
-                NewValue = math.clamp(NewValue, Min, Max)
-                NewValue = math.floor(NewValue * multiplier + 0.5) / multiplier
+                local RawValue = math.clamp(NewValue, Min, Max)
+                -- Округление до Decimals
+                local Multiplier = 10 ^ Decimals
+                Value = math.round(RawValue * Multiplier) / Multiplier
                 
-                Value = NewValue
                 local Percent = (Value - Min) / (Max - Min)
+                local TargetX = Percent * (SliderBar.AbsoluteSize.X - Thumb.AbsoluteSize.X)
                 
-                -- Плавное обновление ползунка
-                CreateTween(SliderFill, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                -- Плавное перемещение ручки
+                CreateTween(Thumb, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Position = UDim2.new(0, TargetX, 0.5, -Thumb.AbsoluteSize.Y/2)
+                })
+                
+                CreateTween(SliderFill, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                     Size = UDim2.new(Percent, 0, 1, 0)
                 })
                 
-                -- Плавное обновление ручки
-                CreateTween(Handle, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    Position = UDim2.new(Percent, -6, 0.5, -6)
-                })
+                ValueText.Text = tostring(Value) .. Suffix
                 
-                local displayValue = string.format("%." .. tostring(#tostring(Decimals):match("%.(%d+)")) .. "f", Value)
-                ValueText.Text = displayValue .. Suffix
+                Flags[Flag] = Value
+                Callback(Value)
+            end
+            
+            -- Обновление без анимации (для Drag)
+            local function SetValueInstant(NewValue)
+                local RawValue = math.clamp(NewValue, Min, Max)
+                local Multiplier = 10 ^ Decimals
+                Value = math.round(RawValue * Multiplier) / Multiplier
+                
+                local Percent = (Value - Min) / (Max - Min)
+                local TargetX = Percent * (SliderBar.AbsoluteSize.X - Thumb.AbsoluteSize.X)
+                
+                Thumb.Position = UDim2.new(0, TargetX, 0.5, -Thumb.AbsoluteSize.Y/2)
+                SliderFill.Size = UDim2.new(Percent, 0, 1, 0)
+                
+                ValueText.Text = tostring(Value) .. Suffix
                 
                 Flags[Flag] = Value
                 Callback(Value)
             end
             
             local function UpdateFromInput(Input)
+                if not SliderBar or not SliderBar.AbsoluteSize.X then return end
                 local X = math.clamp((Input.Position.X - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X, 0, 1)
-                local newValue = Min + (Max - Min) * X
-                SetValue(newValue)
+                SetValueInstant(Min + (Max - Min) * X)
             end
             
+            -- Mouse/Touch события
             SliderBar.InputBegan:Connect(function(Input)
                 if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
                     Sliding = true
@@ -1656,42 +1715,55 @@ local function CreatePage(PageConfig)
             SliderBar.InputEnded:Connect(function(Input)
                 if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
                     Sliding = false
+                    if SlideConnection then
+                        SlideConnection:Disconnect()
+                        SlideConnection = nil
+                    end
                 end
             end)
             
-            -- Для перетаскивания ручки
-            Handle.InputBegan:Connect(function(Input)
-                if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-                    Sliding = true
-                    UpdateFromInput(Input)
-                end
-            end)
-            
-            Handle.InputEnded:Connect(function(Input)
-                if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-                    Sliding = false
-                end
-            end)
-            
+            -- Глобальное отслеживание движения
             UserInputService.InputChanged:Connect(function(Input)
                 if Sliding and (Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch) then
                     UpdateFromInput(Input)
                 end
             end)
             
-            -- Устанавливаем начальное значение с правильной позицией ручки
-            local initialPercent = (Default - Min) / (Max - Min)
-            SliderFill.Size = UDim2.new(initialPercent, 0, 1, 0)
-            Handle.Position = UDim2.new(initialPercent, -6, 0.5, -6)
-            Value = Default
-            ValueText.Text = tostring(Default) .. Suffix
-            Flags[Flag] = Default
+            -- Дополнительная обработка для выхода за пределы
+            local function OnInputEnded(input, gameProcessed)
+                if Sliding then
+                    Sliding = false
+                    if SlideConnection then
+                        SlideConnection:Disconnect()
+                        SlideConnection = nil
+                    end
+                end
+            end
+            
+            UserInputService.InputEnded:Connect(OnInputEnded)
+            
+            -- Обработка изменения размера
+            local function OnSizeChanged()
+                if not Sliding then
+                    local Percent = (Value - Min) / (Max - Min)
+                    local TargetX = Percent * (SliderBar.AbsoluteSize.X - Thumb.AbsoluteSize.X)
+                    Thumb.Position = UDim2.new(0, TargetX, 0.5, -Thumb.AbsoluteSize.Y/2)
+                    SliderFill.Size = UDim2.new(Percent, 0, 1, 0)
+                end
+            end
+            
+            SliderBar:GetPropertyChangedSignal("AbsoluteSize"):Connect(OnSizeChanged)
+            MainFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(OnSizeChanged)
             
             SetValue(Default)
             SetFlags[Flag] = SetValue
             
             table.insert(SectionData.Elements, { Frame = SliderFrame, Name = SliderName })
-            return { Set = SetValue, Get = function() return Value end }
+            return { 
+                Set = SetValue, 
+                Get = function() return Value end,
+                SetInstant = SetValueInstant,
+            }
         end
         
         -- Dropdown
