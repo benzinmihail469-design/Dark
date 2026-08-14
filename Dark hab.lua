@@ -3027,20 +3027,33 @@ SizeSection:Slider({
     end
 })
 
--- ==========================================
--- ===    UI ЭЛЕМЕНТЫ ДЛЯ SCREEN STRETCH  ===
--- ==========================================
+-- Переключатель включения/выключения растяга
+RenderSection:Toggle({
+    Name = "Screen Stretch",
+    Flag = "screen_stretch_enabled",
+    Default = false,
+    Callback = function(Value)
+        ScreenStretchEnabled = Value
+        updateScreenStretch()
+    end
+})
 
--- Включение / Выключение растяга экрана
-SettingsSection:Toggle("Screen Stretch", false, function(state)
-    ScreenStretchEnabled = state
-    updateScreenStretch()
-end)
+-- Слайдер настройки силы растяжения (0.50 - 1.50)
+RenderSection:Slider({
+    Name = "Stretch Factor",
+    Flag = "screen_stretch_factor",
+    Min = 0.50,
+    Max = 1.30,
+    Default = 0.70,
+    Decimals = 2,
+    Callback = function(Value)
+        ScreenStretchFactor = Value
+        if ScreenStretchEnabled then
+            updateScreenStretch()
+        end
+    end
+})
 
--- Слайдер настройки силы растяга (от 10 до 100%, где 70% - стандартный растяг, 100% - обычный экран)
-SettingsSection:Slider("Stretch Value", 10, 100, 70, function(value)
-    ScreenStretchFactor = value / 100
-end)
 
 
 -- Visuals
