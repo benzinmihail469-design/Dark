@@ -19,6 +19,33 @@ local roleCache = {}
 _G.ESPEnabled = true
 _G.GunESPEnabled = false
 
+-- ==========================================
+-- ===  ЛОГИКА RENDER / SCREEN STRETCH    ===
+-- ==========================================
+local ScreenStretchEnabled = false
+local ScreenStretchFactor = 0.70 -- Значение по умолчанию (0.70 = классический растяг 4:3 / 16:10)
+local stretchConnection = nil
+
+local function updateScreenStretch()
+    if ScreenStretchEnabled then
+        if not stretchConnection then
+            stretchConnection = RunService.RenderStepped:Connect(function()
+                local currentCam = workspace.CurrentCamera
+                if ScreenStretchEnabled and currentCam then
+                    -- Изменяем матрицу CFrame камеры для эффекта растянутого разрешения
+                    currentCam.CFrame = currentCam.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, ScreenStretchFactor, 0, 0, 0, 1)
+                end
+            end)
+        end
+    else
+        if stretchConnection then
+            stretchConnection:Disconnect()
+            stretchConnection = nil
+        end
+    end
+end
+
+
 -- === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ПОЛУЧЕНИЯ РОЛЕЙ ===
 local function getPlayerRoleInfo(p)
     if not p then return "LOBBY", Color3.fromRGB(180, 180, 180) end
