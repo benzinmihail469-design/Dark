@@ -1,4 +1,3 @@
-
 local DarkHub = {} -- Dark Hub UI (Pulse Hub Styled Sizes - Compact)
 
 local Players = game:GetService("Players")
@@ -894,8 +893,6 @@ local function ApplyAccentColor(color, gradientColor)
     end
 end
 
-
-
 -- ФУНКЦИЯ ДИНАМИЧЕСКОЙ СМЕНЫ ТЕМЫ (ФОНА, ЭЛЕМЕНТОВ И СЕКЦИЙ)
 local function ApplyTheme(themeName)
     local t = ThemesPresets[themeName]
@@ -947,8 +944,6 @@ local function ApplyTheme(themeName)
 
     ApplyAccentColor(Theme.Accent, Theme.AccentGradient)
 end
-
-
 
 -- Обновление позиции белой полоски
 local function UpdateActiveIndicator(instant)
@@ -2731,6 +2726,98 @@ local function CreatePage(PageConfig)
     return PageData
 end
 
+-- ==========================================
+-- ===      ГЛОБАЛЬНАЯ СИСТЕМА ПЕРЕВОДА   ===
+-- ==========================================
+local CurrentLanguage = "RU" -- Язык по умолчанию ("RU" или "EN")
+local RegisteredTexts = {}   -- Реестр UI-элементов для динамической смены текста
+
+-- 📖 СЛОВАРЬ ПЕРЕВОДОВ 
+-- (Сюда просто добавляй новые ключевые слова для будущих функций!)
+local Dictionary = {
+    ["RU"] = {
+        -- Системные и интерфейсные фразы
+        ["Search..."] = "Поиск...",
+        ["Settings"] = "Настройки",
+        ["Language"] = "Язык",
+        
+        -- Пример функций (добавляй сюда свои новые функции)
+        ["Aimbot"] = "Аимбот",
+        ["Visuals"] = "Визуалы",
+        ["ESP Enabled"] = "Включить ESP",
+        ["Gun ESP"] = "ESP Оружия",
+        ["FOV Stretch"] = "Растяжение FOV",
+        ["WalkSpeed"] = "Скорость ходьбы",
+        ["JumpPower"] = "Сила прыжка",
+        ["Noclip"] = "Ноклип",
+        ["Fling Player"] = "Флинг игрока",
+        ["Anti-Fling"] = "Анти-Флинг",
+    },
+    ["EN"] = {
+        -- System & UI phrases
+        ["Search..."] = "Search...",
+        ["Settings"] = "Settings",
+        ["Language"] = "Language",
+        
+        -- Functions
+        ["Aimbot"] = "Aimbot",
+        ["Visuals"] = "Visuals",
+        ["ESP Enabled"] = "ESP Enabled",
+        ["Gun ESP"] = "Gun ESP",
+        ["FOV Stretch"] = "FOV Stretch",
+        ["WalkSpeed"] = "WalkSpeed",
+        ["JumpPower"] = "JumpPower",
+        ["Noclip"] = "Noclip",
+        ["Fling Player"] = "Fling Player",
+        ["Anti-Fling"] = "Anti-Fling",
+    }
+}
+
+-- Получение перевода по ключу
+local function GetTranslation(key)
+    if Dictionary[CurrentLanguage] and Dictionary[CurrentLanguage][key] then
+        return Dictionary[CurrentLanguage][key]
+    end
+    return key -- Если перевод не найден, выводим исходное слово
+end
+
+-- Регистрация элемента интерфейса для живого обновления при смене языка
+local function RegisterText(instance, originalText, property)
+    property = property or "Text"
+    if not instance then return end
+
+    table.insert(RegisteredTexts, {
+        Instance = instance,
+        Key = originalText,
+        Property = property
+    })
+
+    instance[property] = GetTranslation(originalText)
+end
+
+-- Функция смены языка для всего GUI
+local function SetLanguage(langCode)
+    if not Dictionary[langCode] then return end
+    CurrentLanguage = langCode
+
+    for _, item in ipairs(RegisteredTexts) do
+        if item.Instance and item.Instance.Parent then
+            item.Instance[item.Property] = GetTranslation(item.Key)
+        end
+    end
+end
+
+-- Универсальный хелпер L()
+local function L(text, instance, property)
+    if instance then
+        RegisterText(instance, text, property)
+    end
+    return GetTranslation(text)
+end
+
+-- Авто-перевод плейсхолдера поиска
+RegisterText(HeaderSearchInput, "Search...", "PlaceholderText")
+
 -- =======================================================
 -- === АВТОНОМНАЯ СИСТЕМА FLING & ANTI-FLING ===
 -- =======================================================
@@ -2932,19 +3019,20 @@ end
 -- === СОЗДАНИЕ СТРАНИЦ ===
 
 -- Aimbot
-local AimbotPage = CreatePage({Name = "Aimbot", Icon = "100050851789190"})
-local AimbotSection = AimbotPage:CreateSection({Name = "Aimbot Settings"})
+local AimbotPage = CreatePage({Name = L("Aimbot"), Icon = "100050851789190"})
+local AimbotSection = AimbotPage:CreateSection({Name = L("Aimbot")})
 AimbotSection:Toggle({Name = "Enable Aimbot", Default = false})
 AimbotSection:Slider({Name = "FOV", Min = 0, Max = 360, Default = 90, Suffix = "°"})
 AimbotSection:Slider({Name = "Smoothness", Min = 0, Max = 100, Default = 50, Suffix = "%"})
 AimbotSection:Dropdown({Name = "Target", Items = {"Head", "Body", "Legs"}, Default = "Head"})
 AimbotSection:Keybind({Name = "Aimbot Key", Default = Enum.KeyCode.LeftShift})
 
--- Settings (Вкладка настроек с выбором темы, цвета и изменением размера GUI)
-local SettingsPage = CreatePage({Name = "settings", Icon = "123944728972740"})
-local SettingsSection = SettingsPage:CreateSection({Name = "Theme Settings", Description = "Customize GUI colors"})
+-- Settings (Вкладка настроек с выбором темы, цвета, размеров GUI и языка)
+local SettingsPage = CreatePage({Name = L("Settings"), Icon = "123944728972740"})
+local SettingsSection = SettingsPage:CreateSection({Name = L("Settings"), Description = "Customize GUI appearance"})
 
 local themeDropdown
+local customColorpicker
 
 themeDropdown = SettingsSection:Dropdown({
     Name = "Ui Theme",
@@ -2952,6 +3040,23 @@ themeDropdown = SettingsSection:Dropdown({
     Default = "AMOLED Black",
     Callback = function(selected)
         ApplyTheme(selected)
+    end
+})
+
+customColorpicker = SettingsSection:Colorpicker({
+    Name = "Custom Accent Color",
+    Default = Color3.fromRGB(0, 116, 224),
+    Callback = function(col)
+        local h, s, v = col:ToHSV()
+        local accentGrad = Color3.fromHSV((h + 0.05) % 1, s, v)
+
+        local currentTheme = themeDropdown and themeDropdown.Get() or "AMOLED Black"
+        if ThemesPresets[currentTheme] then
+            ThemesPresets[currentTheme].Accent = col
+            ThemesPresets[currentTheme].AccentGradient = accentGrad
+        end
+
+        ApplyTheme(currentTheme)
     end
 })
 
@@ -2991,11 +3096,11 @@ SizeSection:Slider({
 -- ==========================================
 
 -- Добавляем секцию для FOV настроек
-local FOVSection = SettingsPage:CreateSection({Name = "FOV Settings", Description = "Adjust camera field of view"})
+local FOVSection = SettingsPage:CreateSection({Name = L("FOV Stretch"), Description = "Adjust camera field of view"})
 
 -- Включение / Выключение FOV
 FOVSection:Toggle({
-    Name = "FOV Stretch",
+    Name = L("FOV Stretch"),
     Default = false,
     Callback = function(state)
         FOVEnabled = state
@@ -3019,12 +3124,30 @@ FOVSection:Slider({
     end
 })
 
+-- ==========================================
+-- ===    UI ЭЛЕМЕНТЫ ДЛЯ ПЕРЕКЛЮЧЕНИЯ ЯЗЫКА    ===
+-- ==========================================
+
+-- ДРОПДАУН ВЫБОРА ЯЗЫКА
+SettingsSection:Dropdown({
+    Name = L("Language"),
+    Items = {"Русский", "English"},
+    Default = "Русский",
+    Callback = function(selected)
+        if selected == "Русский" then
+            SetLanguage("RU")
+        elseif selected == "English" then
+            SetLanguage("EN")
+        end
+    end
+})
+
 -- Visuals
-local VisualsPage = CreatePage({Name = "Visuals", Icon = "122669828593160"})
+local VisualsPage = CreatePage({Name = L("Visuals"), Icon = "122669828593160"})
 local VisualsSection = VisualsPage:CreateSection({Name = "Players"})
 
 VisualsSection:Toggle({
-    Name = "Player ESP",
+    Name = L("ESP Enabled"),
     Default = true,
     Callback = function(state)
         _G.ESPEnabled = state
@@ -3032,7 +3155,7 @@ VisualsSection:Toggle({
 })
 
 VisualsSection:Toggle({
-    Name = "ESP Gun",
+    Name = L("Gun ESP"),
     Default = false,
     Callback = function(state)
         _G.GunESPEnabled = state
@@ -3048,15 +3171,15 @@ MovementSection:Slider({Name = "Strafe Speed", Min = 0, Max = 100, Default = 60,
 
 -- === ВКЛАДКА FLING PLAYERS ===
 local FlingIcon = "110220024060608"
-local FlingPage = CreatePage({Name = "Fling Players", Icon = FlingIcon})
+local FlingPage = CreatePage({Name = L("Fling Player"), Icon = FlingIcon})
 local FlingSection = FlingPage:CreateSection({
-    Name = "Fling Players", 
+    Name = L("Fling Player"), 
     Description = "Tap a player to fling them",
     Icon = FlingIcon
 })
 
 FlingSection:Toggle({
-    Name = "Anti-Fling Protection",
+    Name = L("Anti-Fling"),
     Default = false,
     Callback = function(state)
         toggleAntiFling(state)
