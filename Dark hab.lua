@@ -19,9 +19,7 @@ local roleCache = {}
 _G.ESPEnabled = true
 _G.GunESPEnabled = false
 
--- ==========================================
--- ===  ЛОГИКА RENDER / SCREEN STRETCH    ===
--- ==========================================local ScreenStretchEnabled = false
+
 -- ==========================================
 -- ===        ЛОГИКА CAMERA / FOV         ===
 -- ==========================================
