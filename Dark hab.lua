@@ -1550,256 +1550,276 @@ local function CreatePage(PageConfig)
         -- Slider (ИСПРАВЛЕННАЯ ВЕРСИЯ - КРАСИВАЯ РУЧКА ПРИКРЕПЛЕНА К СЛАЙДЕРУ)
         
             -- Slider (ИСПРАВЛЕННАЯ ВЕРСИЯ - КРУГЛЯШОК НАМЕРТВО ПРИВЯЗАН К ПОЛОСЕ)
-function SectionData:Slider(Data)
-    local SliderName = Data.Name or "Slider"
-    local Flag = Data.Flag or "slider_" .. (#Flags + 1)
-    local Min = Data.Min or 0
-    local Max = Data.Max or 100
-    local Default = Data.Default or 0
-    local Suffix = Data.Suffix or ""
-    local Decimals = Data.Decimals or 1
-    local Callback = Data.Callback or function() end
-    
-    local SliderFrame = Create("Frame", {
-        Parent = SectionContent,
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 32),
-        BorderSizePixel = 0,
-    })
-    
-    -- Заголовок и значение
-    local LabelFrame = Create("Frame", {
-        Parent = SliderFrame,
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 18),
-        BorderSizePixel = 0,
-    })
-    
-    local NameLabel = Create("TextLabel", {
-        Parent = LabelFrame,
-        Text = SliderName,
-        TextColor3 = Theme.Text,
-        TextTransparency = 0.3,
-        BackgroundTransparency = 1,
-        FontFace = FontRegular,
-        TextSize = 11,
-        Position = UDim2.new(0, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0, 0.5),
-        Size = UDim2.new(0, 0, 0, 12),
-        AutomaticSize = Enum.AutomaticSize.X,
-    })
-    
-    local ValueText = Create("TextLabel", {
-        Parent = LabelFrame,
-        Text = tostring(Default) .. Suffix,
-        TextColor3 = Theme.Text,
-        TextTransparency = 0.3,
-        BackgroundTransparency = 1,
-        FontFace = FontRegular,
-        TextSize = 11,
-        Position = UDim2.new(1, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(1, 0.5),
-        Size = UDim2.new(0, 0, 0, 12),
-        AutomaticSize = Enum.AutomaticSize.X,
-    })
-    
-    -- Контейнер слайдера
-    local SliderTrack = Create("Frame", {
-        Parent = SliderFrame,
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 10),
-        Position = UDim2.new(0, 0, 1, -10),
-        BorderSizePixel = 0,
-        ClipsDescendants = false,
-    })
-    
-    -- Фон слайдера
-    local SliderBar = Create("Frame", {
-        Parent = SliderTrack,
-        Name = "ElementBG",
-        BackgroundColor3 = Theme.Element,
-        BackgroundTransparency = 0.4,
-        Size = UDim2.new(1, 0, 1, 0),
-        Position = UDim2.new(0, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0, 0.5),
-        BorderSizePixel = 0,
-        ClipsDescendants = true,
-    })
-    Create("UICorner", { Parent = SliderBar, CornerRadius = UDim.new(1, 0) })
-    
-    -- Заполнение полосы
-    local SliderFill = Create("Frame", {
-        Parent = SliderBar,
-        BackgroundColor3 = Theme.Accent,
-        Size = UDim2.new(0, 0, 1, 0),
-        Position = UDim2.new(0, 0, 0, 0),
-        BorderSizePixel = 0,
-    })
-    Create("UICorner", { Parent = SliderFill, CornerRadius = UDim.new(1, 0) })
-    
-    Create("UIGradient", {
-        Parent = SliderFill,
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Theme.Accent),
-            ColorSequenceKeypoint.new(1, Theme.AccentGradient),
-        }),
-        Rotation = 90,
-    })
-    
-    -- КРУГЛЯШОК (РУЧКА) С ПРАВИЛЬНЫМ ANCHORPOINT В ЦЕНТРЕ
-    local Thumb = Create("Frame", {
-        Parent = SliderTrack,
-        BackgroundColor3 = Theme.Text,
-        Size = UDim2.new(0, 16, 0, 16),
-        Position = UDim2.new(0, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BorderSizePixel = 0,
-        ZIndex = 2,
-    })
-    Create("UICorner", { Parent = Thumb, CornerRadius = UDim.new(1, 0) })
-    
-    -- Эффекты кругляшка
-    local ThumbGlow = Create("Frame", {
-        Parent = Thumb,
-        BackgroundColor3 = Theme.Accent,
-        BackgroundTransparency = 0.25,
-        Size = UDim2.new(2, 0, 2, 0),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BorderSizePixel = 0,
-        ZIndex = 0,
-    })
-    Create("UICorner", { Parent = ThumbGlow, CornerRadius = UDim.new(1, 0) })
-    
-    local ThumbInner = Create("Frame", {
-        Parent = Thumb,
-        BackgroundColor3 = Theme.Accent,
-        Size = UDim2.new(0.6, 0, 0.6, 0),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BorderSizePixel = 0,
-        ZIndex = 3,
-    })
-    Create("UICorner", { Parent = ThumbInner, CornerRadius = UDim.new(1, 0) })
-    
-    Create("UIGradient", {
-        Parent = ThumbInner,
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Theme.Accent),
-            ColorSequenceKeypoint.new(1, Theme.AccentGradient),
-        }),
-        Rotation = 45,
-    })
-    
-    Create("UIStroke", {
-        Parent = Thumb,
-        Color = Theme.Accent,
-        Thickness = 2,
-        Transparency = 0.4,
-    })
-    
-    local ThumbHighlight = Create("Frame", {
-        Parent = Thumb,
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BackgroundTransparency = 0.6,
-        Size = UDim2.new(0.3, 0, 0.3, 0),
-        Position = UDim2.new(0.2, 0, 0.2, 0),
-        BorderSizePixel = 0,
-        ZIndex = 4,
-    })
-    Create("UICorner", { Parent = ThumbHighlight, CornerRadius = UDim.new(1, 0) })
-    
-    -- Зона клика и перетаскивания
-    local DragButton = Create("TextButton", {
-        Parent = SliderTrack,
-        Text = "",
-        AutoButtonColor = false,
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),
-        Position = UDim2.new(0, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0, 0.5),
-        BorderSizePixel = 0,
-        ZIndex = 3,
-    })
-    
-    local Value = Default
-    local Sliding = false
-    
-    -- Обновление позиции кругляшка по Scale (в процентах)
-    local function UpdateSlider(percent)
-        percent = math.clamp(percent, 0, 1)
-        Thumb.Position = UDim2.new(percent, 0, 0.5, 0)
-        SliderFill.Size = UDim2.new(percent, 0, 1, 0)
-    end
-    
-    local function SetValue(NewValue)
-        local rawValue = math.clamp(NewValue, Min, Max)
-        local multiplier = 10 ^ Decimals
-        Value = math.round(rawValue * multiplier) / multiplier
-        
-        local percent = (Max > Min) and ((Value - Min) / (Max - Min)) or 0
-        UpdateSlider(percent)
-        ValueText.Text = tostring(Value) .. Suffix
-        
-        Flags[Flag] = Value
-        Callback(Value)
-    end
-    
-    local function UpdateFromMouse(input)
-        if not SliderBar or not SliderBar.AbsoluteSize or SliderBar.AbsoluteSize.X <= 0 then return end
-        local barPos = SliderBar.AbsolutePosition.X
-        local barWidth = SliderBar.AbsoluteSize.X
-        
-        local x = (input.Position.X - barPos) / barWidth
-        local percent = math.clamp(x, 0, 1)
-        local newValue = Min + (Max - Min) * percent
-        SetValue(newValue)
-    end
-    
-    DragButton.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            Sliding = true
-            UpdateFromMouse(input)
+
+                 -- Slider (ИСПРАВЛЕННАЯ ВЕРСИЯ С ПОДДЕРЖКОЙ СМЕНЫ ЦВЕТА ТЕМЫ)
+        function SectionData:Slider(Data)
+            local SliderName = Data.Name or "Slider"
+            local Flag = Data.Flag or "slider_" .. (#Flags + 1)
+            local Min = Data.Min or 0
+            local Max = Data.Max or 100
+            local Default = Data.Default or 0
+            local Suffix = Data.Suffix or ""
+            local Decimals = Data.Decimals or 1
+            local Callback = Data.Callback or function() end
             
-            CreateTween(Thumb, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Size = UDim2.new(0, 18, 0, 18),
+            local SliderFrame = Create("Frame", {
+                Parent = SectionContent,
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 32),
+                BorderSizePixel = 0,
             })
-        end
-    end)
-    
-    DragButton.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            Sliding = false
-            CreateTween(Thumb, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            
+            -- Заголовок и значение
+            local LabelFrame = Create("Frame", {
+                Parent = SliderFrame,
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 18),
+                BorderSizePixel = 0,
+            })
+            
+            local NameLabel = Create("TextLabel", {
+                Parent = LabelFrame,
+                Text = SliderName,
+                TextColor3 = Theme.Text,
+                TextTransparency = 0.3,
+                BackgroundTransparency = 1,
+                FontFace = FontRegular,
+                TextSize = 11,
+                Position = UDim2.new(0, 0, 0.5, 0),
+                AnchorPoint = Vector2.new(0, 0.5),
+                Size = UDim2.new(0, 0, 0, 12),
+                AutomaticSize = Enum.AutomaticSize.X,
+            })
+            
+            local ValueText = Create("TextLabel", {
+                Parent = LabelFrame,
+                Text = tostring(Default) .. Suffix,
+                TextColor3 = Theme.Text,
+                TextTransparency = 0.3,
+                BackgroundTransparency = 1,
+                FontFace = FontRegular,
+                TextSize = 11,
+                Position = UDim2.new(1, 0, 0.5, 0),
+                AnchorPoint = Vector2.new(1, 0.5),
+                Size = UDim2.new(0, 0, 0, 12),
+                AutomaticSize = Enum.AutomaticSize.X,
+            })
+            
+            -- Контейнер слайдера
+            local SliderTrack = Create("Frame", {
+                Parent = SliderFrame,
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 10),
+                Position = UDim2.new(0, 0, 1, -10),
+                BorderSizePixel = 0,
+                ClipsDescendants = false,
+            })
+            
+            -- Фон слайдера
+            local SliderBar = Create("Frame", {
+                Parent = SliderTrack,
+                Name = "ElementBG",
+                BackgroundColor3 = Theme.Element,
+                BackgroundTransparency = 0.4,
+                Size = UDim2.new(1, 0, 1, 0),
+                Position = UDim2.new(0, 0, 0.5, 0),
+                AnchorPoint = Vector2.new(0, 0.5),
+                BorderSizePixel = 0,
+                ClipsDescendants = true,
+            })
+            Create("UICorner", { Parent = SliderBar, CornerRadius = UDim.new(1, 0) })
+            
+            -- Заполнение полосы
+            local SliderFill = Create("Frame", {
+                Parent = SliderBar,
+                Name = "SliderFill",
+                BackgroundColor3 = Theme.Accent,
+                Size = UDim2.new(0, 0, 1, 0),
+                Position = UDim2.new(0, 0, 0, 0),
+                BorderSizePixel = 0,
+            })
+            Create("UICorner", { Parent = SliderFill, CornerRadius = UDim.new(1, 0) })
+            
+            Create("UIGradient", {
+                Parent = SliderFill,
+                Name = "AccentGradient",
+                Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Theme.Accent),
+                    ColorSequenceKeypoint.new(1, Theme.AccentGradient),
+                }),
+                Rotation = 90,
+            })
+            
+            -- КРУГЛЯШОК (РУЧКА)
+            local Thumb = Create("Frame", {
+                Parent = SliderTrack,
+                BackgroundColor3 = Theme.Text,
                 Size = UDim2.new(0, 16, 0, 16),
+                Position = UDim2.new(0, 0, 0.5, 0),
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                BorderSizePixel = 0,
+                ZIndex = 2,
             })
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if Sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            UpdateFromMouse(input)
-        end
-    end)
-    
-    UserInputService.InputEnded:Connect(function(input)
-        if Sliding and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-            Sliding = false
-            CreateTween(Thumb, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Size = UDim2.new(0, 16, 0, 16),
+            Create("UICorner", { Parent = Thumb, CornerRadius = UDim.new(1, 0) })
+            
+            -- Эффекты кругляшка
+            local ThumbGlow = Create("Frame", {
+                Parent = Thumb,
+                Name = "ThumbGlow",
+                BackgroundColor3 = Theme.Accent,
+                BackgroundTransparency = 0.25,
+                Size = UDim2.new(2, 0, 2, 0),
+                Position = UDim2.new(0.5, 0, 0.5, 0),
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                BorderSizePixel = 0,
+                ZIndex = 0,
             })
+            Create("UICorner", { Parent = ThumbGlow, CornerRadius = UDim.new(1, 0) })
+            
+            local ThumbInner = Create("Frame", {
+                Parent = Thumb,
+                Name = "ThumbInner",
+                BackgroundColor3 = Theme.Accent,
+                Size = UDim2.new(0.6, 0, 0.6, 0),
+                Position = UDim2.new(0.5, 0, 0.5, 0),
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                BorderSizePixel = 0,
+                ZIndex = 3,
+            })
+            Create("UICorner", { Parent = ThumbInner, CornerRadius = UDim.new(1, 0) })
+            
+            Create("UIGradient", {
+                Parent = ThumbInner,
+                Name = "AccentGradient",
+                Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Theme.Accent),
+                    ColorSequenceKeypoint.new(1, Theme.AccentGradient),
+                }),
+                Rotation = 45,
+            })
+            
+            Create("UIStroke", {
+                Parent = Thumb,
+                Name = "ThumbStroke",
+                Color = Theme.Accent,
+                Thickness = 2,
+                Transparency = 0.4,
+            })
+            
+            local ThumbHighlight = Create("Frame", {
+                Parent = Thumb,
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                BackgroundTransparency = 0.6,
+                Size = UDim2.new(0.3, 0, 0.3, 0),
+                Position = UDim2.new(0.2, 0, 0.2, 0),
+                BorderSizePixel = 0,
+                ZIndex = 4,
+            })
+            Create("UICorner", { Parent = ThumbHighlight, CornerRadius = UDim.new(1, 0) })
+            
+            -- Зона клика и перетаскивания
+            local DragButton = Create("TextButton", {
+                Parent = SliderTrack,
+                Text = "",
+                AutoButtonColor = false,
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 1, 0),
+                Position = UDim2.new(0, 0, 0.5, 0),
+                AnchorPoint = Vector2.new(0, 0.5),
+                BorderSizePixel = 0,
+                ZIndex = 3,
+            })
+            
+            local Value = Default
+            local Sliding = false
+            
+            -- Обновление позиции кругляшка по Scale (в процентах)
+            local function UpdateSlider(percent)
+                percent = math.clamp(percent, 0, 1)
+                Thumb.Position = UDim2.new(percent, 0, 0.5, 0)
+                SliderFill.Size = UDim2.new(percent, 0, 1, 0)
+            end
+            
+            local function SetValue(NewValue)
+                local rawValue = math.clamp(NewValue, Min, Max)
+                local multiplier = 10 ^ Decimals
+                Value = math.round(rawValue * multiplier) / multiplier
+                
+                local percent = (Max > Min) and ((Value - Min) / (Max - Min)) or 0
+                UpdateSlider(percent)
+                ValueText.Text = tostring(Value) .. Suffix
+                
+                Flags[Flag] = Value
+                Callback(Value)
+            end
+            
+            local function UpdateFromMouse(input)
+                if not SliderBar or not SliderBar.AbsoluteSize or SliderBar.AbsoluteSize.X <= 0 then return end
+                local barPos = SliderBar.AbsolutePosition.X
+                local barWidth = SliderBar.AbsoluteSize.X
+                
+                local x = (input.Position.X - barPos) / barWidth
+                local percent = math.clamp(x, 0, 1)
+                local newValue = Min + (Max - Min) * percent
+                SetValue(newValue)
+            end
+            
+            DragButton.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    Sliding = true
+                    UpdateFromMouse(input)
+                    
+                    CreateTween(Thumb, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                        Size = UDim2.new(0, 18, 0, 18),
+                    })
+                end
+            end)
+            
+            DragButton.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    Sliding = false
+                    CreateTween(Thumb, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                        Size = UDim2.new(0, 16, 0, 16),
+                    })
+                end
+            end)
+            
+            UserInputService.InputChanged:Connect(function(input)
+                if Sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                    UpdateFromMouse(input)
+                end
+            end)
+            
+            UserInputService.InputEnded:Connect(function(input)
+                if Sliding and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+                    Sliding = false
+                    CreateTween(Thumb, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                        Size = UDim2.new(0, 16, 0, 16),
+                    })
+                end
+            end)
+            
+            SetValue(Default)
+            SetFlags[Flag] = function(val) SetValue(val) end
+            
+            table.insert(SectionData.Elements, { Frame = SliderFrame, Name = SliderName })
+            return {
+                Set = function(val) SetValue(val) end,
+                Get = function() return Value end,
+            }
         end
-    end)
+
     
-    SetValue(Default)
-    SetFlags[Flag] = function(val) SetValue(val) end
     
-    table.insert(SectionData.Elements, { Frame = SliderFrame, Name = SliderName })
-    return {
-        Set = function(val) SetValue(val) end,
-        Get = function() return Value end,
-    }
-end
+     
+     
+   
+    
+    
+        
+        
+    
+    
 
                 
             
