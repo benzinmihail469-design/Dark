@@ -21,29 +21,35 @@ _G.GunESPEnabled = false
 
 -- ==========================================
 -- ===  ЛОГИКА RENDER / SCREEN STRETCH    ===
+-- ==========================================local ScreenStretchEnabled = false
 -- ==========================================
-local ScreenStretchEnabled = false
-local ScreenStretchFactor = 0.70 -- Значение по умолчанию (0.70 = классический растяг 4:3 / 16:10)
-local stretchConnection = nil
+-- ===        ЛОГИКА CAMERA / FOV         ===
+-- ==========================================
+local FOVEnabled = false
+local CustomFOV = 90 -- Стандартный FOV в Roblox = 70. 90-110 дает отличный эффекты растяжения
+local fovConnection = nil
 
-local function updateScreenStretch()
-    if ScreenStretchEnabled then
-        if not stretchConnection then
-            stretchConnection = RunService.RenderStepped:Connect(function()
+local function updateFOV()
+    if FOVEnabled then
+        if not fovConnection then
+            fovConnection = RunService.RenderStepped:Connect(function()
                 local currentCam = workspace.CurrentCamera
-                if ScreenStretchEnabled and currentCam then
-                    -- Изменяем матрицу CFrame камеры для эффекта растянутого разрешения
-                    currentCam.CFrame = currentCam.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, ScreenStretchFactor, 0, 0, 0, 1)
+                if currentCam then
+                    currentCam.FieldOfView = CustomFOV
                 end
             end)
         end
     else
-        if stretchConnection then
-            stretchConnection:Disconnect()
-            stretchConnection = nil
+        if fovConnection then
+            fovConnection:Disconnect()
+            fovConnection = nil
+        end
+        if workspace.CurrentCamera then
+            workspace.CurrentCamera.FieldOfView = 70 -- Сброс на стандартный FOV
         end
     end
 end
+
 
 
 -- === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ПОЛУЧЕНИЯ РОЛЕЙ ===
