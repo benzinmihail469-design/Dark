@@ -1,4 +1,4 @@
-getgenv().DarkHub = {}
+
 local DarkHub = getgenv().DarkHub
 
 
