@@ -1,5 +1,7 @@
 
-getgenv().DarkHub = {}
+ getgenv().DarkHub = {}
+local DarkHub = getgenv().DarkHub
+
 
 
 local Players = game:GetService("Players")
