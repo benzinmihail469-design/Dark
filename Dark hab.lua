@@ -417,8 +417,30 @@ local ThemesPresets = {
 }
 
 -- Шрифты
+local FontsPresets = {
+    ["Fredoka One"] = Enum.Font.FredokaOne,
+    ["Gotham"] = Enum.Font.Gotham,
+    ["Gotham Bold"] = Enum.Font.GothamBold,
+    ["Roboto"] = Enum.Font.Roboto,
+    ["Source Sans"] = Enum.Font.SourceSans,
+    ["Ubuntu"] = Enum.Font.Ubuntu,
+    ["Arial"] = Enum.Font.Arial,
+}
+
 local FontSemiBold = Font.fromEnum(Enum.Font.FredokaOne)
 local FontRegular = Font.fromEnum(Enum.Font.FredokaOne)
+
+local function ApplyFont(fontName)
+    local enumFont = FontsPresets[fontName] or Enum.Font.FredokaOne
+    FontRegular = Font.fromEnum(enumFont)
+    FontSemiBold = Font.fromEnum(enumFont)
+
+    for _, desc in ipairs(Holder:GetDescendants()) do
+        if desc:IsA("TextLabel") or desc:IsA("TextBox") or desc:IsA("TextButton") then
+            desc.FontFace = FontRegular
+        end
+    end
+end
 
 -- ==========================================
 -- === СИСТЕМА ЛОКАЛИЗАЦИИ / Localizations ===
@@ -446,6 +468,7 @@ local Translations = {
         ["Sec_Configs"] = "Configurations",
         ["Sec_Themes"] = "Theme Settings",
         ["Sec_UISize"] = "UI Size Settings",
+        ["Sec_Font"] = "Font Settings",
         -- Элементы
         ["Toggle_ESP"] = "Enable Player ESP",
         ["Toggle_GunESP"] = "Enable Gun ESP",
@@ -461,6 +484,7 @@ local Translations = {
         ["Dropdown_Theme"] = "Select Theme",
         ["Dropdown_Language"] = "Language",
         ["Dropdown_AimbotTarget"] = "Target",
+        ["Dropdown_Font"] = "Font",
         ["Keybind_Aimbot"] = "Aimbot Key",
         ["Btn_Rejoin"] = "Rejoin Server",
         ["Btn_ServerHop"] = "Server Hop",
@@ -493,6 +517,7 @@ local Translations = {
         ["Sec_Configs"] = "Конфигурации",
         ["Sec_Themes"] = "Оформление",
         ["Sec_UISize"] = "Размер Интерфейса",
+        ["Sec_Font"] = "Настройки Шрифта",
         -- Элементы
         ["Toggle_ESP"] = "Включить ESP Игроков",
         ["Toggle_GunESP"] = "Включить ESP Оружия",
@@ -508,6 +533,7 @@ local Translations = {
         ["Dropdown_Theme"] = "Выбор темы",
         ["Dropdown_Language"] = "Язык",
         ["Dropdown_AimbotTarget"] = "Цель",
+        ["Dropdown_Font"] = "Шрифт",
         ["Keybind_Aimbot"] = "Клавиша",
         ["Btn_Rejoin"] = "Перезайти на Сервер",
         ["Btn_ServerHop"] = "Сменить Сервер",
@@ -3233,6 +3259,23 @@ SettingsSection:Dropdown({
                 Duration = 3
             })
         end
+    end
+})
+
+-- ===================================================
+-- НАСТРОЙКА DROPDOWN ДЛЯ ВЫБОРА ШРИФТА
+-- ===================================================
+
+local FontSection = SettingsPage:CreateSection({Name = "Font Settings", NameKey = "Sec_Font"})
+
+FontSection:Dropdown({
+    Name = "Font",
+    NameKey = "Dropdown_Font",
+    Flag = "Selected_Font",
+    Items = {"Fredoka One", "Gotham", "Gotham Bold", "Roboto", "Source Sans", "Ubuntu", "Arial"},
+    Default = "Fredoka One",
+    Callback = function(selectedFont)
+        ApplyFont(selectedFont)
     end
 })
 
