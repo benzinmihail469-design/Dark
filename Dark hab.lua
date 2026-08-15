@@ -490,6 +490,7 @@ local Translations = {
         ["Slider_UISize"] = "UI Size",
         ["Dropdown_Theme"] = "Select Theme",
         ["Dropdown_Language"] = "Language",
+        ["DropDown_FontUi"] = "UI Font", 
         ["Dropdown_AimbotTarget"] = "Target",
         ["Keybind_Aimbot"] = "Aimbot Key",
         ["Btn_Rejoin"] = "Rejoin Server",
@@ -534,9 +535,10 @@ local Translations = {
         ["Slider_AimbotFOV"] = "Угол обзора",
         ["Slider_AimbotSmooth"] = "Плавность",
         ["Slider_StrafeSpeed"] = "Скорость Стрейфа",
-        ["Slider_UISize"] = "Размер GUI",
+        ["Slider_UISize"] = "Размер UI",
         ["Dropdown_Theme"] = "Выбор темы",
         ["Dropdown_Language"] = "Язык",
+        ["DropDown_FontUi"] = "Шрифт UI"
         ["Dropdown_AimbotTarget"] = "Цель",
         ["Keybind_Aimbot"] = "Клавиша",
         ["Btn_Rejoin"] = "Перезайти на Сервер",
@@ -3272,9 +3274,10 @@ SettingsSection:Dropdown({
 
 -- Дропдаун выбора шрифта
 SettingsSection:Dropdown({
-    Name = "UI Font / Шрифт UI",
+    Name = "UI Font",
+    NameKey = "DropDown_FontUi",  
     Items = {"Source Sans", "Gotham", "Roboto", "Ubuntu", "Code", "Fredoka One", "Arcade", "Fantasy"},
-    Default = "Source Sans",
+    Default = "Fredoka One",
     Callback = function(selectedFont)
         local fontEnum = AvailableFonts[selectedFont]
         if fontEnum then
