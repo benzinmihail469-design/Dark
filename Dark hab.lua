@@ -550,12 +550,12 @@ local Logo = Create("ImageLabel", {
 })
 Create("UICorner", { Parent = Logo, CornerRadius = UDim.new(0, 6) })
 
+-- Заголовок: ВСЕГДА "Dark Hub"
 Create("TextLabel", {
     Parent = MainFrame,
     Name = "Title",
-    Text = "Dark Hub",
+    Text = "Dark Hub", -- Текст фиксирован
     TextColor3 = Theme.Text,
-    BackgroundTransparency = 1,
     FontFace = FontSemiBold,
     TextSize = 12,
     Position = UDim2.new(0, 40, 0, 5),
@@ -564,13 +564,13 @@ Create("TextLabel", {
     ZIndex = 5,
 })
 
+-- Подзаголовок: ВСЕГДА "Premium Cheat" (или любой другой фиксированный текст)
 Create("TextLabel", {
     Parent = MainFrame,
     Name = "SubTitle",
-    Text = "Premium Cheat",
+    Text = "Premium Cheat", -- Текст фиксирован
     TextColor3 = Theme.Text,
     TextTransparency = 0.4,
-    BackgroundTransparency = 1,
     FontFace = FontRegular,
     TextSize = 9,
     Position = UDim2.new(0, 40, 0, 18),
@@ -1038,6 +1038,265 @@ HeaderSearchInput:GetPropertyChangedSignal("Text"):Connect(function()
     GlobalSearch(HeaderSearchInput.Text)
 end)
 
+-- ===================================================
+-- СИСТЕМА МНОГОЯЗЫЧНОСТИ
+-- ===================================================
+
+-- Текущий выбранный язык ("RU" или "EN")
+local CurrentLanguage = "RU"
+
+-- Словарь всех текстов и элементов UI
+local Translations = {
+    RU = {
+        -- Вкладки
+        TabMain = "Главная",
+        TabAimbot = "Аимбот",
+        TabVisuals = "Визуалы",
+        TabMovement = "Движение",
+        TabFling = "Флинг",
+        TabServer = "Сервер",
+        TabConfigs = "Конфиги",
+        TabSettings = "Настройки",
+
+        -- Секции
+        SecAimbot = "Настройки Аимбота",
+        SecEsp = "Подсветка Игроков",
+        SecFov = "Настройки Экрана / FOV",
+        SecThemes = "Оформление",
+        SecMovement = "Настройки Движения",
+        SecFling = "Флинг Игроков",
+        SecServer = "Управление Сервером",
+        SecJobID = "ID Сервера",
+        SecConfigs = "Конфигурации",
+        SecUISize = "Размер Интерфейса",
+
+        -- Кнопки и Переключатели
+        EspPlayer = "Включить ESP Игроков",
+        EspGun = "Подсветка Оружия",
+        FovEnable = "Включить Растяг FOV",
+        FovValue = "Угол обзора (FOV)",
+        AntiFling = "Защита от Флинга",
+        FlingTarget = "Сделать Флинг",
+        ThemeSelect = "Выбор темы",
+        AutoJump = "Авто-Прыжок",
+        AutoStrafe = "Авто-Стрейф",
+        StrafeSpeed = "Скорость Стрейфа",
+        EnableAimbot = "Включить Аимбот",
+        AimbotFOV = "Угол обзора",
+        AimbotSmooth = "Плавность",
+        AimbotTarget = "Цель",
+        AimbotKey = "Клавиша",
+        UISize = "Размер GUI",
+        LanguageSelect = "Язык / Language",
+        
+        -- Уведомления и поиск
+        SearchPlaceholder = "Поиск...",
+        NotifyLangChanged = "Язык изменен на Русский!",
+    },
+    EN = {
+        -- Вкладки
+        TabMain = "Main",
+        TabAimbot = "Aimbot",
+        TabVisuals = "Visuals",
+        TabMovement = "Movement",
+        TabFling = "Fling",
+        TabServer = "Server",
+        TabConfigs = "Configs",
+        TabSettings = "Settings",
+
+        -- Секции
+        SecAimbot = "Aimbot Settings",
+        SecEsp = "Player ESP",
+        SecFov = "Screen / FOV Settings",
+        SecThemes = "Themes & Appearance",
+        SecMovement = "Movement Options",
+        SecFling = "Fling Players",
+        SecServer = "Server Control",
+        SecJobID = "Job ID",
+        SecConfigs = "Configurations",
+        SecUISize = "UI Size",
+
+        -- Кнопки и Переключатели
+        EspPlayer = "Enable Player ESP",
+        EspGun = "Gun ESP",
+        FovEnable = "Enable FOV Stretch",
+        FovValue = "Field of View",
+        AntiFling = "Anti-Fling",
+        FlingTarget = "Execute Fling",
+        ThemeSelect = "Select Theme",
+        AutoJump = "Auto Jump",
+        AutoStrafe = "Auto Strafe",
+        StrafeSpeed = "Strafe Speed",
+        EnableAimbot = "Enable Aimbot",
+        AimbotFOV = "Field of View",
+        AimbotSmooth = "Smoothness",
+        AimbotTarget = "Target",
+        AimbotKey = "Keybind",
+        UISize = "UI Size",
+        LanguageSelect = "Language / Язык",
+
+        -- Уведомления и поиск
+        SearchPlaceholder = "Search...",
+        NotifyLangChanged = "Language changed to English!",
+    }
+}
+
+-- Вспомогательная функция для получения текста по ключу
+local function t(key)
+    if Translations[CurrentLanguage] and Translations[CurrentLanguage][key] then
+        return Translations[CurrentLanguage][key]
+    end
+    return key -- Возвращает сам ключ, если перевод случайно забыли добавить
+end
+
+-- === ОБНОВЛЕНИЕ ЗАГОЛОВКА ПОИСКА ===
+HeaderSearchInput.PlaceholderText = t("SearchPlaceholder")
+
+-- === ОБНОВЛЕНИЕ ВСЕХ ТЕКСТОВ В ИНТЕРФЕЙСЕ ===
+local function UpdateUILanguage()
+    -- Обновляем плейсхолдер поиска
+    HeaderSearchInput.PlaceholderText = t("SearchPlaceholder")
+    
+    -- Обновляем заголовки страниц (вкладок)
+    for _, Page in ipairs(Pages) do
+        if Page.Name == "Aimbot" then
+            Page.TabLabel.Text = t("TabAimbot")
+        elseif Page.Name == "Visuals" then
+            Page.TabLabel.Text = t("TabVisuals")
+        elseif Page.Name == "Movement" then
+            Page.TabLabel.Text = t("TabMovement")
+        elseif Page.Name == "Fling Players" then
+            Page.TabLabel.Text = t("TabFling")
+        elseif Page.Name == "Server" then
+            Page.TabLabel.Text = t("TabServer")
+        elseif Page.Name == "Configs" then
+            Page.TabLabel.Text = t("TabConfigs")
+        elseif Page.Name == "settings" then
+            Page.TabLabel.Text = t("TabSettings")
+        end
+    end
+
+    -- Обновляем названия секций
+    for _, Page in ipairs(Pages) do
+        for _, Section in ipairs(Page.Sections) do
+            if Section.Name == "Aimbot Settings" or Section.Name == "Настройки Аимбота" then
+                local label = Section.Frame:FindFirstChild("SectionTop"):FindFirstChild("SectionTopBg"):FindFirstChildWhichIsA("TextLabel")
+                if label then label.Text = t("SecAimbot") end
+            elseif Section.Name == "Players" or Section.Name == "Подсветка Игроков" then
+                local label = Section.Frame:FindFirstChild("SectionTop"):FindFirstChild("SectionTopBg"):FindFirstChildWhichIsA("TextLabel")
+                if label then label.Text = t("SecEsp") end
+            elseif Section.Name == "Movement Options" or Section.Name == "Настройки Движения" then
+                local label = Section.Frame:FindFirstChild("SectionTop"):FindFirstChild("SectionTopBg"):FindFirstChildWhichIsA("TextLabel")
+                if label then label.Text = t("SecMovement") end
+            elseif Section.Name == "Fling Players" or Section.Name == "Флинг Игроков" then
+                local label = Section.Frame:FindFirstChild("SectionTop"):FindFirstChild("SectionTopBg"):FindFirstChildWhichIsA("TextLabel")
+                if label then label.Text = t("SecFling") end
+            elseif Section.Name == "Server Control" or Section.Name == "Управление Сервером" then
+                local label = Section.Frame:FindFirstChild("SectionTop"):FindFirstChild("SectionTopBg"):FindFirstChildWhichIsA("TextLabel")
+                if label then label.Text = t("SecServer") end
+            elseif Section.Name == "Job ID" or Section.Name == "ID Сервера" then
+                local label = Section.Frame:FindFirstChild("SectionTop"):FindFirstChild("SectionTopBg"):FindFirstChildWhichIsA("TextLabel")
+                if label then label.Text = t("SecJobID") end
+            elseif Section.Name == "Configs" or Section.Name == "Конфигурации" then
+                local label = Section.Frame:FindFirstChild("SectionTop"):FindFirstChild("SectionTopBg"):FindFirstChildWhichIsA("TextLabel")
+                if label then label.Text = t("SecConfigs") end
+            elseif Section.Name == "Theme Settings" or Section.Name == "Оформление" then
+                local label = Section.Frame:FindFirstChild("SectionTop"):FindFirstChild("SectionTopBg"):FindFirstChildWhichIsA("TextLabel")
+                if label then label.Text = t("SecThemes") end
+            elseif Section.Name == "FOV Settings" or Section.Name == "Настройки Экрана / FOV" then
+                local label = Section.Frame:FindFirstChild("SectionTop"):FindFirstChild("SectionTopBg"):FindFirstChildWhichIsA("TextLabel")
+                if label then label.Text = t("SecFov") end
+            elseif Section.Name == "UI Size Settings" or Section.Name == "Размер Интерфейса" then
+                local label = Section.Frame:FindFirstChild("SectionTop"):FindFirstChild("SectionTopBg"):FindFirstChildWhichIsA("TextLabel")
+                if label then label.Text = t("SecUISize") end
+            end
+        end
+    end
+end
+
+-- ===================================================
+-- НАСТРОЙКА DROPDOWN ДЛЯ ВЫБОРА ЯЗЫКА
+-- ===================================================
+
+-- Загружаем сохраненный язык (если есть)
+local function LoadLanguage()
+    local saved = getgenv and getgenv().DarkHubLanguage or nil
+    if saved == "RU" or saved == "EN" then
+        CurrentLanguage = saved
+    else
+        CurrentLanguage = "RU"
+    end
+end
+LoadLanguage()
+
+-- Создаем функцию для уведомлений
+function DarkHub:Notify(Data)
+    local Title = Data.Title or "Notification"
+    local Content = Data.Content or ""
+    local Duration = Data.Duration or 3
+    
+    local Notification = Create("Frame", {
+        Parent = NotificationHolder,
+        BackgroundColor3 = Theme.Background,
+        BackgroundTransparency = 0.1,
+        Size = UDim2.new(0, 200, 0, 40),
+        BorderSizePixel = 0,
+        AutomaticSize = Enum.AutomaticSize.X,
+        ClipsDescendants = true,
+        LayoutOrder = 1,
+    })
+    
+    Create("UICorner", { Parent = Notification, CornerRadius = UDim.new(0, 6) })
+    Create("UIStroke", { Parent = Notification, Color = Theme.Outline, Thickness = 1 })
+    
+    local TitleLabel = Create("TextLabel", {
+        Parent = Notification,
+        Text = Title,
+        TextColor3 = Theme.Text,
+        BackgroundTransparency = 1,
+        FontFace = FontSemiBold,
+        TextSize = 11,
+        Position = UDim2.new(0, 8, 0, 4),
+        Size = UDim2.new(1, -16, 0, 14),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 2,
+    })
+    
+    local ContentLabel = Create("TextLabel", {
+        Parent = Notification,
+        Text = Content,
+        TextColor3 = Theme.Text,
+        TextTransparency = 0.5,
+        BackgroundTransparency = 1,
+        FontFace = FontRegular,
+        TextSize = 10,
+        Position = UDim2.new(0, 8, 0, 20),
+        Size = UDim2.new(1, -16, 0, 14),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 2,
+    })
+    
+    local AccentBar = Create("Frame", {
+        Parent = Notification,
+        BackgroundColor3 = Theme.Accent,
+        Size = UDim2.new(0, 2, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        BorderSizePixel = 0,
+        ZIndex = 2,
+    })
+    
+    task.spawn(function()
+        task.wait(Duration)
+        CreateTween(Notification, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 0, 0, -50),
+        })
+        task.wait(0.3)
+        Notification:Destroy()
+    end)
+end
+
+-- Страницы
 local function CreatePage(PageConfig)
     local PageName = PageConfig.Name or "Page"
     local PageIcon = PageConfig.Icon or "100050851789190"
@@ -1288,7 +1547,7 @@ local function CreatePage(PageConfig)
             TextXOffset = 28
         end
 
-        Create("TextLabel", {
+        local SectionTitleLabel = Create("TextLabel", {
             Parent = SectionTopBg,
             Text = SectionName,
             TextColor3 = Theme.Text,
@@ -1419,7 +1678,7 @@ local function CreatePage(PageConfig)
             })
             Create("UICorner", { Parent = CheckImage, CornerRadius = UDim.new(0, 2) })
             
-            Create("TextLabel", {
+            local ToggleLabel = Create("TextLabel", {
                 Parent = ToggleFrame,
                 Text = ToggleName,
                 TextColor3 = Theme.Text,
@@ -1842,7 +2101,7 @@ local function CreatePage(PageConfig)
                 BorderSizePixel = 0,
             })
             
-            Create("TextLabel", {
+            local DropdownLabel = Create("TextLabel", {
                 Parent = DropdownFrame,
                 Text = DropdownName,
                 TextColor3 = Theme.Text,
@@ -2024,7 +2283,7 @@ local function CreatePage(PageConfig)
                 BorderSizePixel = 0,
             })
             
-            Create("TextLabel", {
+            local KeybindLabel = Create("TextLabel", {
                 Parent = KeybindFrame,
                 Text = KeybindName,
                 TextColor3 = Theme.Text,
@@ -2129,7 +2388,7 @@ local function CreatePage(PageConfig)
                 BorderSizePixel = 0,
             })
             
-            Create("TextLabel", {
+            local TextboxLabel = Create("TextLabel", {
                 Parent = TextboxFrame,
                 Text = TextboxName,
                 TextColor3 = Theme.Text,
@@ -2196,7 +2455,7 @@ local function CreatePage(PageConfig)
                 BorderSizePixel = 0,
             })
             
-            Create("TextLabel", {
+            local ColorLabel = Create("TextLabel", {
                 Parent = ColorFrame,
                 Text = ColorpickerName,
                 TextColor3 = Theme.Text,
@@ -2552,7 +2811,7 @@ local function CreatePage(PageConfig)
                 BorderSizePixel = 0,
             })
             
-            Create("TextLabel", {
+            local ListboxLabel = Create("TextLabel", {
                 Parent = ListboxFrame,
                 Text = ListboxName,
                 TextColor3 = Theme.Text,
@@ -2725,98 +2984,6 @@ local function CreatePage(PageConfig)
     
     return PageData
 end
-
--- ==========================================
--- ===      ГЛОБАЛЬНАЯ СИСТЕМА ПЕРЕВОДА   ===
--- ==========================================
-local CurrentLanguage = "RU" -- Язык по умолчанию ("RU" или "EN")
-local RegisteredTexts = {}   -- Реестр UI-элементов для динамической смены текста
-
--- 📖 СЛОВАРЬ ПЕРЕВОДОВ 
--- (Сюда просто добавляй новые ключевые слова для будущих функций!)
-local Dictionary = {
-    ["RU"] = {
-        -- Системные и интерфейсные фразы
-        ["Search..."] = "Поиск...",
-        ["Settings"] = "Настройки",
-        ["Language"] = "Язык",
-        
-        -- Пример функций (добавляй сюда свои новые функции)
-        ["Aimbot"] = "Аимбот",
-        ["Visuals"] = "Визуалы",
-        ["ESP Enabled"] = "Включить ESP",
-        ["Gun ESP"] = "ESP Оружия",
-        ["FOV Stretch"] = "Растяжение FOV",
-        ["WalkSpeed"] = "Скорость ходьбы",
-        ["JumpPower"] = "Сила прыжка",
-        ["Noclip"] = "Ноклип",
-        ["Fling Player"] = "Флинг игрока",
-        ["Anti-Fling"] = "Анти-Флинг",
-    },
-    ["EN"] = {
-        -- System & UI phrases
-        ["Search..."] = "Search...",
-        ["Settings"] = "Settings",
-        ["Language"] = "Language",
-        
-        -- Functions
-        ["Aimbot"] = "Aimbot",
-        ["Visuals"] = "Visuals",
-        ["ESP Enabled"] = "ESP Enabled",
-        ["Gun ESP"] = "Gun ESP",
-        ["FOV Stretch"] = "FOV Stretch",
-        ["WalkSpeed"] = "WalkSpeed",
-        ["JumpPower"] = "JumpPower",
-        ["Noclip"] = "Noclip",
-        ["Fling Player"] = "Fling Player",
-        ["Anti-Fling"] = "Anti-Fling",
-    }
-}
-
--- Получение перевода по ключу
-local function GetTranslation(key)
-    if Dictionary[CurrentLanguage] and Dictionary[CurrentLanguage][key] then
-        return Dictionary[CurrentLanguage][key]
-    end
-    return key -- Если перевод не найден, выводим исходное слово
-end
-
--- Регистрация элемента интерфейса для живого обновления при смене языка
-local function RegisterText(instance, originalText, property)
-    property = property or "Text"
-    if not instance then return end
-
-    table.insert(RegisteredTexts, {
-        Instance = instance,
-        Key = originalText,
-        Property = property
-    })
-
-    instance[property] = GetTranslation(originalText)
-end
-
--- Функция смены языка для всего GUI
-local function SetLanguage(langCode)
-    if not Dictionary[langCode] then return end
-    CurrentLanguage = langCode
-
-    for _, item in ipairs(RegisteredTexts) do
-        if item.Instance and item.Instance.Parent then
-            item.Instance[item.Property] = GetTranslation(item.Key)
-        end
-    end
-end
-
--- Универсальный хелпер L()
-local function L(text, instance, property)
-    if instance then
-        RegisterText(instance, text, property)
-    end
-    return GetTranslation(text)
-end
-
--- Авто-перевод плейсхолдера поиска
-RegisterText(HeaderSearchInput, "Search...", "PlaceholderText")
 
 -- =======================================================
 -- === АВТОНОМНАЯ СИСТЕМА FLING & ANTI-FLING ===
@@ -3019,20 +3186,19 @@ end
 -- === СОЗДАНИЕ СТРАНИЦ ===
 
 -- Aimbot
-local AimbotPage = CreatePage({Name = L("Aimbot"), Icon = "100050851789190"})
-local AimbotSection = AimbotPage:CreateSection({Name = L("Aimbot")})
+local AimbotPage = CreatePage({Name = "Aimbot", Icon = "100050851789190"})
+local AimbotSection = AimbotPage:CreateSection({Name = "Aimbot Settings"})
 AimbotSection:Toggle({Name = "Enable Aimbot", Default = false})
 AimbotSection:Slider({Name = "FOV", Min = 0, Max = 360, Default = 90, Suffix = "°"})
 AimbotSection:Slider({Name = "Smoothness", Min = 0, Max = 100, Default = 50, Suffix = "%"})
 AimbotSection:Dropdown({Name = "Target", Items = {"Head", "Body", "Legs"}, Default = "Head"})
 AimbotSection:Keybind({Name = "Aimbot Key", Default = Enum.KeyCode.LeftShift})
 
--- Settings (Вкладка настроек с выбором темы, цвета, размеров GUI и языка)
-local SettingsPage = CreatePage({Name = L("Settings"), Icon = "123944728972740"})
-local SettingsSection = SettingsPage:CreateSection({Name = L("Settings"), Description = "Customize GUI appearance"})
+-- Settings (Вкладка настроек с выбором темы, цвета и изменением размера GUI)
+local SettingsPage = CreatePage({Name = "settings", Icon = "123944728972740"})
+local SettingsSection = SettingsPage:CreateSection({Name = "Theme Settings", Description = "Customize GUI colors"})
 
 local themeDropdown
-local customColorpicker
 
 themeDropdown = SettingsSection:Dropdown({
     Name = "Ui Theme",
@@ -3040,23 +3206,6 @@ themeDropdown = SettingsSection:Dropdown({
     Default = "AMOLED Black",
     Callback = function(selected)
         ApplyTheme(selected)
-    end
-})
-
-customColorpicker = SettingsSection:Colorpicker({
-    Name = "Custom Accent Color",
-    Default = Color3.fromRGB(0, 116, 224),
-    Callback = function(col)
-        local h, s, v = col:ToHSV()
-        local accentGrad = Color3.fromHSV((h + 0.05) % 1, s, v)
-
-        local currentTheme = themeDropdown and themeDropdown.Get() or "AMOLED Black"
-        if ThemesPresets[currentTheme] then
-            ThemesPresets[currentTheme].Accent = col
-            ThemesPresets[currentTheme].AccentGradient = accentGrad
-        end
-
-        ApplyTheme(currentTheme)
     end
 })
 
@@ -3096,11 +3245,11 @@ SizeSection:Slider({
 -- ==========================================
 
 -- Добавляем секцию для FOV настроек
-local FOVSection = SettingsPage:CreateSection({Name = L("FOV Stretch"), Description = "Adjust camera field of view"})
+local FOVSection = SettingsPage:CreateSection({Name = "FOV Settings", Description = "Adjust camera field of view"})
 
 -- Включение / Выключение FOV
 FOVSection:Toggle({
-    Name = L("FOV Stretch"),
+    Name = "FOV Stretch",
     Default = false,
     Callback = function(state)
         FOVEnabled = state
@@ -3124,30 +3273,52 @@ FOVSection:Slider({
     end
 })
 
--- ==========================================
--- ===    UI ЭЛЕМЕНТЫ ДЛЯ ПЕРЕКЛЮЧЕНИЯ ЯЗЫКА    ===
--- ==========================================
+-- ===================================================
+-- НАСТРОЙКА DROPDOWN ДЛЯ ВЫБОРА ЯЗЫКА
+-- ===================================================
 
--- ДРОПДАУН ВЫБОРА ЯЗЫКА
 SettingsSection:Dropdown({
-    Name = L("Language"),
+    Name = "Language / Язык",
+    Flag = "UI_Language_Select",
     Items = {"Русский", "English"},
-    Default = "Русский",
-    Callback = function(selected)
-        if selected == "Русский" then
-            SetLanguage("RU")
-        elseif selected == "English" then
-            SetLanguage("EN")
+    Default = (CurrentLanguage == "RU") and "Русский" or "English",
+    Callback = function(SelectedOption)
+        local OldLanguage = CurrentLanguage
+
+        -- Определяем новый язык
+        if SelectedOption == "Русский" then
+            CurrentLanguage = "RU"
+        elseif SelectedOption == "English" then
+            CurrentLanguage = "EN"
+        end
+
+        -- Сохраняем язык
+        if getgenv then
+            getgenv().DarkHubLanguage = CurrentLanguage
+        end
+
+        -- Если язык реально изменился, реагируем
+        if OldLanguage ~= CurrentLanguage then
+            
+            -- 1. Отправляем уведомление пользователю
+            DarkHub:Notify({
+                Title = "Language / Язык",
+                Content = t("NotifyLangChanged"),
+                Duration = 3
+            })
+
+            -- 2. Обновляем тексты в интерфейсе
+            UpdateUILanguage()
         end
     end
 })
 
 -- Visuals
-local VisualsPage = CreatePage({Name = L("Visuals"), Icon = "122669828593160"})
+local VisualsPage = CreatePage({Name = "Visuals", Icon = "122669828593160"})
 local VisualsSection = VisualsPage:CreateSection({Name = "Players"})
 
 VisualsSection:Toggle({
-    Name = L("ESP Enabled"),
+    Name = "Player ESP",
     Default = true,
     Callback = function(state)
         _G.ESPEnabled = state
@@ -3155,7 +3326,7 @@ VisualsSection:Toggle({
 })
 
 VisualsSection:Toggle({
-    Name = L("Gun ESP"),
+    Name = "ESP Gun",
     Default = false,
     Callback = function(state)
         _G.GunESPEnabled = state
@@ -3171,15 +3342,15 @@ MovementSection:Slider({Name = "Strafe Speed", Min = 0, Max = 100, Default = 60,
 
 -- === ВКЛАДКА FLING PLAYERS ===
 local FlingIcon = "110220024060608"
-local FlingPage = CreatePage({Name = L("Fling Player"), Icon = FlingIcon})
+local FlingPage = CreatePage({Name = "Fling Players", Icon = FlingIcon})
 local FlingSection = FlingPage:CreateSection({
-    Name = L("Fling Player"), 
+    Name = "Fling Players", 
     Description = "Tap a player to fling them",
     Icon = FlingIcon
 })
 
 FlingSection:Toggle({
-    Name = L("Anti-Fling"),
+    Name = "Anti-Fling Protection",
     Default = false,
     Callback = function(state)
         toggleAntiFling(state)
@@ -3361,6 +3532,9 @@ end
 task.defer(function()
     task.wait(0.1)
     UpdateActiveIndicator(true)
+    
+    -- Обновляем язык после загрузки всех страниц
+    UpdateUILanguage()
 end)
 
 -- === ЗАГОЛОВОК-ТУГГЛ (DARK HUB) С ИНДИКАТОРОМ СОСТОЯНИЯ И АНИМАЦИЕЙ ===
