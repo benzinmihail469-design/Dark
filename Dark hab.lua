@@ -2721,7 +2721,8 @@ local function CreatePage(PageConfig)
                 end
             end)
             
-            ColorButton.MouseButton1Down:Connect(function() SetOpen(not IsOpen) end)
+            
+                        ColorButton.MouseButton1Down:Connect(function() SetOpen(not IsOpen) end)
             
             UserInputService.InputBegan:Connect(function(Input)
                 if IsOpen and (Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch) then
@@ -2738,23 +2739,22 @@ local function CreatePage(PageConfig)
                 end
             end)
             
-            SyncCursors()
-            UpdateColor()
+            if Default then SyncCursors() UpdateColor() end
             
-            SetFlags[Flag] = function(Val)
-                if typeof(Val) == "Color3" then
-                    local H, S, V = Val:ToHSV()
+            SetFlags[Flag] = function(NewColor)
+                if typeof(NewColor) == "Color3" then
+                    local H, S, V = NewColor:ToHSV()
                     Hue, Sat, Val = H, S, V
                     SyncCursors()
                     UpdateColor()
                 end
             end
-
+            
             table.insert(SectionData.Elements, { Frame = ColorFrame, Name = ColorpickerName })
             return {
-                Set = function(Val)
-                    if typeof(Val) == "Color3" then
-                        local H, S, V = Val:ToHSV()
+                Set = function(NewColor)
+                    if typeof(NewColor) == "Color3" then
+                        local H, S, V = NewColor:ToHSV()
                         Hue, Sat, Val = H, S, V
                         SyncCursors()
                         UpdateColor()
@@ -2765,6 +2765,15 @@ local function CreatePage(PageConfig)
                 IsOpen = function() return IsOpen end,
             }
         end
+        
+        return SectionData
+    end
+    
+    return PageData
+end
+
+return DarkHub
+
         
         -- Listbox
         function SectionData:Listbox(Data)
