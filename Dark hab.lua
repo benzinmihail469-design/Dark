@@ -468,7 +468,6 @@ local Translations = {
         ["Sec_Configs"] = "Configurations",
         ["Sec_Themes"] = "Theme Settings",
         ["Sec_UISize"] = "UI Size Settings",
-        ["Sec_Font"] = "Font Settings",
         -- Элементы
         ["Toggle_ESP"] = "Enable Player ESP",
         ["Toggle_GunESP"] = "Enable Gun ESP",
@@ -483,8 +482,8 @@ local Translations = {
         ["Slider_UISize"] = "UI Size",
         ["Dropdown_Theme"] = "Select Theme",
         ["Dropdown_Language"] = "Language",
-        ["Dropdown_AimbotTarget"] = "Target",
         ["Dropdown_Font"] = "Font",
+        ["Dropdown_AimbotTarget"] = "Target",
         ["Keybind_Aimbot"] = "Aimbot Key",
         ["Btn_Rejoin"] = "Rejoin Server",
         ["Btn_ServerHop"] = "Server Hop",
@@ -517,7 +516,6 @@ local Translations = {
         ["Sec_Configs"] = "Конфигурации",
         ["Sec_Themes"] = "Оформление",
         ["Sec_UISize"] = "Размер Интерфейса",
-        ["Sec_Font"] = "Настройки Шрифта",
         -- Элементы
         ["Toggle_ESP"] = "Включить ESP Игроков",
         ["Toggle_GunESP"] = "Включить ESP Оружия",
@@ -532,8 +530,8 @@ local Translations = {
         ["Slider_UISize"] = "Размер GUI",
         ["Dropdown_Theme"] = "Выбор темы",
         ["Dropdown_Language"] = "Язык",
-        ["Dropdown_AimbotTarget"] = "Цель",
         ["Dropdown_Font"] = "Шрифт",
+        ["Dropdown_AimbotTarget"] = "Цель",
         ["Keybind_Aimbot"] = "Клавиша",
         ["Btn_Rejoin"] = "Перезайти на Сервер",
         ["Btn_ServerHop"] = "Сменить Сервер",
@@ -3266,9 +3264,7 @@ SettingsSection:Dropdown({
 -- НАСТРОЙКА DROPDOWN ДЛЯ ВЫБОРА ШРИФТА
 -- ===================================================
 
-local FontSection = SettingsPage:CreateSection({Name = "Font Settings", NameKey = "Sec_Font"})
-
-FontSection:Dropdown({
+SettingsSection:Dropdown({
     Name = "Font",
     NameKey = "Dropdown_Font",
     Flag = "Selected_Font",
