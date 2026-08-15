@@ -699,6 +699,7 @@ Create("TextLabel", {
     Name = "Title",
     Text = "Dark Hub", -- Текст фиксирован
     TextColor3 = Theme.Text,
+    BackgroundTransparency = 1, -- Скрывает белый фон заднего плана
     FontFace = FontSemiBold,
     TextSize = 12,
     Position = UDim2.new(0, 40, 0, 5),
@@ -707,13 +708,14 @@ Create("TextLabel", {
     ZIndex = 5,
 })
 
--- Подзаголовок: ВСЕГДА "Premium Cheat" (или любой другой фиксированный текст)
+-- Подзаголовок: ВСЕГДА "Premium Cheat"
 Create("TextLabel", {
     Parent = MainFrame,
     Name = "SubTitle",
     Text = "Premium Cheat", -- Текст фиксирован
     TextColor3 = Theme.Text,
     TextTransparency = 0.4,
+    BackgroundTransparency = 1, -- Скрывает белый фон заднего плана
     FontFace = FontRegular,
     TextSize = 9,
     Position = UDim2.new(0, 40, 0, 18),
