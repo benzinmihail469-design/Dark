@@ -1,8 +1,4 @@
-
- getgenv().DarkHub = {}
-local DarkHub = getgenv().DarkHub
-
-
+local DarkHub = {} -- Dark Hub UI (Pulse Hub Styled Sizes - Compact)
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -2728,10 +2724,10 @@ local function CreatePage(PageConfig)
             UserInputService.InputBegan:Connect(function(Input)
                 if IsOpen and (Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch) then
                     local mX, mY = Input.Position.X, Input.Position.Y
-                    local lPos, lSize = ColorPicker.AbsolutePosition, ColorPicker.AbsoluteSize
+                    local cPos, cSize = ColorPicker.AbsolutePosition, ColorPicker.AbsoluteSize
                     local bPos, bSize = ColorButton.AbsolutePosition, ColorButton.AbsoluteSize
 
-                    local inPicker = (mX >= lPos.X and mX <= lPos.X + lSize.X and mY >= lPos.Y and mY <= lPos.Y + lSize.Y)
+                    local inPicker = (mX >= cPos.X and mX <= cPos.X + cSize.X and mY >= cPos.Y and mY <= cPos.Y + cSize.Y)
                     local inBtn = (mX >= bPos.X and mX <= bPos.X + bSize.X and mY >= bPos.Y and mY <= bPos.Y + bSize.Y)
 
                     if not inPicker and not inBtn then
@@ -2743,17 +2739,29 @@ local function CreatePage(PageConfig)
             SyncCursors()
             UpdateColor()
             
-            SetFlags[Flag] = function(NewColor)
-                if type(NewColor) == "Color3" then
-                    local H, S, V = NewColor:ToHSV()
+            SetFlags[Flag] = function(Val)
+                if typeof(Val) == "Color3" then
+                    local H, S, V = Val:ToHSV()
                     Hue, Sat, Val = H, S, V
                     SyncCursors()
                     UpdateColor()
                 end
             end
-            
+
             table.insert(SectionData.Elements, { Frame = ColorFrame, Name = ColorpickerName })
-            return { Set = SetFlags[Flag], Get = function() return Color end, SetOpen = SetOpen, IsOpen = function() return IsOpen end }
+            return {
+                Set = function(Val)
+                    if typeof(Val) == "Color3" then
+                        local H, S, V = Val:ToHSV()
+                        Hue, Sat, Val = H, S, V
+                        SyncCursors()
+                        UpdateColor()
+                    end
+                end,
+                Get = function() return Color end,
+                SetOpen = SetOpen,
+                IsOpen = function() return IsOpen end,
+            }
         end
         
         -- Listbox
