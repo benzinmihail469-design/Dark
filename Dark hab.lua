@@ -1,4 +1,6 @@
-local DarkHub = {} -- Dark Hub UI (Pulse Hub Styled Sizes - Compact)
+getgenv().DarkHub = {}
+local DarkHub = getgenv().DarkHub
+
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
