@@ -941,19 +941,108 @@ local ArrowIcon = Create("ImageLabel", {
 })
 Create("UICorner", { Parent = ArrowIcon, CornerRadius = UDim.new(0, 3) })
 
--- ИНДИКАТОР АКТИВНОЙ ВКЛАДКИ (БЕЛАЯ ПОЛОСКА)
+-- ИНДИКАТОР АКТИВНОЙ ВКЛАДКИ (ОТКЛЮЧЕН)
 local ActiveIndicator = Create("Frame", {
     Parent = MainFrame,
-    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-    Size = UDim2.new(0, 3, 0, 19),
-    AnchorPoint = Vector2.new(0, 0.5),
-    Position = UDim2.new(0, 6, 0, 0),
     Visible = false,
-    BorderSizePixel = 0,
-    ZIndex = 10,
 })
 
-Create("UICorner", { Parent = ActiveIndicator, CornerRadius = UDim.new(1, 0) })
+-- Исправленное обновление позиции белой полоски
+local function UpdateActiveIndicator(instant)
+    if not CurrentPage or not CurrentPage.TabButton then return end
+    local TabButton = CurrentPage.TabButton
+    -- Проверка: если UI еще не отрисовался или позиция выше шапки — не показываем
+    if TabButton.AbsoluteSize.Y <= 0 or MainFrame.AbsoluteSize.Y <= 0 then return end
+    local TargetY = TabButton.AbsolutePosition.Y - MainFrame.AbsolutePosition.Y + (TabButton.AbsoluteSize.Y / 2)
+    -- Не даем полоске заходить в область заголовка (HeaderHeight)
+    if TargetY < HeaderHeight then
+        ActiveIndicator.Visible = false
+        return
+    end
+    local TargetPos = UDim2.new(0, 6, 0, TargetY)
+    if not ActiveIndicator.Visible then
+        ActiveIndicator.Position = TargetPos
+        ActiveIndicator.Visible = true
+    elseif instant then
+        ActiveIndicator.Position = TargetPos
+    else
+        CreateTween(ActiveIndicator, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+            Position = TargetPos
+        })
+    end
+end
+
+LeftTabs:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+    UpdateActiveIndicator(true)
+end)
+
+MainFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+    UpdateActiveIndicator(true)
+end)
+
+-- Глобальная система поиска
+local function GlobalSearch(Query)
+    local CleanQuery = CleanString(Query)
+
+    if CleanQuery == "" then
+        GlobalSearchFrame.Visible = false
+        
+        for _, Page in ipairs(Pages) do
+            for _, Section in ipairs(Page.Sections) do
+                Section.Frame.Parent = Section.OriginalParent
+                Section.Frame.Visible = true
+                for _, Element in ipairs(Section.Elements) do
+                    if Element.Frame then
+                        Element.Frame.Visible = true
+                    end
+                end
+            end
+        end
+
+        if CurrentPage then
+            CurrentPage.Frame.Visible = true
+        end
+    else
+        if CurrentPage then
+            CurrentPage.Frame.Visible = false
+        end
+        GlobalSearchFrame.Visible = true
+
+        for _, Page in ipairs(Pages) do
+            for _, Section in ipairs(Page.Sections) do
+                local CleanSectionName = CleanString(Section.Name)
+                local SectionMatch = (CleanSectionName ~= "") and (string.find(CleanSectionName, CleanQuery, 1, true) ~= nil)
+                local HasAnyElementMatch = false
+
+                for _, Element in ipairs(Section.Elements) do
+                    local CleanElementName = CleanString(Element.Name)
+                    local ElementMatch = (CleanElementName ~= "") and (string.find(CleanElementName, CleanQuery, 1, true) ~= nil)
+                    local IsVisible = SectionMatch or ElementMatch
+
+                    if Element.Frame then
+                        Element.Frame.Visible = IsVisible
+                    end
+
+                    if IsVisible then
+                        HasAnyElementMatch = true
+                    end
+                end
+
+                if SectionMatch or HasAnyElementMatch then
+                    Section.Frame.Parent = GlobalSearchContent
+                    Section.Frame.Visible = true
+                else
+                    Section.Frame.Visible = false
+                    Section.Frame.Parent = Section.OriginalParent
+                end
+            end
+        end
+    end
+end
+
+HeaderSearchInput:GetPropertyChangedSignal("Text"):Connect(function()
+    GlobalSearch(HeaderSearchInput.Text)
+end)
 
 -- Контентная зона
 local Content = Create("Frame", {
@@ -1089,164 +1178,9 @@ local function ApplyTheme(themeName)
     ApplyAccentColor(Theme.Accent, Theme.AccentGradient)
 end
 
--- Обновление позиции белой полоски
-local function UpdateActiveIndicator(instant)
-    if not CurrentPage or not CurrentPage.TabButton then return end
-    local TabButton = CurrentPage.TabButton
-    if TabButton.AbsoluteSize.Y == 0 or MainFrame.AbsoluteSize.Y == 0 then return end
-
-    local TargetY = TabButton.AbsolutePosition.Y - MainFrame.AbsolutePosition.Y + (TabButton.AbsoluteSize.Y / 2)
-    local TargetPos = UDim2.new(0, 6, 0, TargetY)
-
-    if not ActiveIndicator.Visible then
-        ActiveIndicator.Position = TargetPos
-        ActiveIndicator.Visible = true
-    elseif instant then
-        ActiveIndicator.Position = TargetPos
-    else
-        CreateTween(ActiveIndicator, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-            Position = TargetPos
-        })
-    end
-end
-
-LeftTabs:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
-    UpdateActiveIndicator(true)
-end)
-
-MainFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
-    UpdateActiveIndicator(true)
-end)
-
--- Глобальная система поиска
-local function GlobalSearch(Query)
-    local CleanQuery = CleanString(Query)
-
-    if CleanQuery == "" then
-        GlobalSearchFrame.Visible = false
-        
-        for _, Page in ipairs(Pages) do
-            for _, Section in ipairs(Page.Sections) do
-                Section.Frame.Parent = Section.OriginalParent
-                Section.Frame.Visible = true
-                for _, Element in ipairs(Section.Elements) do
-                    if Element.Frame then
-                        Element.Frame.Visible = true
-                    end
-                end
-            end
-        end
-
-        if CurrentPage then
-            CurrentPage.Frame.Visible = true
-        end
-    else
-        if CurrentPage then
-            CurrentPage.Frame.Visible = false
-        end
-        GlobalSearchFrame.Visible = true
-
-        for _, Page in ipairs(Pages) do
-            for _, Section in ipairs(Page.Sections) do
-                local CleanSectionName = CleanString(Section.Name)
-                local SectionMatch = (CleanSectionName ~= "") and (string.find(CleanSectionName, CleanQuery, 1, true) ~= nil)
-                local HasAnyElementMatch = false
-
-                for _, Element in ipairs(Section.Elements) do
-                    local CleanElementName = CleanString(Element.Name)
-                    local ElementMatch = (CleanElementName ~= "") and (string.find(CleanElementName, CleanQuery, 1, true) ~= nil)
-                    local IsVisible = SectionMatch or ElementMatch
-
-                    if Element.Frame then
-                        Element.Frame.Visible = IsVisible
-                    end
-
-                    if IsVisible then
-                        HasAnyElementMatch = true
-                    end
-                end
-
-                if SectionMatch or HasAnyElementMatch then
-                    Section.Frame.Parent = GlobalSearchContent
-                    Section.Frame.Visible = true
-                else
-                    Section.Frame.Visible = false
-                    Section.Frame.Parent = Section.OriginalParent
-                end
-            end
-        end
-    end
-end
-
-HeaderSearchInput:GetPropertyChangedSignal("Text"):Connect(function()
-    GlobalSearch(HeaderSearchInput.Text)
-end)
-
--- Функция для уведомлений
+-- Выключение системы уведомлений
 function DarkHub:Notify(Data)
-    local Title = Data.Title or "Notification"
-    local Content = Data.Content or ""
-    local Duration = Data.Duration or 3
-    
-    local Notification = Create("Frame", {
-        Parent = NotificationHolder,
-        BackgroundColor3 = Theme.Background,
-        BackgroundTransparency = 0.1,
-        Size = UDim2.new(0, 200, 0, 40),
-        BorderSizePixel = 0,
-        AutomaticSize = Enum.AutomaticSize.X,
-        ClipsDescendants = true,
-        LayoutOrder = 1,
-    })
-    
-    Create("UICorner", { Parent = Notification, CornerRadius = UDim.new(0, 6) })
-    Create("UIStroke", { Parent = Notification, Color = Theme.Outline, Thickness = 1 })
-    
-    local TitleLabel = Create("TextLabel", {
-        Parent = Notification,
-        Text = Title,
-        TextColor3 = Theme.Text,
-        BackgroundTransparency = 1,
-        FontFace = FontSemiBold,
-        TextSize = 11,
-        Position = UDim2.new(0, 8, 0, 4),
-        Size = UDim2.new(1, -16, 0, 14),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 2,
-    })
-    
-    local ContentLabel = Create("TextLabel", {
-        Parent = Notification,
-        Text = Content,
-        TextColor3 = Theme.Text,
-        TextTransparency = 0.5,
-        BackgroundTransparency = 1,
-        FontFace = FontRegular,
-        TextSize = 10,
-        Position = UDim2.new(0, 8, 0, 20),
-        Size = UDim2.new(1, -16, 0, 14),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 2,
-    })
-    
-    local AccentBar = Create("Frame", {
-        Parent = Notification,
-        BackgroundColor3 = Theme.Accent,
-        Size = UDim2.new(0, 2, 1, 0),
-        Position = UDim2.new(0, 0, 0, 0),
-        BorderSizePixel = 0,
-        ZIndex = 2,
-    })
-    
-    task.spawn(function()
-        task.wait(Duration)
-        CreateTween(Notification, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            BackgroundTransparency = 1,
-            Position = UDim2.new(0, 0, 0, -50),
-        })
-        task.wait(0.3)
-        Notification:Destroy()
-    end)
+    -- Уведомления отключены
 end
 
 -- Страницы
