@@ -20,6 +20,36 @@ _G.ESPEnabled = true
 _G.GunESPEnabled = false
 
 -- ==========================================
+-- ===        СИСТЕМА СМЕНЫ ШРИФТОВ       ===
+-- ==========================================
+local AvailableFonts = {
+    ["Source Sans"] = Enum.Font.SourceSans,
+    ["Gotham"]      = Enum.Font.Gotham,
+    ["Roboto"]      = Enum.Font.Roboto,
+    ["Ubuntu"]      = Enum.Font.Ubuntu,
+    ["Code"]        = Enum.Font.Code,
+    ["Fredoka One"] = Enum.Font.FredokaOne,
+    ["Arcade"]      = Enum.Font.Arcade,
+    ["Fantasy"]     = Enum.Font.Fantasy
+}
+
+local CurrentFont = Enum.Font.SourceSans
+
+-- Функция, которая находит абсолютно все тексты в GUI и меняет их шрифт
+local function UpdateUIFont(fontEnum)
+    CurrentFont = fontEnum
+    -- Определяем главный контейнер GUI
+    local targetGui = Holder or MainFrame or CoreGui:FindFirstChild("DarkHub")
+    if targetGui then
+        for _, obj in ipairs(targetGui:GetDescendants()) do
+            if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                obj.Font = fontEnum
+            end
+        end
+    end
+end
+
+-- ==========================================
 -- ===  ЛОГИКА RENDER / FOV STRETCH      ===
 -- ==========================================
 local FOVEnabled = false
@@ -417,30 +447,8 @@ local ThemesPresets = {
 }
 
 -- Шрифты
-local FontsPresets = {
-    ["Fredoka One"] = Enum.Font.FredokaOne,
-    ["Gotham"] = Enum.Font.Gotham,
-    ["Gotham Bold"] = Enum.Font.GothamBold,
-    ["Roboto"] = Enum.Font.Roboto,
-    ["Source Sans"] = Enum.Font.SourceSans,
-    ["Ubuntu"] = Enum.Font.Ubuntu,
-    ["Arial"] = Enum.Font.Arial,
-}
-
 local FontSemiBold = Font.fromEnum(Enum.Font.FredokaOne)
 local FontRegular = Font.fromEnum(Enum.Font.FredokaOne)
-
-local function ApplyFont(fontName)
-    local enumFont = FontsPresets[fontName] or Enum.Font.FredokaOne
-    FontRegular = Font.fromEnum(enumFont)
-    FontSemiBold = Font.fromEnum(enumFont)
-
-    for _, desc in ipairs(Holder:GetDescendants()) do
-        if desc:IsA("TextLabel") or desc:IsA("TextBox") or desc:IsA("TextButton") then
-            desc.FontFace = FontRegular
-        end
-    end
-end
 
 -- ==========================================
 -- === СИСТЕМА ЛОКАЛИЗАЦИИ / Localizations ===
@@ -482,7 +490,6 @@ local Translations = {
         ["Slider_UISize"] = "UI Size",
         ["Dropdown_Theme"] = "Select Theme",
         ["Dropdown_Language"] = "Language",
-        ["Dropdown_Font"] = "Font",
         ["Dropdown_AimbotTarget"] = "Target",
         ["Keybind_Aimbot"] = "Aimbot Key",
         ["Btn_Rejoin"] = "Rejoin Server",
@@ -530,7 +537,6 @@ local Translations = {
         ["Slider_UISize"] = "Размер GUI",
         ["Dropdown_Theme"] = "Выбор темы",
         ["Dropdown_Language"] = "Язык",
-        ["Dropdown_Font"] = "Шрифт",
         ["Dropdown_AimbotTarget"] = "Цель",
         ["Keybind_Aimbot"] = "Клавиша",
         ["Btn_Rejoin"] = "Перезайти на Сервер",
@@ -3264,14 +3270,16 @@ SettingsSection:Dropdown({
 -- НАСТРОЙКА DROPDOWN ДЛЯ ВЫБОРА ШРИФТА
 -- ===================================================
 
+-- Дропдаун выбора шрифта
 SettingsSection:Dropdown({
-    Name = "Font",
-    NameKey = "Dropdown_Font",
-    Flag = "Selected_Font",
-    Items = {"Fredoka One", "Gotham", "Gotham Bold", "Roboto", "Source Sans", "Ubuntu", "Arial"},
-    Default = "Fredoka One",
+    Name = "UI Font / Шрифт UI",
+    Items = {"Source Sans", "Gotham", "Roboto", "Ubuntu", "Code", "Fredoka One", "Arcade", "Fantasy"},
+    Default = "Source Sans",
     Callback = function(selectedFont)
-        ApplyFont(selectedFont)
+        local fontEnum = AvailableFonts[selectedFont]
+        if fontEnum then
+            UpdateUIFont(fontEnum)
+        end
     end
 })
 
