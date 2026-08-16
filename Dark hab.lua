@@ -351,22 +351,18 @@ local function CreateTween(Instance, Info, Goal)
     return Tween
 end
 
--- === ИСПРАВЛЕННАЯ ФУНКЦИЯ РЕГИСТРА И СИМВОЛОВ ===
-local function LowerUTF8(str)
+-- Безопасное приведение к нижнему регистру для UTF-8 (RU / EN)
+local function SafeLower(str)
     if not str then return "" end
-    str = tostring(str)
-    local upper = {"А","Б","В","Г","Д","Е","Ё","Ж","З","И","Й","К","Л","М","Н","О","П","Р","С","Т","У","Ф","Х","Ц","Ч","Ш","Щ","Ъ","Ы","Ь","Э","Ю","Я"}
-    local lower = {"а","б","в","г","д","е","ё","ж","з","и","й","к","л","м","н","о","п","р","с","т","у","ф","х","ц","ч","ш","щ","ъ","ы","ь","э","ю","я"}
-    for i = 1, #upper do
-        str = string.gsub(str, upper[i], lower[i])
-    end
-    return str:lower()
+    local success, result = pcall(function() return utf8.lower(tostring(str)) end)
+    return success and result or tostring(str):lower()
 end
 
+-- Очистка строки от лишних пробелов без повреждения UTF-8 байтов кириллицы
 local function CleanString(Str)
     if not Str then return "" end
-    local Cleaned = LowerUTF8(Str)
-    Cleaned = string.gsub(Cleaned, "[%s%p]", "")
+    local Cleaned = SafeLower(Str)
+    Cleaned = string.gsub(Cleaned, "%s+", "")
     return Cleaned
 end
 
@@ -1056,15 +1052,17 @@ local function GlobalSearch(Query)
         
         for _, Page in ipairs(Pages) do
             for _, Section in ipairs(Page.Sections) do
-                local secText = Section.Label and Section.Label.Text or Section.Name
-                local CleanSectionName = CleanString(Section.Name) .. CleanString(secText)
-                local SectionMatch = (CleanSectionName ~= "") and (string.find(CleanSectionName, CleanQuery, 1, true) ~= nil)
+                local secLabelText = Section.Label and Section.Label.Text or ""
+                local CleanSecName = CleanString(Section.Name)
+                local CleanSecLabel = CleanString(secLabelText)
+                local SectionMatch = (CleanSecName ~= "" and string.find(CleanSecName, CleanQuery, 1, true) ~= nil) or (CleanSecLabel ~= "" and string.find(CleanSecLabel, CleanQuery, 1, true) ~= nil)
                 local HasAnyElementMatch = false
 
                 for _, Element in ipairs(Section.Elements) do
-                    local elemText = Element.Label and Element.Label.Text or Element.Name
-                    local CleanElementName = CleanString(Element.Name) .. CleanString(elemText)
-                    local ElementMatch = (CleanElementName ~= "") and (string.find(CleanElementName, CleanQuery, 1, true) ~= nil)
+                    local elemLabelText = Element.Label and Element.Label.Text or ""
+                    local CleanElemName = CleanString(Element.Name)
+                    local CleanElemLabel = CleanString(elemLabelText)
+                    local ElementMatch = (CleanElemName ~= "" and string.find(CleanElemName, CleanQuery, 1, true) ~= nil) or (CleanElemLabel ~= "" and string.find(CleanElemLabel, CleanQuery, 1, true) ~= nil)
                     
                     local IsVisible = SectionMatch or ElementMatch
                     if Element.Frame then
