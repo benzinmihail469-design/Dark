@@ -1,6 +1,7 @@
 getgenv().DarkHub = {}
 local DarkHub = getgenv().DarkHub
 
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -54,7 +55,7 @@ end
 -- ===  ЛОГИКА RENDER / FOV STRETCH      ===
 -- ==========================================
 local FOVEnabled = false
-local FOVValue = 70
+local FOVValue = 70 -- Значение по умолчанию (70 = стандартный FOV)
 local originalFOV = Camera.FieldOfView
 local fovConnection = nil
 
@@ -63,16 +64,19 @@ local function updateFOV()
         if not fovConnection then
             fovConnection = RunService.RenderStepped:Connect(function()
                 if FOVEnabled and Camera then
+                    -- Плавно изменяем FOV для эффекта "растянутого" экрана
                     Camera.FieldOfView = FOVValue
                 end
             end)
         end
+        -- Применяем сразу
         Camera.FieldOfView = FOVValue
     else
         if fovConnection then
             fovConnection:Disconnect()
             fovConnection = nil
         end
+        -- Возвращаем стандартный FOV
         Camera.FieldOfView = originalFOV
     end
 end
@@ -107,6 +111,7 @@ local function getMurderer()
         if p ~= lp then
             local backpack = p:FindFirstChild('Backpack')
             local char = p.Character
+
             if backpack and backpack:FindFirstChild('Knife') then
                 return p
             end
@@ -123,6 +128,7 @@ local function getMurderer()
             end
         end
     end
+
     return nil
 end
 
@@ -130,11 +136,13 @@ local function getSheriff()
     if workspace:FindFirstChild('GunDrop', true) then
         return nil
     end
+
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= lp and p.Character then
             local backpack = p:FindFirstChild('Backpack')
             local char = p.Character
             local hasGun = char:FindFirstChild('Gun') or (backpack and backpack:FindFirstChild('Gun'))
+
             if hasGun then
                 return p
             end
@@ -148,26 +156,8 @@ local function getSheriff()
             end
         end
     end
+
     return nil
-end
-
--- === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ОЧИСТКИ И НИЖНЕГО РЕГИСТРА (С ПОДДЕРЖКОЙ КИРИЛЛИЦЫ) ===
-local function LowerUTF8(str)
-    if not str then return "" end
-    str = tostring(str):lower()
-    local upper = {"А","Б","В","Г","Д","Е","Ё","Ж","З","И","Й","К","Л","М","Н","О","П","Р","С","Т","У","Ф","Х","Ц","Ч","Ш","Щ","Ъ","Ы","Ь","Э","Ю","Я"}
-    local lower = {"а","б","в","г","д","е","ё","ж","з","и","й","к","л","м","н","о","п","р","с","т","у","ф","х","ц","ч","ш","щ","ъ","ы","ь","э","ю","я"}
-    for i = 1, #upper do
-        str = string.gsub(str, upper[i], lower[i])
-    end
-    return str
-end
-
-local function CleanString(Str)
-    if not Str then return "" end
-    local Cleaned = LowerUTF8(Str)
-    Cleaned = string.gsub(Cleaned, "[%s%p]", "")
-    return Cleaned
 end
 
 -- === ОБНОВЛЕННАЯ СИСТЕМА ESP ИГРОКОВ ===
@@ -213,19 +203,24 @@ local function applyPlayerESP(p)
                 if _G.ESPEnabled then
                     highlight.Enabled = true
                     bill.Enabled = true
+
                     local roleName, roleColor = getPlayerRoleInfo(p)
+
                     local distance = 0
                     if Camera and head then
                         distance = math.floor((head.Position - Camera.CFrame.Position).Magnitude)
                     end
+
                     highlight.FillColor = roleColor
                     highlight.OutlineColor = roleColor
+
                     label.TextColor3 = roleColor
                     label.Text = string.format("[%s]\n%s\n[%dm]", roleName, p.DisplayName, distance)
                 else
                     highlight.Enabled = false
                     bill.Enabled = false
                 end
+
                 task.wait(0.15)
             end
         end)
@@ -242,7 +237,7 @@ for _, player in pairs(Players:GetPlayers()) do
 end
 Players.PlayerAdded:Connect(applyPlayerESP)
 
--- === СИСТЕМА ESP GUN ===
+-- === СИСТЕМА ESP GUN (ВЫПАВШЕЕ ОРУЖИЕ) ===
 local function applyGunESP(gun)
     if not gun then return end
     if gun:FindFirstChild("ExodusGunESP") then return end
@@ -313,6 +308,7 @@ task.spawn(function()
                 return remote:InvokeServer()
             end
         end)
+
         if success and type(data) == 'table' then
             roleCache = data
         end
@@ -355,7 +351,26 @@ local function CreateTween(Instance, Info, Goal)
     return Tween
 end
 
--- Цветовая схема
+-- === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ОЧИСТКИ И НИЖНЕГО РЕГИСТРА (С ПОДДЕРЖКОЙ КИРИЛЛИЦЫ) ===
+local function LowerUTF8(str)
+    if not str then return "" end
+    str = tostring(str):lower()
+    local upper = {"А","Б","В","Г","Д","Е","Ё","Ж","З","И","Й","К","Л","М","Н","О","П","Р","С","Т","У","Ф","Х","Ц","Ч","Ш","Щ","Ъ","Ы","Ь","Э","Ю","Я"}
+    local lower = {"а","б","в","г","д","е","ё","ж","з","и","й","к","л","м","н","о","п","р","с","т","у","ф","х","ц","ч","ш","щ","ъ","ы","ь","э","ю","я"}
+    for i = 1, #upper do
+        str = string.gsub(str, upper[i], lower[i])
+    end
+    return str
+end
+
+local function CleanString(Str)
+    if not Str then return "" end
+    local Cleaned = LowerUTF8(Str)
+    Cleaned = string.gsub(Cleaned, "[%s%p]", "")
+    return Cleaned
+end
+
+-- Цветовая схема (По умолчанию AMOLED Black)
 local Theme = {
     Background = Color3.fromRGB(0, 0, 0),
     Background2 = Color3.fromRGB(5, 5, 5),
@@ -369,6 +384,7 @@ local Theme = {
     AccentGradient = Color3.fromRGB(0, 195, 255),
 }
 
+-- ПРЕСЕТЫ ТЕМ ДЛЯ UI
 local ThemesPresets = {
     ["AMOLED Black"] = {
         Background = Color3.fromRGB(0, 0, 0),
@@ -444,15 +460,17 @@ local ThemesPresets = {
     },
 }
 
+-- Шрифты
 local FontSemiBold = Font.fromEnum(Enum.Font.FredokaOne)
 local FontRegular = Font.fromEnum(Enum.Font.FredokaOne)
 
 -- ==========================================
--- === СИСТЕМА ЛОКАЛИЗАЦИИ ===
+-- === СИСТЕМА ЛОКАЛИЗАЦИИ / Localizations ===
 -- ==========================================
 local Translations = {
     ["EN"] = {
         ["SearchPlaceholder"] = "Search...",
+        -- Табы
         ["Tab_Main"] = "Main",
         ["Tab_Aimbot"] = "Aimbot",
         ["Tab_Visuals"] = "Visuals",
@@ -461,6 +479,7 @@ local Translations = {
         ["Tab_Server"] = "Server",
         ["Tab_Configs"] = "Configs",
         ["Tab_Settings"] = "Settings",
+        -- Секции
         ["Sec_Aimbot"] = "Aimbot Settings",
         ["Sec_ESP"] = "ESP Settings",
         ["Sec_FOV"] = "Render & Camera",
@@ -471,6 +490,7 @@ local Translations = {
         ["Sec_Configs"] = "Configurations",
         ["Sec_Themes"] = "Theme Settings",
         ["Sec_UISize"] = "UI Size Settings",
+        -- Элементы
         ["Toggle_ESP"] = "Enable Player ESP",
         ["Toggle_GunESP"] = "Enable Gun ESP",
         ["Toggle_FOV"] = "Enable FOV Stretch",
@@ -498,6 +518,7 @@ local Translations = {
     },
     ["RU"] = {
         ["SearchPlaceholder"] = "Поиск...",
+        -- Табы
         ["Tab_Main"] = "Главная",
         ["Tab_Aimbot"] = "Аимбот",
         ["Tab_Visuals"] = "Визуалы",
@@ -506,6 +527,7 @@ local Translations = {
         ["Tab_Server"] = "Сервер",
         ["Tab_Configs"] = "Конфиги",
         ["Tab_Settings"] = "Настройки",
+        -- Секции
         ["Sec_Aimbot"] = "Настройки Аимбота",
         ["Sec_ESP"] = "Настройки ESP",
         ["Sec_FOV"] = "Рендер и Камера",
@@ -516,6 +538,7 @@ local Translations = {
         ["Sec_Configs"] = "Конфигурации",
         ["Sec_Themes"] = "Оформление",
         ["Sec_UISize"] = "Размер Интерфейса",
+        -- Элементы
         ["Toggle_ESP"] = "Включить ESP Игроков",
         ["Toggle_GunESP"] = "Включить ESP Оружия",
         ["Toggle_FOV"] = "Включить Растяг FOV",
@@ -546,13 +569,15 @@ local Translations = {
 local CurrentLanguage = "EN"
 local LocalizedRegistry = {}
 
+-- Получение текста по ключу
 local function GetText(key)
     if Translations[CurrentLanguage] and Translations[CurrentLanguage][key] then
         return Translations[CurrentLanguage][key]
     end
-    return key
+    return key -- Возвращает ключ, если перевод не найден
 end
 
+-- Регистрация элемента для динамического перевода
 local function RegisterTranslation(instance, key, property)
     if not instance or not key then return end
     property = property or "Text"
@@ -560,6 +585,7 @@ local function RegisterTranslation(instance, key, property)
     instance[property] = GetText(key)
 end
 
+-- Переключение языка
 local function SetLanguage(lang)
     if not Translations[lang] then return end
     CurrentLanguage = lang
@@ -568,11 +594,13 @@ local function SetLanguage(lang)
             item.Instance[item.Property] = GetText(item.Key)
         end
     end
+    -- Сохраняем язык
     if getgenv then
         getgenv().DarkHubLanguage = CurrentLanguage
     end
 end
 
+-- Загружаем сохраненный язык
 local function LoadLanguage()
     local saved = getgenv and getgenv().DarkHubLanguage or nil
     if saved == "RU" or saved == "EN" then
@@ -590,6 +618,7 @@ local Holder = Create("ScreenGui", {
     ResetOnSpawn = false,
 })
 
+-- Контейнер для уведомлений
 local NotificationHolder = Create("Frame", {
     Parent = Holder,
     Name = "Notifications",
@@ -613,6 +642,7 @@ Create("UIPadding", {
     PaddingLeft = UDim.new(0, 8),
 })
 
+-- Список флагов
 local Flags = {}
 local SetFlags = {}
 
@@ -709,12 +739,13 @@ local Logo = Create("ImageLabel", {
 })
 Create("UICorner", { Parent = Logo, CornerRadius = UDim.new(0, 6) })
 
+-- Заголовок: ВСЕГДА "Dark Hub"
 Create("TextLabel", {
     Parent = MainFrame,
     Name = "Title",
-    Text = "Dark Hub",
+    Text = "Dark Hub", -- Текст фиксирован
     TextColor3 = Theme.Text,
-    BackgroundTransparency = 1,
+    BackgroundTransparency = 1, -- Скрывает белый фон заднего плана
     FontFace = FontSemiBold,
     TextSize = 12,
     Position = UDim2.new(0, 40, 0, 5),
@@ -723,13 +754,14 @@ Create("TextLabel", {
     ZIndex = 5,
 })
 
+-- Подзаголовок: ВСЕГДА "Premium Cheat"
 Create("TextLabel", {
     Parent = MainFrame,
     Name = "SubTitle",
-    Text = "Premium Cheat",
+    Text = "Premium Cheat", -- Текст фиксирован
     TextColor3 = Theme.Text,
     TextTransparency = 0.4,
-    BackgroundTransparency = 1,
+    BackgroundTransparency = 1, -- Скрывает белый фон заднего плана
     FontFace = FontRegular,
     TextSize = 9,
     Position = UDim2.new(0, 40, 0, 18),
@@ -842,7 +874,7 @@ local HeaderSearchInput = Create("TextBox", {
 })
 RegisterTranslation(HeaderSearchInput, "SearchPlaceholder", "PlaceholderText")
 
--- Левая панель вкладок
+-- Левая панель вкладок (Сайдбар)
 local LeftTabs = Create("ScrollingFrame", {
     Parent = MainFrame,
     BackgroundColor3 = Theme.Background,
@@ -957,17 +989,20 @@ local ArrowIcon = Create("ImageLabel", {
 })
 Create("UICorner", { Parent = ArrowIcon, CornerRadius = UDim.new(0, 3) })
 
--- ИНДИКАТОР АКТИВНОЙ ВКЛАДКИ
+-- ИНДИКАТОР АКТИВНОЙ ВКЛАДКИ (ОТКЛЮЧЕН)
 local ActiveIndicator = Create("Frame", {
     Parent = MainFrame,
     Visible = false,
 })
 
+-- Исправленное обновление позиции белой полоски
 local function UpdateActiveIndicator(instant)
     if not CurrentPage or not CurrentPage.TabButton then return end
     local TabButton = CurrentPage.TabButton
+    -- Проверка: если UI еще не отрисовался или позиция выше шапки — не показываем
     if TabButton.AbsoluteSize.Y <= 0 or MainFrame.AbsoluteSize.Y <= 0 then return end
     local TargetY = TabButton.AbsolutePosition.Y - MainFrame.AbsolutePosition.Y + (TabButton.AbsoluteSize.Y / 2)
+    -- Не даем полоске заходить в область заголовка (HeaderHeight)
     if TargetY < HeaderHeight then
         ActiveIndicator.Visible = false
         return
@@ -993,52 +1028,7 @@ MainFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
     UpdateActiveIndicator(true)
 end)
 
--- Контентная зона
-local Content = Create("Frame", {
-    Parent = MainFrame,
-    BackgroundColor3 = Theme.Background,
-    BackgroundTransparency = 0.5,
-    Position = UDim2.new(0, SidebarWidth, 0, HeaderHeight),
-    Size = UDim2.new(1, -SidebarWidth, 1, -HeaderHeight),
-    BorderSizePixel = 0,
-    ClipsDescendants = true,
-})
-
-Create("UICorner", { Parent = Content, CornerRadius = UDim.new(0, 10) })
-
-local GlobalSearchFrame = Create("ScrollingFrame", {
-    Parent = Content,
-    BackgroundTransparency = 1,
-    Size = UDim2.new(1, 0, 1, 0),
-    ScrollBarThickness = 3,
-    CanvasSize = UDim2.new(0, 0, 0, 0),
-    AutomaticCanvasSize = Enum.AutomaticSize.Y,
-    Visible = false,
-    BorderSizePixel = 0,
-    VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar,
-})
-
-Create("UICorner", { Parent = GlobalSearchFrame, CornerRadius = UDim.new(0, 10) })
-
-local GlobalSearchContent = Create("Frame", {
-    Parent = GlobalSearchFrame,
-    BackgroundTransparency = 1,
-    Size = UDim2.new(1, -10, 0, 0),
-    Position = UDim2.new(0, 5, 0, 5),
-    AutomaticSize = Enum.AutomaticSize.Y,
-})
-
-Create("UIListLayout", {
-    Parent = GlobalSearchContent,
-    Padding = UDim.new(0, 6),
-    SortOrder = Enum.SortOrder.LayoutOrder,
-})
-
--- Страницы
-local Pages = {}
-local CurrentPage = nil
-
--- === ГЛОБАЛЬНАЯ СИСТЕМА ПОИСКА ===
+-- Глобальная система поиска
 local function GlobalSearch(Query)
     local CleanQuery = CleanString(Query)
 
@@ -1101,6 +1091,52 @@ HeaderSearchInput:GetPropertyChangedSignal("Text"):Connect(function()
     GlobalSearch(HeaderSearchInput.Text)
 end)
 
+-- Контентная зона
+local Content = Create("Frame", {
+    Parent = MainFrame,
+    BackgroundColor3 = Theme.Background,
+    BackgroundTransparency = 0.5,
+    Position = UDim2.new(0, SidebarWidth, 0, HeaderHeight),
+    Size = UDim2.new(1, -SidebarWidth, 1, -HeaderHeight),
+    BorderSizePixel = 0,
+    ClipsDescendants = true,
+})
+
+Create("UICorner", { Parent = Content, CornerRadius = UDim.new(0, 10) })
+
+-- Контейнер для результатов глобального поиска
+local GlobalSearchFrame = Create("ScrollingFrame", {
+    Parent = Content,
+    BackgroundTransparency = 1,
+    Size = UDim2.new(1, 0, 1, 0),
+    ScrollBarThickness = 3,
+    CanvasSize = UDim2.new(0, 0, 0, 0),
+    AutomaticCanvasSize = Enum.AutomaticSize.Y,
+    Visible = false,
+    BorderSizePixel = 0,
+    VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar,
+})
+
+Create("UICorner", { Parent = GlobalSearchFrame, CornerRadius = UDim.new(0, 10) })
+
+local GlobalSearchContent = Create("Frame", {
+    Parent = GlobalSearchFrame,
+    BackgroundTransparency = 1,
+    Size = UDim2.new(1, -10, 0, 0),
+    Position = UDim2.new(0, 5, 0, 5),
+    AutomaticSize = Enum.AutomaticSize.Y,
+})
+
+Create("UIListLayout", {
+    Parent = GlobalSearchContent,
+    Padding = UDim.new(0, 6),
+    SortOrder = Enum.SortOrder.LayoutOrder,
+})
+
+-- Страницы
+local Pages = {}
+local CurrentPage = nil
+
 -- ФУНКЦИЯ ДИНАМИЧЕСКОЙ СМЕНЫ ТЕМЫ
 local isCustomAccent = false
 
@@ -1137,6 +1173,7 @@ local function ApplyAccentColor(color, gradientColor)
     end
 end
 
+-- ФУНКЦИЯ ДИНАМИЧЕСКОЙ СМЕНЫ ТЕМЫ (ФОНА, ЭЛЕМЕНТОВ И СЕКЦИЙ)
 local function ApplyTheme(themeName)
     local t = ThemesPresets[themeName]
     if not t then return end
@@ -1188,11 +1225,12 @@ local function ApplyTheme(themeName)
     ApplyAccentColor(Theme.Accent, Theme.AccentGradient)
 end
 
+-- Выключение системы уведомлений
 function DarkHub:Notify(Data)
     -- Уведомления отключены
 end
 
--- === ОБНОВЛЕННАЯ ФУНКЦИЯ СОЗДАНИЯ СТРАНИЦ ===
+-- Страницы
 local function CreatePage(PageConfig)
     local PageName = PageConfig.Name or "Page"
     local PageNameKey = PageConfig.NameKey
@@ -1240,6 +1278,35 @@ local function CreatePage(PageConfig)
         RegisterTranslation(TabLabel, PageNameKey)
     end
     
+    local DotsContainer = Create("Frame", {
+        Parent = TabButton,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -8, 0.5, 0),
+        AnchorPoint = Vector2.new(1, 0.5),
+        Size = UDim2.new(0, 3, 0, 13),
+        BorderSizePixel = 0,
+    })
+
+    Create("UIListLayout", {
+        Parent = DotsContainer,
+        Padding = UDim.new(0, 2),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+    })
+
+    for i = 1, 3 do
+        local Dot = Create("Frame", {
+            Parent = DotsContainer,
+            BackgroundColor3 = Theme.Text,
+            BackgroundTransparency = 0.6,
+            Size = UDim2.new(0, 3, 0, 3),
+            BorderSizePixel = 0,
+            LayoutOrder = i,
+        })
+        Create("UICorner", { Parent = Dot, CornerRadius = UDim.new(1, 0) })
+    end
+    
     local PageFrame = Create("ScrollingFrame", {
         Parent = Content,
         BackgroundTransparency = 1,
@@ -1278,15 +1345,29 @@ local function CreatePage(PageConfig)
         Active = false,
     }
     
-    -- Регистрация страницы в глобальном массиве
-    table.insert(Pages, PageData)
-
-    TabButton.MouseButton1Down:Connect(function()
-        PageData.SetActive(true)
+    TabButton.MouseEnter:Connect(function()
+        if not PageData.Active then
+            CreateTween(TabButton, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+                BackgroundTransparency = 0.92
+            })
+            CreateTween(TabLabel, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+                TextTransparency = 0.25
+            })
+        end
     end)
 
-    -- Функция SetActive для страницы
-    function PageData.SetActive(Active)
+    TabButton.MouseLeave:Connect(function()
+        if not PageData.Active then
+            CreateTween(TabButton, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+                BackgroundTransparency = 1
+            })
+            CreateTween(TabLabel, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+                TextTransparency = 0.5
+            })
+        end
+    end)
+    
+    local function SetActive(Active)
         if Active == PageData.Active and not GlobalSearchFrame.Visible then return end
         
         if HeaderSearchInput.Text ~= "" then
@@ -1330,7 +1411,13 @@ local function CreatePage(PageConfig)
             PageData.TabLabel.FontFace = FontRegular
         end
     end
-
+    
+    TabButton.MouseButton1Down:Connect(function()
+        SetActive(true)
+    end)
+    
+    PageData.SetActive = SetActive
+    
     local function CreateSection(SectionConfig)
         local SectionName = SectionConfig.Name or "Section"
         local SectionNameKey = SectionConfig.NameKey
@@ -1442,8 +1529,20 @@ local function CreatePage(PageConfig)
         })
         
         Create("UICorner", { Parent = SectionContent, CornerRadius = UDim.new(0, 7) })
-        Create("UIListLayout", { Parent = SectionContent, Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder })
-        Create("UIPadding", { Parent = SectionContent, PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) })
+        
+        Create("UIListLayout", {
+            Parent = SectionContent,
+            Padding = UDim.new(0, 5),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+        })
+        
+        Create("UIPadding", {
+            Parent = SectionContent,
+            PaddingTop = UDim.new(0, 6),
+            PaddingBottom = UDim.new(0, 6),
+            PaddingLeft = UDim.new(0, 6),
+            PaddingRight = UDim.new(0, 6),
+        })
         
         local SectionData = {
             Name = SectionName,
@@ -1540,10 +1639,6 @@ local function CreatePage(PageConfig)
                 RegisterTranslation(ToggleLabel, ToggleNameKey)
             end
             
-            -- Добавляем ссылку на лейбл для поиска
-            local ElementData = { Frame = ToggleFrame, Name = ToggleName, Label = ToggleLabel }
-            table.insert(SectionData.Elements, ElementData)
-            
             local Value = Default
             
             local function SetValue(NewValue)
@@ -1580,6 +1675,8 @@ local function CreatePage(PageConfig)
             SetValue(Default)
             SetFlags[Flag] = SetValue
             
+            local elementData = { Frame = ToggleFrame, Name = ToggleName, Label = ToggleLabel }
+            table.insert(SectionData.Elements, elementData)
             return { Set = SetValue, Get = function() return Value end }
         end
         
@@ -1654,9 +1751,6 @@ local function CreatePage(PageConfig)
                 Create("UICorner", { Parent = BtnIcon, CornerRadius = UDim.new(0, 3) })
             end
             
-            local ElementData = { Frame = ButtonFrame, Name = ButtonName, Label = ButtonText }
-            table.insert(SectionData.Elements, ElementData)
-            
             ButtonFrame.MouseEnter:Connect(function()
                 CreateTween(Accent, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
                     Size = UDim2.new(1, 0, 1, 0),
@@ -1682,6 +1776,8 @@ local function CreatePage(PageConfig)
                 Callback()
             end)
             
+            local elementData = { Frame = ButtonFrame, Name = ButtonName, Label = ButtonText }
+            table.insert(SectionData.Elements, elementData)
             return ButtonFrame
         end
         
@@ -1704,6 +1800,7 @@ local function CreatePage(PageConfig)
                 BorderSizePixel = 0,
             })
             
+            -- Заголовок и значение
             local LabelFrame = Create("Frame", {
                 Parent = SliderFrame,
                 BackgroundTransparency = 1,
@@ -1742,6 +1839,7 @@ local function CreatePage(PageConfig)
                 AutomaticSize = Enum.AutomaticSize.X,
             })
             
+            -- Контейнер слайдера
             local SliderTrack = Create("Frame", {
                 Parent = SliderFrame,
                 BackgroundTransparency = 1,
@@ -1751,6 +1849,7 @@ local function CreatePage(PageConfig)
                 ClipsDescendants = false,
             })
             
+            -- Фон слайдера
             local SliderBar = Create("Frame", {
                 Parent = SliderTrack,
                 Name = "ElementBG",
@@ -1764,6 +1863,7 @@ local function CreatePage(PageConfig)
             })
             Create("UICorner", { Parent = SliderBar, CornerRadius = UDim.new(1, 0) })
             
+            -- Заполнение полосы
             local SliderFill = Create("Frame", {
                 Parent = SliderBar,
                 Name = "SliderFill",
@@ -1784,6 +1884,7 @@ local function CreatePage(PageConfig)
                 Rotation = 90,
             })
             
+            -- КРУГЛЯШОК (РУЧКА)
             local Thumb = Create("Frame", {
                 Parent = SliderTrack,
                 BackgroundColor3 = Theme.Text,
@@ -1795,6 +1896,7 @@ local function CreatePage(PageConfig)
             })
             Create("UICorner", { Parent = Thumb, CornerRadius = UDim.new(1, 0) })
             
+            -- Эффекты кругляшка
             local ThumbGlow = Create("Frame", {
                 Parent = Thumb,
                 Name = "ThumbGlow",
@@ -1849,6 +1951,7 @@ local function CreatePage(PageConfig)
             })
             Create("UICorner", { Parent = ThumbHighlight, CornerRadius = UDim.new(1, 0) })
             
+            -- Зона клика и перетаскивания
             local DragButton = Create("TextButton", {
                 Parent = SliderTrack,
                 Text = "",
@@ -1861,12 +1964,10 @@ local function CreatePage(PageConfig)
                 ZIndex = 3,
             })
             
-            local ElementData = { Frame = SliderFrame, Name = SliderName, Label = NameLabel }
-            table.insert(SectionData.Elements, ElementData)
-            
             local Value = Default
             local Sliding = false
             
+            -- Обновление позиции кругляшка по Scale (в процентах)
             local function UpdateSlider(percent)
                 percent = math.clamp(percent, 0, 1)
                 Thumb.Position = UDim2.new(percent, 0, 0.5, 0)
@@ -1877,9 +1978,11 @@ local function CreatePage(PageConfig)
                 local rawValue = math.clamp(NewValue, Min, Max)
                 local multiplier = 10 ^ Decimals
                 Value = math.round(rawValue * multiplier) / multiplier
+                
                 local percent = (Max > Min) and ((Value - Min) / (Max - Min)) or 0
                 UpdateSlider(percent)
                 ValueText.Text = tostring(Value) .. Suffix
+                
                 Flags[Flag] = Value
                 Callback(Value)
             end
@@ -1888,6 +1991,7 @@ local function CreatePage(PageConfig)
                 if not SliderBar or not SliderBar.AbsoluteSize or SliderBar.AbsoluteSize.X <= 0 then return end
                 local barPos = SliderBar.AbsolutePosition.X
                 local barWidth = SliderBar.AbsoluteSize.X
+                
                 local x = (input.Position.X - barPos) / barWidth
                 local percent = math.clamp(x, 0, 1)
                 local newValue = Min + (Max - Min) * percent
@@ -1898,6 +2002,7 @@ local function CreatePage(PageConfig)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     Sliding = true
                     UpdateFromMouse(input)
+                    
                     CreateTween(Thumb, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                         Size = UDim2.new(0, 18, 0, 18),
                     })
@@ -1931,6 +2036,8 @@ local function CreatePage(PageConfig)
             SetValue(Default)
             SetFlags[Flag] = function(val) SetValue(val) end
             
+            local elementData = { Frame = SliderFrame, Name = SliderName, Label = NameLabel }
+            table.insert(SectionData.Elements, elementData)
             return {
                 Set = function(val) SetValue(val) end,
                 Get = function() return Value end,
@@ -2039,9 +2146,6 @@ local function CreatePage(PageConfig)
                 SortOrder = Enum.SortOrder.LayoutOrder,
             })
             
-            local ElementData = { Frame = DropdownFrame, Name = DropdownName, Label = DropdownLabel }
-            table.insert(SectionData.Elements, ElementData)
-            
             local Options = {}
             local Selected = nil
             local IsOpen = false
@@ -2078,7 +2182,7 @@ local function CreatePage(PageConfig)
                     ZIndex = 102,
                 })
                 
-                Create("TextLabel", {
+                local OptionLabel = Create("TextLabel", {
                     Parent = OptionButton,
                     Text = Item,
                     TextColor3 = Theme.Text,
@@ -2104,8 +2208,10 @@ local function CreatePage(PageConfig)
                     local mX, mY = Input.Position.X, Input.Position.Y
                     local lPos, lSize = DropdownList.AbsolutePosition, DropdownList.AbsoluteSize
                     local bPos, bSize = DropdownButton.AbsolutePosition, DropdownButton.AbsoluteSize
+
                     local inList = (mX >= lPos.X and mX <= lPos.X + lSize.X and mY >= lPos.Y and mY <= lPos.Y + lSize.Y)
                     local inBtn = (mX >= bPos.X and mX <= bPos.X + bSize.X and mY >= bPos.Y and mY <= bPos.Y + bSize.Y)
+
                     if not inList and not inBtn then
                         SetOpen(false)
                     end
@@ -2116,6 +2222,8 @@ local function CreatePage(PageConfig)
             
             SetFlags[Flag] = function(Val) if Options[Val] then SetValue(Val) end end
             
+            local elementData = { Frame = DropdownFrame, Name = DropdownName, Label = DropdownLabel }
+            table.insert(SectionData.Elements, elementData)
             return {
                 Set = function(Val) if Options[Val] then SetValue(Val) end end,
                 Get = function() return Selected end,
@@ -2155,9 +2263,6 @@ local function CreatePage(PageConfig)
             if KeybindNameKey then
                 RegisterTranslation(KeybindLabel, KeybindNameKey)
             end
-            
-            local ElementData = { Frame = KeybindFrame, Name = KeybindName, Label = KeybindLabel }
-            table.insert(SectionData.Elements, ElementData)
             
             local KeybindButton = Create("TextButton", {
                 Parent = KeybindFrame,
@@ -2217,6 +2322,7 @@ local function CreatePage(PageConfig)
                 if Picking then SetKey(Key) return end
                 Picking = true
                 KeybindValue.Text = "..."
+                
                 local Connection
                 Connection = UserInputService.InputBegan:Connect(function(Input)
                     if Input.UserInputType == Enum.UserInputType.Keyboard then
@@ -2229,6 +2335,8 @@ local function CreatePage(PageConfig)
             SetKey(Default)
             SetFlags[Flag] = SetKey
             
+            local elementData = { Frame = KeybindFrame, Name = KeybindName, Label = KeybindLabel }
+            table.insert(SectionData.Elements, elementData)
             return { Set = SetKey, Get = function() return Key end }
         end
         
@@ -2266,9 +2374,6 @@ local function CreatePage(PageConfig)
                 RegisterTranslation(TextboxLabel, TextboxNameKey)
             end
             
-            local ElementData = { Frame = TextboxFrame, Name = TextboxName, Label = TextboxLabel }
-            table.insert(SectionData.Elements, ElementData)
-            
             local TextboxInput = Create("TextBox", {
                 Parent = TextboxFrame,
                 Name = "ElementBG",
@@ -2304,6 +2409,8 @@ local function CreatePage(PageConfig)
             SetValue(Default)
             SetFlags[Flag] = SetValue
             
+            local elementData = { Frame = TextboxFrame, Name = TextboxName, Label = TextboxLabel }
+            table.insert(SectionData.Elements, elementData)
             return { Set = SetValue, Get = function() return Value end }
         end
         
@@ -2338,9 +2445,6 @@ local function CreatePage(PageConfig)
             if ColorpickerNameKey then
                 RegisterTranslation(ColorLabel, ColorpickerNameKey)
             end
-            
-            local ElementData = { Frame = ColorFrame, Name = ColorpickerName, Label = ColorLabel }
-            table.insert(SectionData.Elements, ElementData)
             
             local ColorButton = Create("TextButton", {
                 Parent = ColorFrame,
@@ -2635,15 +2739,18 @@ local function CreatePage(PageConfig)
                 end
             end)
             
-            ColorButton.MouseButton1Down:Connect(function() SetOpen(not IsOpen) end)
+            
+                        ColorButton.MouseButton1Down:Connect(function() SetOpen(not IsOpen) end)
             
             UserInputService.InputBegan:Connect(function(Input)
                 if IsOpen and (Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch) then
                     local mX, mY = Input.Position.X, Input.Position.Y
                     local cPos, cSize = ColorPicker.AbsolutePosition, ColorPicker.AbsoluteSize
                     local bPos, bSize = ColorButton.AbsolutePosition, ColorButton.AbsoluteSize
+
                     local inPicker = (mX >= cPos.X and mX <= cPos.X + cSize.X and mY >= cPos.Y and mY <= cPos.Y + cSize.Y)
                     local inBtn = (mX >= bPos.X and mX <= bPos.X + bSize.X and mY >= bPos.Y and mY <= bPos.Y + bSize.Y)
+
                     if not inPicker and not inBtn then
                         SetOpen(false)
                     end
@@ -2661,6 +2768,8 @@ local function CreatePage(PageConfig)
                 end
             end
             
+            local elementData = { Frame = ColorFrame, Name = ColorpickerName, Label = ColorLabel }
+            table.insert(SectionData.Elements, elementData)
             return {
                 Set = function(NewColor)
                     if typeof(NewColor) == "Color3" then
@@ -2708,9 +2817,6 @@ local function CreatePage(PageConfig)
             if ListboxNameKey then
                 RegisterTranslation(ListboxLabel, ListboxNameKey)
             end
-            
-            local ElementData = { Frame = ListboxFrame, Name = ListboxName, Label = ListboxLabel }
-            table.insert(SectionData.Elements, ElementData)
             
             local SearchBox = Create("TextBox", {
                 Parent = ListboxFrame,
@@ -2849,6 +2955,8 @@ local function CreatePage(PageConfig)
                 Callback(table.clone(Selected))
             end
             
+            local elementData = { Frame = ListboxFrame, Name = ListboxName, Label = ListboxLabel }
+            table.insert(SectionData.Elements, elementData)
             return {
                 Set = SetFlags[Flag],
                 Get = function() return table.clone(Selected) end,
@@ -2862,12 +2970,14 @@ local function CreatePage(PageConfig)
             }
         end
         
-        -- Регистрация секции в текущей странице
+        -- Регистрируем секцию в PageData
         table.insert(PageData.Sections, SectionData)
         return SectionData
     end
-
+    
     PageData.CreateSection = CreateSection
+    -- Регистрируем страницу в глобальном массиве Pages
+    table.insert(Pages, PageData)
     return PageData
 end
 
@@ -3080,7 +3190,7 @@ AimbotSection:Slider({Name = "Smoothness", NameKey = "Slider_AimbotSmooth", Min 
 AimbotSection:Dropdown({Name = "Target", NameKey = "Dropdown_AimbotTarget", Items = {"Head", "Body", "Legs"}, Default = "Head"})
 AimbotSection:Keybind({Name = "Aimbot Key", NameKey = "Keybind_Aimbot", Default = Enum.KeyCode.LeftShift})
 
--- Settings
+-- Settings (Вкладка настроек с выбором темы, цвета и изменением размера GUI)
 local SettingsPage = CreatePage({Name = "settings", NameKey = "Tab_Settings", Icon = "123944728972740"})
 local SettingsSection = SettingsPage:CreateSection({Name = "Theme Settings", NameKey = "Sec_Themes"})
 
@@ -3096,7 +3206,13 @@ themeDropdown = SettingsSection:Dropdown({
     end
 })
 
+-- Добавленная функция изменения размера GUI во вкладку Settings
 local SizeSection = SettingsPage:CreateSection({Name = "UI Size Settings", NameKey = "Sec_UISize"})
+
+-- Базовые стандартные размеры для расчёта масштаба
+local BaseWidth = MainWidth
+local BaseHeight = MainHeight
+local BaseSidebarWidth = SidebarWidth
 
 SizeSection:Slider({
     Name = "UI Size",
@@ -3107,21 +3223,29 @@ SizeSection:Slider({
     Suffix = "px",
     Decimals = 1,
     Callback = function(newWidth)
+        -- Вычисляем высоту пропорционально (сохраняя исходное соотношение сторон)
         local ratio = MainHeight / MainWidth
         local newHeight = math.floor(newWidth * ratio)
         local newSidebar = math.floor(SidebarWidth * (newWidth / MainWidth))
+
         MainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
         LeftTabs.Size = UDim2.new(0, newSidebar, 1, -(HeaderHeight + FooterHeight))
         ProfileFooter.Size = UDim2.new(0, newSidebar, 0, FooterHeight)
         Content.Position = UDim2.new(0, newSidebar, 0, HeaderHeight)
         Content.Size = UDim2.new(1, -newSidebar, 1, -HeaderHeight)
+        
         UpdateActiveIndicator(true)
     end
 })
 
--- FOV
+-- ==========================================
+-- ===    UI ЭЛЕМЕНТЫ ДЛЯ FOV STRETCH    ===
+-- ==========================================
+
+-- Добавляем секцию для FOV настроек
 local FOVSection = SettingsPage:CreateSection({Name = "FOV Settings", NameKey = "Sec_FOV"})
 
+-- Включение / Выключение FOV
 FOVSection:Toggle({
     Name = "FOV Stretch",
     NameKey = "Toggle_FOV",
@@ -3132,6 +3256,7 @@ FOVSection:Toggle({
     end
 })
 
+-- Слайдер настройки FOV (от 40 до 150 градусов)
 FOVSection:Slider({
     Name = "FOV Value",
     NameKey = "Slider_FOV",
@@ -3148,7 +3273,10 @@ FOVSection:Slider({
     end
 })
 
--- Language
+-- ===================================================
+-- НАСТРОЙКА DROPDOWN ДЛЯ ВЫБОРА ЯЗЫКА
+-- ===================================================
+
 SettingsSection:Dropdown({
     Name = "Language",
     NameKey = "Dropdown_Language",
@@ -3156,11 +3284,15 @@ SettingsSection:Dropdown({
     Default = (CurrentLanguage == "RU") and "Русский" or "English",
     Callback = function(SelectedOption)
         local OldLanguage = CurrentLanguage
+
+        -- Определяем новый язык
         if SelectedOption == "English" then
             SetLanguage("EN")
         elseif SelectedOption == "Русский" then
             SetLanguage("RU")
         end
+
+        -- Если язык реально изменился, отправляем уведомление
         if OldLanguage ~= CurrentLanguage then
             DarkHub:Notify({
                 Title = "Language / Язык",
@@ -3171,7 +3303,11 @@ SettingsSection:Dropdown({
     end
 })
 
--- Font
+-- ===================================================
+-- НАСТРОЙКА DROPDOWN ДЛЯ ВЫБОРА ШРИФТА
+-- ===================================================
+
+-- Дропдаун выбора шрифта
 SettingsSection:Dropdown({
     Name = "UI Font",
     NameKey = "DropDown_FontUi",  
@@ -3214,7 +3350,7 @@ MovementSection:Toggle({Name = "Auto Jump", NameKey = "Toggle_AutoJump", Default
 MovementSection:Toggle({Name = "Auto Strafe", NameKey = "Toggle_AutoStrafe", Default = false})
 MovementSection:Slider({Name = "Strafe Speed", NameKey = "Slider_StrafeSpeed", Min = 0, Max = 100, Default = 60, Suffix = "%"})
 
--- Fling
+-- === ВКЛАДКА FLING PLAYERS ===
 local FlingIcon = "110220024060608"
 local FlingPage = CreatePage({Name = "Fling Players", NameKey = "Tab_Fling", Icon = FlingIcon})
 local FlingSection = FlingPage:CreateSection({
@@ -3400,7 +3536,7 @@ ConfigsSection:Button({Name = "Load", NameKey = "Btn_LoadConfig", Callback = fun
     end
 end})
 
--- Активация первой страницы
+-- Активация первой страницы и привязка индикатора
 if Pages[1] then
     Pages[1]:SetActive(true)
 end
@@ -3410,7 +3546,7 @@ task.defer(function()
     UpdateActiveIndicator(true)
 end)
 
--- === ЗАГОЛОВОК-ТУГГЛ ===
+-- === ЗАГОЛОВОК-ТУГГЛ (DARK HUB) С ИНДИКАТОРОМ СОСТОЯНИЯ И АНИМАЦИЕЙ ===
 local FloatHeader = Create("TextButton", {
     Parent = Holder,
     Name = "DarkHubToggleHeader",
@@ -3497,7 +3633,7 @@ local FloatTitle = Create("TextLabel", {
     ZIndex = 128,
 })
 
--- КРУГЛЕШОК ИНДИКАТОРА
+-- === КРУГЛЕШОК ИНДИКАТОРА (ЗЕЛЕНЫЙ = GUI ОТКРЫТ, КРАСНЫЙ = GUI ЗАКРЫТ) ===
 local StatusDot = Create("Frame", {
     Parent = FloatHeader,
     Name = "StatusDot",
@@ -3522,6 +3658,7 @@ local StatusDotStroke = Create("UIStroke", {
 local function UpdateStatusDot()
     local isOpen = MainFrame.Visible
     local targetColor = isOpen and Color3.fromRGB(0, 255, 128) or Color3.fromRGB(255, 45, 45)
+
     CreateTween(StatusDot, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
         BackgroundColor3 = targetColor
     })
@@ -3532,7 +3669,7 @@ end
 
 MainFrame:GetPropertyChangedSignal("Visible"):Connect(UpdateStatusDot)
 
--- ЛОГИКА ПЕРЕТАСКИВАНИЯ
+-- === ЛОГИКА ПЕРЕТАСКИВАНИЯ КНОПКИ И ГЛАВНОГО ОКНА ===
 local DraggingFloat = false
 local DragInputFloat, DragStartFloat, StartPosFloat
 
@@ -3551,6 +3688,7 @@ FloatHeader.InputBegan:Connect(function(input)
         DraggingFloat = true
         DragStartFloat = input.Position
         StartPosFloat = FloatHeader.Position
+
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 DraggingFloat = false
@@ -3596,6 +3734,7 @@ MainFrame.InputBegan:Connect(function(input)
             DraggingMain = true
             DragStartMain = input.Position
             StartPosMain = MainFrame.Position
+
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     DraggingMain = false
