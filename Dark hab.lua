@@ -2675,6 +2675,7 @@ local function CreatePage(PageConfig)
                 IsOpen = Open
                 if Open then
                     UpdatePosition()
+                    SyncCursors()
                     ColorPicker.Visible = true
                 else
                     ColorPicker.Visible = false
@@ -2716,57 +2717,57 @@ local function CreatePage(PageConfig)
             end)
             
             UserInputService.InputChanged:Connect(function(Input)
-                if DraggingPalette and (Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch) then
-                    local X = math.clamp((Input.Position.X - Palette.AbsolutePosition.X) / Palette.AbsoluteSize.X, 0, 1)
-                    local Y = math.clamp((Input.Position.Y - Palette.AbsolutePosition.Y) / Palette.AbsoluteSize.Y, 0, 1)
-                    Sat = X
-                    Val = 1 - Y
-                    Cursor.Position = UDim2.new(X, -3, Y, -3)
-                    UpdateColor()
-                end
-                if DraggingHue and (Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch) then
-                    local X = math.clamp((Input.Position.X - HueSlider.AbsolutePosition.X) / HueSlider.AbsoluteSize.X, 0, 1)
-                    Hue = X
-                    HueCursor.Position = UDim2.new(X, 0, 0.5, 0)
-                    UpdateColor()
+                if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
+                    if DraggingPalette then
+                        local X = math.clamp((Input.Position.X - Palette.AbsolutePosition.X) / Palette.AbsoluteSize.X, 0, 1)
+                        local Y = math.clamp((Input.Position.Y - Palette.AbsolutePosition.Y) / Palette.AbsoluteSize.Y, 0, 1)
+                        Sat = X
+                        Val = 1 - Y
+                        Cursor.Position = UDim2.new(X, -3, Y, -3)
+                        UpdateColor()
+                    elseif DraggingHue then
+                        local X = math.clamp((Input.Position.X - HueSlider.AbsolutePosition.X) / HueSlider.AbsoluteSize.X, 0, 1)
+                        Hue = X
+                        HueCursor.Position = UDim2.new(X, 0, 0.5, 0)
+                        UpdateColor()
+                    end
                 end
             end)
             
             HexInput.FocusLost:Connect(function()
-                local Hex = HexInput.Text:gsub("#", "")
-                local Success, NewColor = pcall(Color3.fromHex, Hex)
-                if Success then
-                    local H, S, V = NewColor:ToHSV()
-                    Hue, Sat, Val = H, S, V
+                local text = HexInput.Text:gsub("#", "")
+                local success, newColor = pcall(function() return Color3.fromHex(text) end)
+                if success and newColor then
+                    Hue, Sat, Val = newColor:ToHSV()
                     SyncCursors()
                     UpdateColor()
+                else
+                    HexInput.Text = "#" .. Color:ToHex()
                 end
             end)
             
-            
-                        ColorButton.MouseButton1Down:Connect(function() SetOpen(not IsOpen) end)
+            ColorButton.MouseButton1Down:Connect(function()
+                SetOpen(not IsOpen)
+            end)
             
             UserInputService.InputBegan:Connect(function(Input)
                 if IsOpen and (Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch) then
                     local mX, mY = Input.Position.X, Input.Position.Y
-                    local cPos, cSize = ColorPicker.AbsolutePosition, ColorPicker.AbsoluteSize
+                    local pPos, pSize = ColorPicker.AbsolutePosition, ColorPicker.AbsoluteSize
                     local bPos, bSize = ColorButton.AbsolutePosition, ColorButton.AbsoluteSize
-
-                    local inPicker = (mX >= cPos.X and mX <= cPos.X + cSize.X and mY >= cPos.Y and mY <= cPos.Y + cSize.Y)
+                    local inPicker = (mX >= pPos.X and mX <= pPos.X + pSize.X and mY >= pPos.Y and mY <= pPos.Y + pSize.Y)
                     local inBtn = (mX >= bPos.X and mX <= bPos.X + bSize.X and mY >= bPos.Y and mY <= bPos.Y + bSize.Y)
-
                     if not inPicker and not inBtn then
                         SetOpen(false)
                     end
                 end
             end)
             
-            if Default then SyncCursors() UpdateColor() end
+            UpdateColor(Hue, Sat, Val)
             
-            SetFlags[Flag] = function(NewColor)
-                if typeof(NewColor) == "Color3" then
-                    local H, S, V = NewColor:ToHSV()
-                    Hue, Sat, Val = H, S, V
+            SetFlags[Flag] = function(col)
+                if typeof(col) == "Color3" then
+                    Hue, Sat, Val = col:ToHSV()
                     SyncCursors()
                     UpdateColor()
                 end
@@ -2775,10 +2776,9 @@ local function CreatePage(PageConfig)
             local elementData = { Frame = ColorFrame, Name = ColorpickerName, Label = ColorLabel }
             table.insert(SectionData.Elements, elementData)
             return {
-                Set = function(NewColor)
-                    if typeof(NewColor) == "Color3" then
-                        local H, S, V = NewColor:ToHSV()
-                        Hue, Sat, Val = H, S, V
+                Set = function(col)
+                    if typeof(col) == "Color3" then
+                        Hue, Sat, Val = col:ToHSV()
                         SyncCursors()
                         UpdateColor()
                     end
