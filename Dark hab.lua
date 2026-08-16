@@ -351,16 +351,16 @@ local function CreateTween(Instance, Info, Goal)
     return Tween
 end
 
--- === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ОЧИСТКИ И НИЖНЕГО РЕГИСТРА (С ПОДДЕРЖКОЙ КИРИЛЛИЦЫ) ===
+-- === ИСПРАВЛЕННАЯ ФУНКЦИЯ РЕГИСТРА И СИМВОЛОВ ===
 local function LowerUTF8(str)
     if not str then return "" end
-    str = tostring(str):lower()
+    str = tostring(str)
     local upper = {"А","Б","В","Г","Д","Е","Ё","Ж","З","И","Й","К","Л","М","Н","О","П","Р","С","Т","У","Ф","Х","Ц","Ч","Ш","Щ","Ъ","Ы","Ь","Э","Ю","Я"}
     local lower = {"а","б","в","г","д","е","ё","ж","з","и","й","к","л","м","н","о","п","р","с","т","у","ф","х","ц","ч","ш","щ","ъ","ы","ь","э","ю","я"}
     for i = 1, #upper do
         str = string.gsub(str, upper[i], lower[i])
     end
-    return str
+    return str:lower()
 end
 
 local function CleanString(Str)
@@ -1230,7 +1230,7 @@ function DarkHub:Notify(Data)
     -- Уведомления отключены
 end
 
--- Страницы
+-- === ИСПРАВЛЕННАЯ СОЗДАНИЕ СТРАНИЦЫ ===
 local function CreatePage(PageConfig)
     local PageName = PageConfig.Name or "Page"
     local PageNameKey = PageConfig.NameKey
@@ -1344,6 +1344,9 @@ local function CreatePage(PageConfig)
         Sections = {},
         Active = false,
     }
+    
+    -- КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Добавление страницы в глобальную таблицу поиска
+    table.insert(Pages, PageData)
     
     TabButton.MouseEnter:Connect(function()
         if not PageData.Active then
@@ -1552,6 +1555,9 @@ local function CreatePage(PageConfig)
             Content = SectionContent,
             Elements = {},
         }
+        
+        -- КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Добавление секции в таблицу страницы для поиска
+        table.insert(PageData.Sections, SectionData)
         
         -- Toggle
         function SectionData:Toggle(Data)
@@ -2970,14 +2976,10 @@ local function CreatePage(PageConfig)
             }
         end
         
-        -- Регистрируем секцию в PageData
-        table.insert(PageData.Sections, SectionData)
         return SectionData
     end
     
     PageData.CreateSection = CreateSection
-    -- Регистрируем страницу в глобальном массиве Pages
-    table.insert(Pages, PageData)
     return PageData
 end
 
