@@ -151,6 +151,25 @@ local function getSheriff()
     return nil
 end
 
+-- === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ОЧИСТКИ И НИЖНЕГО РЕГИСТРА (С ПОДДЕРЖКОЙ КИРИЛЛИЦЫ) ===
+local function LowerUTF8(str)
+    if not str then return "" end
+    str = tostring(str):lower()
+    local upper = {"А","Б","В","Г","Д","Е","Ё","Ж","З","И","Й","К","Л","М","Н","О","П","Р","С","Т","У","Ф","Х","Ц","Ч","Ш","Щ","Ъ","Ы","Ь","Э","Ю","Я"}
+    local lower = {"а","б","в","г","д","е","ё","ж","з","и","й","к","л","м","н","о","п","р","с","т","у","ф","х","ц","ч","ш","щ","ъ","ы","ь","э","ю","я"}
+    for i = 1, #upper do
+        str = string.gsub(str, upper[i], lower[i])
+    end
+    return str
+end
+
+local function CleanString(Str)
+    if not Str then return "" end
+    local Cleaned = LowerUTF8(Str)
+    Cleaned = string.gsub(Cleaned, "[%s%p]", "")
+    return Cleaned
+end
+
 -- === ОБНОВЛЕННАЯ СИСТЕМА ESP ИГРОКОВ ===
 local function applyPlayerESP(p)
     if not p or p == lp then
@@ -334,13 +353,6 @@ local function CreateTween(Instance, Info, Goal)
     local Tween = TweenService:Create(Instance, Info, Goal)
     Tween:Play()
     return Tween
-end
-
-local function CleanString(Str)
-    if not Str then return "" end
-    local Cleaned = string.lower(tostring(Str))
-    Cleaned = string.gsub(Cleaned, "[%s%p]", "")
-    return Cleaned
 end
 
 -- Цветовая схема
@@ -981,63 +993,6 @@ MainFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
     UpdateActiveIndicator(true)
 end)
 
--- Глобальная система поиска
-local function GlobalSearch(Query)
-    local CleanQuery = CleanString(Query)
-
-    if CleanQuery == "" then
-        GlobalSearchFrame.Visible = false
-        for _, Page in ipairs(Pages) do
-            for _, Section in ipairs(Page.Sections) do
-                Section.Frame.Parent = Section.OriginalParent
-                Section.Frame.Visible = true
-                for _, Element in ipairs(Section.Elements) do
-                    if Element.Frame then
-                        Element.Frame.Visible = true
-                    end
-                end
-            end
-        end
-        if CurrentPage then
-            CurrentPage.Frame.Visible = true
-        end
-    else
-        if CurrentPage then
-            CurrentPage.Frame.Visible = false
-        end
-        GlobalSearchFrame.Visible = true
-        for _, Page in ipairs(Pages) do
-            for _, Section in ipairs(Page.Sections) do
-                local CleanSectionName = CleanString(Section.Name)
-                local SectionMatch = (CleanSectionName ~= "") and (string.find(CleanSectionName, CleanQuery, 1, true) ~= nil)
-                local HasAnyElementMatch = false
-                for _, Element in ipairs(Section.Elements) do
-                    local CleanElementName = CleanString(Element.Name)
-                    local ElementMatch = (CleanElementName ~= "") and (string.find(CleanElementName, CleanQuery, 1, true) ~= nil)
-                    local IsVisible = SectionMatch or ElementMatch
-                    if Element.Frame then
-                        Element.Frame.Visible = IsVisible
-                    end
-                    if IsVisible then
-                        HasAnyElementMatch = true
-                    end
-                end
-                if SectionMatch or HasAnyElementMatch then
-                    Section.Frame.Parent = GlobalSearchContent
-                    Section.Frame.Visible = true
-                else
-                    Section.Frame.Visible = false
-                    Section.Frame.Parent = Section.OriginalParent
-                end
-            end
-        end
-    end
-end
-
-HeaderSearchInput:GetPropertyChangedSignal("Text"):Connect(function()
-    GlobalSearch(HeaderSearchInput.Text)
-end)
-
 -- Контентная зона
 local Content = Create("Frame", {
     Parent = MainFrame,
@@ -1082,6 +1037,69 @@ Create("UIListLayout", {
 -- Страницы
 local Pages = {}
 local CurrentPage = nil
+
+-- === ГЛОБАЛЬНАЯ СИСТЕМА ПОИСКА ===
+local function GlobalSearch(Query)
+    local CleanQuery = CleanString(Query)
+
+    if CleanQuery == "" then
+        GlobalSearchFrame.Visible = false
+        for _, Page in ipairs(Pages) do
+            for _, Section in ipairs(Page.Sections) do
+                Section.Frame.Parent = Section.OriginalParent
+                Section.Frame.Visible = true
+                for _, Element in ipairs(Section.Elements) do
+                    if Element.Frame then
+                        Element.Frame.Visible = true
+                    end
+                end
+            end
+        end
+        if CurrentPage then
+            CurrentPage.Frame.Visible = true
+        end
+    else
+        if CurrentPage then
+            CurrentPage.Frame.Visible = false
+        end
+        GlobalSearchFrame.Visible = true
+        
+        for _, Page in ipairs(Pages) do
+            for _, Section in ipairs(Page.Sections) do
+                local secText = Section.Label and Section.Label.Text or Section.Name
+                local CleanSectionName = CleanString(Section.Name) .. CleanString(secText)
+                local SectionMatch = (CleanSectionName ~= "") and (string.find(CleanSectionName, CleanQuery, 1, true) ~= nil)
+                local HasAnyElementMatch = false
+
+                for _, Element in ipairs(Section.Elements) do
+                    local elemText = Element.Label and Element.Label.Text or Element.Name
+                    local CleanElementName = CleanString(Element.Name) .. CleanString(elemText)
+                    local ElementMatch = (CleanElementName ~= "") and (string.find(CleanElementName, CleanQuery, 1, true) ~= nil)
+                    
+                    local IsVisible = SectionMatch or ElementMatch
+                    if Element.Frame then
+                        Element.Frame.Visible = IsVisible
+                    end
+                    if IsVisible then
+                        HasAnyElementMatch = true
+                    end
+                end
+
+                if SectionMatch or HasAnyElementMatch then
+                    Section.Frame.Parent = GlobalSearchContent
+                    Section.Frame.Visible = true
+                else
+                    Section.Frame.Visible = false
+                    Section.Frame.Parent = Section.OriginalParent
+                end
+            end
+        end
+    end
+end
+
+HeaderSearchInput:GetPropertyChangedSignal("Text"):Connect(function()
+    GlobalSearch(HeaderSearchInput.Text)
+end)
 
 -- ФУНКЦИЯ ДИНАМИЧЕСКОЙ СМЕНЫ ТЕМЫ
 local isCustomAccent = false
@@ -1174,7 +1192,7 @@ function DarkHub:Notify(Data)
     -- Уведомления отключены
 end
 
--- Страницы
+-- === ОБНОВЛЕННАЯ ФУНКЦИЯ СОЗДАНИЯ СТРАНИЦ ===
 local function CreatePage(PageConfig)
     local PageName = PageConfig.Name or "Page"
     local PageNameKey = PageConfig.NameKey
@@ -1222,35 +1240,6 @@ local function CreatePage(PageConfig)
         RegisterTranslation(TabLabel, PageNameKey)
     end
     
-    local DotsContainer = Create("Frame", {
-        Parent = TabButton,
-        BackgroundTransparency = 1,
-        Position = UDim2.new(1, -8, 0.5, 0),
-        AnchorPoint = Vector2.new(1, 0.5),
-        Size = UDim2.new(0, 3, 0, 13),
-        BorderSizePixel = 0,
-    })
-
-    Create("UIListLayout", {
-        Parent = DotsContainer,
-        Padding = UDim.new(0, 2),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        HorizontalAlignment = Enum.HorizontalAlignment.Center,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-    })
-
-    for i = 1, 3 do
-        local Dot = Create("Frame", {
-            Parent = DotsContainer,
-            BackgroundColor3 = Theme.Text,
-            BackgroundTransparency = 0.6,
-            Size = UDim2.new(0, 3, 0, 3),
-            BorderSizePixel = 0,
-            LayoutOrder = i,
-        })
-        Create("UICorner", { Parent = Dot, CornerRadius = UDim.new(1, 0) })
-    end
-    
     local PageFrame = Create("ScrollingFrame", {
         Parent = Content,
         BackgroundTransparency = 1,
@@ -1289,29 +1278,15 @@ local function CreatePage(PageConfig)
         Active = false,
     }
     
-    TabButton.MouseEnter:Connect(function()
-        if not PageData.Active then
-            CreateTween(TabButton, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-                BackgroundTransparency = 0.92
-            })
-            CreateTween(TabLabel, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-                TextTransparency = 0.25
-            })
-        end
+    -- Регистрация страницы в глобальном массиве
+    table.insert(Pages, PageData)
+
+    TabButton.MouseButton1Down:Connect(function()
+        PageData.SetActive(true)
     end)
 
-    TabButton.MouseLeave:Connect(function()
-        if not PageData.Active then
-            CreateTween(TabButton, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-                BackgroundTransparency = 1
-            })
-            CreateTween(TabLabel, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-                TextTransparency = 0.5
-            })
-        end
-    end)
-    
-    local function SetActive(Active)
+    -- Функция SetActive для страницы
+    function PageData.SetActive(Active)
         if Active == PageData.Active and not GlobalSearchFrame.Visible then return end
         
         if HeaderSearchInput.Text ~= "" then
@@ -1355,13 +1330,7 @@ local function CreatePage(PageConfig)
             PageData.TabLabel.FontFace = FontRegular
         end
     end
-    
-    TabButton.MouseButton1Down:Connect(function()
-        SetActive(true)
-    end)
-    
-    PageData.SetActive = SetActive
-    
+
     local function CreateSection(SectionConfig)
         local SectionName = SectionConfig.Name or "Section"
         local SectionNameKey = SectionConfig.NameKey
@@ -1473,23 +1442,12 @@ local function CreatePage(PageConfig)
         })
         
         Create("UICorner", { Parent = SectionContent, CornerRadius = UDim.new(0, 7) })
-        
-        Create("UIListLayout", {
-            Parent = SectionContent,
-            Padding = UDim.new(0, 5),
-            SortOrder = Enum.SortOrder.LayoutOrder,
-        })
-        
-        Create("UIPadding", {
-            Parent = SectionContent,
-            PaddingTop = UDim.new(0, 6),
-            PaddingBottom = UDim.new(0, 6),
-            PaddingLeft = UDim.new(0, 6),
-            PaddingRight = UDim.new(0, 6),
-        })
+        Create("UIListLayout", { Parent = SectionContent, Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder })
+        Create("UIPadding", { Parent = SectionContent, PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) })
         
         local SectionData = {
             Name = SectionName,
+            Label = SecLabel,
             Frame = SectionFrame,
             OriginalParent = PageContent,
             Content = SectionContent,
@@ -1582,6 +1540,10 @@ local function CreatePage(PageConfig)
                 RegisterTranslation(ToggleLabel, ToggleNameKey)
             end
             
+            -- Добавляем ссылку на лейбл для поиска
+            local ElementData = { Frame = ToggleFrame, Name = ToggleName, Label = ToggleLabel }
+            table.insert(SectionData.Elements, ElementData)
+            
             local Value = Default
             
             local function SetValue(NewValue)
@@ -1618,7 +1580,6 @@ local function CreatePage(PageConfig)
             SetValue(Default)
             SetFlags[Flag] = SetValue
             
-            table.insert(SectionData.Elements, { Frame = ToggleFrame, Name = ToggleName })
             return { Set = SetValue, Get = function() return Value end }
         end
         
@@ -1693,6 +1654,9 @@ local function CreatePage(PageConfig)
                 Create("UICorner", { Parent = BtnIcon, CornerRadius = UDim.new(0, 3) })
             end
             
+            local ElementData = { Frame = ButtonFrame, Name = ButtonName, Label = ButtonText }
+            table.insert(SectionData.Elements, ElementData)
+            
             ButtonFrame.MouseEnter:Connect(function()
                 CreateTween(Accent, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
                     Size = UDim2.new(1, 0, 1, 0),
@@ -1718,7 +1682,6 @@ local function CreatePage(PageConfig)
                 Callback()
             end)
             
-            table.insert(SectionData.Elements, { Frame = ButtonFrame, Name = ButtonName })
             return ButtonFrame
         end
         
@@ -1898,6 +1861,9 @@ local function CreatePage(PageConfig)
                 ZIndex = 3,
             })
             
+            local ElementData = { Frame = SliderFrame, Name = SliderName, Label = NameLabel }
+            table.insert(SectionData.Elements, ElementData)
+            
             local Value = Default
             local Sliding = false
             
@@ -1965,7 +1931,6 @@ local function CreatePage(PageConfig)
             SetValue(Default)
             SetFlags[Flag] = function(val) SetValue(val) end
             
-            table.insert(SectionData.Elements, { Frame = SliderFrame, Name = SliderName })
             return {
                 Set = function(val) SetValue(val) end,
                 Get = function() return Value end,
@@ -2074,6 +2039,9 @@ local function CreatePage(PageConfig)
                 SortOrder = Enum.SortOrder.LayoutOrder,
             })
             
+            local ElementData = { Frame = DropdownFrame, Name = DropdownName, Label = DropdownLabel }
+            table.insert(SectionData.Elements, ElementData)
+            
             local Options = {}
             local Selected = nil
             local IsOpen = false
@@ -2148,7 +2116,6 @@ local function CreatePage(PageConfig)
             
             SetFlags[Flag] = function(Val) if Options[Val] then SetValue(Val) end end
             
-            table.insert(SectionData.Elements, { Frame = DropdownFrame, Name = DropdownName })
             return {
                 Set = function(Val) if Options[Val] then SetValue(Val) end end,
                 Get = function() return Selected end,
@@ -2188,6 +2155,9 @@ local function CreatePage(PageConfig)
             if KeybindNameKey then
                 RegisterTranslation(KeybindLabel, KeybindNameKey)
             end
+            
+            local ElementData = { Frame = KeybindFrame, Name = KeybindName, Label = KeybindLabel }
+            table.insert(SectionData.Elements, ElementData)
             
             local KeybindButton = Create("TextButton", {
                 Parent = KeybindFrame,
@@ -2259,7 +2229,6 @@ local function CreatePage(PageConfig)
             SetKey(Default)
             SetFlags[Flag] = SetKey
             
-            table.insert(SectionData.Elements, { Frame = KeybindFrame, Name = KeybindName })
             return { Set = SetKey, Get = function() return Key end }
         end
         
@@ -2297,6 +2266,9 @@ local function CreatePage(PageConfig)
                 RegisterTranslation(TextboxLabel, TextboxNameKey)
             end
             
+            local ElementData = { Frame = TextboxFrame, Name = TextboxName, Label = TextboxLabel }
+            table.insert(SectionData.Elements, ElementData)
+            
             local TextboxInput = Create("TextBox", {
                 Parent = TextboxFrame,
                 Name = "ElementBG",
@@ -2332,7 +2304,6 @@ local function CreatePage(PageConfig)
             SetValue(Default)
             SetFlags[Flag] = SetValue
             
-            table.insert(SectionData.Elements, { Frame = TextboxFrame, Name = TextboxName })
             return { Set = SetValue, Get = function() return Value end }
         end
         
@@ -2367,6 +2338,9 @@ local function CreatePage(PageConfig)
             if ColorpickerNameKey then
                 RegisterTranslation(ColorLabel, ColorpickerNameKey)
             end
+            
+            local ElementData = { Frame = ColorFrame, Name = ColorpickerName, Label = ColorLabel }
+            table.insert(SectionData.Elements, ElementData)
             
             local ColorButton = Create("TextButton", {
                 Parent = ColorFrame,
@@ -2687,7 +2661,6 @@ local function CreatePage(PageConfig)
                 end
             end
             
-            table.insert(SectionData.Elements, { Frame = ColorFrame, Name = ColorpickerName })
             return {
                 Set = function(NewColor)
                     if typeof(NewColor) == "Color3" then
@@ -2735,6 +2708,9 @@ local function CreatePage(PageConfig)
             if ListboxNameKey then
                 RegisterTranslation(ListboxLabel, ListboxNameKey)
             end
+            
+            local ElementData = { Frame = ListboxFrame, Name = ListboxName, Label = ListboxLabel }
+            table.insert(SectionData.Elements, ElementData)
             
             local SearchBox = Create("TextBox", {
                 Parent = ListboxFrame,
@@ -2873,7 +2849,6 @@ local function CreatePage(PageConfig)
                 Callback(table.clone(Selected))
             end
             
-            table.insert(SectionData.Elements, { Frame = ListboxFrame, Name = ListboxName })
             return {
                 Set = SetFlags[Flag],
                 Get = function() return table.clone(Selected) end,
@@ -2887,13 +2862,12 @@ local function CreatePage(PageConfig)
             }
         end
         
+        -- Регистрация секции в текущей странице
         table.insert(PageData.Sections, SectionData)
         return SectionData
     end
-    
+
     PageData.CreateSection = CreateSection
-    Pages[#Pages + 1] = PageData
-    
     return PageData
 end
 
