@@ -1,5 +1,5 @@
 -- Создаем библиотеку
-local Library = loadstring(game:HttpGet("ваша_ссылка"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua"))()
 local Window = Library:Window({
     Name = "My Cheat",
     SubName = "v1.0",
