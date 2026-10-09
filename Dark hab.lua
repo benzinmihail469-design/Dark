@@ -1,21 +1,16 @@
-local MacLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua"))()
 
-local Window = MacLib:Window({
-    Title = "My Script",
-    Subtitle = "v1.0",
-    Keybind = Enum.KeyCode.RightControl,
+local Window = Library:Window({
+    Name = "My Hub",
+    SubTitle = "v1.0",
 })
 
-local Tab = Window:TabGroup():Tab({ Name = "Main", Image = "rbxassetid://18821914323" })
+local Page = Window:Page({ Name = "Main" })
+local Section = Page:Section({ Name = "Combat", Side = 1 })
 
-local Sec = Tab:Section({ Name = "Main Features", Icon = "rbxassetid://18821914323", Side = "Left" })
-
-Sec:Toggle({
-    Name = "Enabled",
-    Default = false,
-    Callback = function(v)
-        Window:Notify({ Title = "Script", Description = "Toggled: " .. tostring(v), Lifetime = 2 })
+Section:Button({
+    Name = "Click Me",
+    Callback = function()
+        print("работает")
     end,
 })
-
-Tab:Select()
