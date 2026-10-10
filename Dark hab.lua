@@ -68,5 +68,16 @@ MainSection:Slider({
     end,
 })
 
+
+MainSection:Colorpicker({
+    Name = "Цвет ESP",
+    Default = Color3.fromRGB(0, 255, 255),
+    Alpha = 0, -- убрать или задать прозрачность (nil, если альфа не нужна)
+    Callback = function(color, alpha)
+        print("Выбран цвет:", color, "Альфа:", alpha)
+    end,
+})
+
+
 -- Выбираем вкладку при запуске
 MainTab:Select()
