@@ -1,11 +1,5 @@
--- Загружаем библиотеку через loadstring
+-- Загружаем обновленную библиотеку
 local MacLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua"))()
-
--- Проверяем, что библиотека успешно загрузилась
-if not MacLib then
-    warn("Не удалось загрузить MacLib!")
-    return
-end
 
 -- Создаем главное окно
 local Window = MacLib:Window({
@@ -22,17 +16,17 @@ local Window = MacLib:Window({
 -- Создаем группу вкладок
 local TabGroup = Window:TabGroup()
 
--- Создаем вкладку (например, "Главная")
+-- Создаем вкладку
 local MainTab = TabGroup:Tab({ 
     Name = "Главная", 
     Image = "rbxassetid://18821914323" 
 })
 
--- Создаем секцию на вкладке (слева)
+-- Создаем секцию (теперь с красивым градиентным контуром, одной иконкой и сворачиванием)
 local MainSection = MainTab:Section({ 
     Side = "Left",
     Name = "Функции",
-    Icon = "rbxassetid://18821914323" -- Опционально (если добавлена иконка)
+    Icon = "rbxassetid://18821914323" -- Одна корректная иконка
 })
 
 -- Добавляем кнопку
@@ -47,7 +41,7 @@ MainSection:Button({
     end,
 })
 
--- Добавляем тоггл (переключатель)
+-- Добавляем переключатель (тоггл)
 MainSection:Toggle({
     Name = "Аимбот",
     Default = false,
@@ -68,16 +62,5 @@ MainSection:Slider({
     end,
 })
 
-
-MainSection:Colorpicker({
-    Name = "Цвет ESP",
-    Default = Color3.fromRGB(0, 255, 255),
-    Alpha = 0, -- убрать или задать прозрачность (nil, если альфа не нужна)
-    Callback = function(color, alpha)
-        print("Выбран цвет:", color, "Альфа:", alpha)
-    end,
-})
-
-
--- Выбираем вкладку при запуске
+-- Выбираем вкладку при старте
 MainTab:Select()
