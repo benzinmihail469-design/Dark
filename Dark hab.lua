@@ -1,36 +1,72 @@
-local MacLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/benzinmihail469-design/Rararara/main/Esp.lua"))()
+-- Загружаем библиотеку через loadstring
+local MacLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua"))()
 
--- Теперь MacLib доступен
+-- Проверяем, что библиотека успешно загрузилась
+if not MacLib then
+    warn("Не удалось загрузить MacLib!")
+    return
+end
+
+-- Создаем главное окно
 local Window = MacLib:Window({
-    Title = "My Script",
-    Subtitle = "v1.0.0",
+    Title = "Мой Скрипт • Hub",
+    Subtitle = "Версия 1.0",
     Size = UDim2.fromOffset(868, 650),
+    DragStyle = 1,
+    DisabledWindowControls = {},
+    ShowUserInfo = true,
     Keybind = Enum.KeyCode.RightControl,
     AcrylicBlur = true,
-    ShowUserInfo = true,
 })
 
+-- Создаем группу вкладок
 local TabGroup = Window:TabGroup()
-local MainTab = TabGroup:Tab({
-    Name = "Main",
-    Image = "rbxassetid://18821914323"
+
+-- Создаем вкладку (например, "Главная")
+local MainTab = TabGroup:Tab({ 
+    Name = "Главная", 
+    Image = "rbxassetid://18821914323" 
 })
 
-local Section = MainTab:Section({
+-- Создаем секцию на вкладке (слева)
+local MainSection = MainTab:Section({ 
     Side = "Left",
-    Name = "Combat",
-    Icon = "rbxassetid://18821914323",
+    Name = "Функции",
+    Icon = "rbxassetid://18821914323" -- Опционально (если добавлена иконка)
 })
 
-Section:Button({
-    Name = "Test",
+-- Добавляем кнопку
+MainSection:Button({
+    Name = "Кнопка",
     Callback = function()
         Window:Notify({
-            Title = "OK",
-            Description = "Работает!",
+            Title = "Уведомление",
+            Description = "Кнопка была нажата!",
             Lifetime = 3
         })
     end,
 })
 
+-- Добавляем тоггл (переключатель)
+MainSection:Toggle({
+    Name = "Аимбот",
+    Default = false,
+    Callback = function(state)
+        print("Аимбот:", state)
+    end,
+})
+
+-- Добавляем слайдер
+MainSection:Slider({
+    Name = "Скорость",
+    Default = 16,
+    Minimum = 16,
+    Maximum = 100,
+    DisplayMethod = "Value",
+    Callback = function(value)
+        print("Скорость изменена на:", value)
+    end,
+})
+
+-- Выбираем вкладку при запуске
 MainTab:Select()
