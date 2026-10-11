@@ -62,5 +62,14 @@ MainSection:Slider({
     end,
 })
 
+Section:Dropdown({
+    Name = "Режим",
+    Options = {"A", "B", "C"},
+    Default = "A",
+    Callback = function(value)
+        print(value)
+    end
+})
+
 -- Выбираем вкладку при старте
 MainTab:Select()
