@@ -1,122 +1,190 @@
--- 1. Подключение библиотеки
-local MacLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua"))()
+local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/Snxdfer/back-ups-for-libs/refs/heads/main/Luna_Source.lua", true))()
 
--- 2. Создание главного окна
-local Window = MacLib:Window({
-	Title = "Мой Скрипт • Hub",
-	Subtitle = "Версия 1.0",
-	Size = UDim2.fromOffset(868, 650),
-	DragStyle = 1, -- 1 = перетаскивание за иконку со стрелками в шапке, 2 = за любое место окна[span_0](start_span)[span_0](end_span)
-	DisabledWindowControls = {}, -- Можно передать {"Exit", "Minimize"}, чтобы убрать ненужные кнопки[span_1](start_span)[span_1](end_span)
-	ShowUserInfo = true, -- Отображение аватара и ника игрока внизу сайдбара[span_2](start_span)[span_2](end_span)
-	Keybind = Enum.KeyCode.RightControl, -- Клавиша открытия/скрытия меню[span_3](start_span)[span_3](end_span)
-	AcrylicBlur = true, -- Эффект размытия стеклянного фона[span_4](start_span)[span_4](end_span)
+local Window = Luna:CreateWindow({
+	Name = "Luna Example Window", -- This Is Title Of Your Window
+	Subtitle = nil, -- A Gray Subtitle next To the main title.
+	LogoID = "82795327169782", -- The Asset ID of your logo. Set to nil if you do not have a logo for Luna to use.
+	LoadingEnabled = true, -- Whether to enable the loading animation. Set to false if you do not want the loading screen or have your own custom one.
+	LoadingTitle = "Luna Interface Suite", -- Header for loading screen
+	LoadingSubtitle = "by Nebula Softworks", -- Subtitle for loading screen
+
+	ConfigSettings = {
+		RootFolder = nil, -- The Root Folder Is Only If You Have A Hub With Multiple Game Scripts and u may remove it. DO NOT ADD A SLASH
+		ConfigFolder = "Big Hub" -- The Name Of The Folder Where Luna Will Store Configs For This Script. DO NOT ADD A SLASH
+	},
+
+	KeySystem = false, -- As Of Beta 6, Luna Has officially Implemented A Key System!
+	KeySettings = {
+		Title = "Luna Example Key",
+		Subtitle = "Key System",
+		Note = "Best Key System Ever! Also, Please Use A HWID Keysystem like Pelican, Luarmor etc. that provide key strings based on your HWID since putting a simple string is very easy to bypass",
+		SaveInRoot = false, -- Enabling will save the key in your RootFolder (YOU MUST HAVE ONE BEFORE ENABLING THIS OPTION)
+		SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+		Key = {"Example Key"}, -- List of keys that will be accepted by the system, please use a system like Pelican or Luarmor that provide key strings based on your HWID since putting a simple string is very easy to bypass
+		SecondAction = {
+			Enabled = true, -- Set to false if you do not want a second action,
+			Type = "Link", -- Link / Discord.
+			Parameter = "" -- If Type is Discord, then put your invite link (DO NOT PUT DISCORD.GG/). Else, put the full link of your key system here.
+		}
+	}
 })
 
--- 3. Создание группы вкладок и вкладки
-local TabGroup = Window:TabGroup() --[span_5](start_span)[span_5](end_span)
-
-local MainTab = TabGroup:Tab({
-	Name = "Главная",
-	Image = "rbxassetid://18821914323" -- Иконка вкладки в левом меню[span_6](start_span)[span_6](end_span)
+local Tab = Window:CreateTab({
+	Name = "Tab Example",
+	Icon = "view_in_ar",
+	ImageSource = "Material",
+	ShowTitle = true -- This will determine whether the big header text in the tab will show
 })
 
--- 4. Создание секции
-local MainSection = MainTab:Section({
-	Side = "Left", -- Колонка: "Left" или "Right[span_7](start_span)"[span_7](end_span)
-	Name = "Функции",
-	Icon = "rbxassetid://18821914323" -- Иконка секции слева от названия[span_8](start_span)[span_8](end_span)
+Tab:CreateSection("Section Example")
+Section:Set("New Section Name")
+Section:Destroy() -- Destroys the section
+Tab:CreateDivider()
+Luna:Destroy()
+
+Luna:Notification({ 
+	Title = "Luna Notification Example",
+	Icon = "notifications_active",
+	ImageSource = "Material",
+	Content = "This Is A Preview Of Luna's Dynamic Notification System Entailing Estimated/Calculated Wait Times, A Sleek Design, Icons, And A Glassmorphic Look",
+        Duration = 10
 })
 
--- =========================================================================
--- 5. Добавление элементов управления в секцию
--- =========================================================================
+local Button = Tab:CreateButton({
+	Name = "Button Example!",
+	Description = nil, -- Creates A Description For Users to know what the button does (looks bad if you use it all the time),
+    	Callback = function()
+         -- The function that takes place when the button is pressed
+    	end
+})
 
--- Кнопка (Button)
-MainSection:Button({
-	Name = "Выполнить действие",
-	Callback = function()
-		Window:Notify({
-			Title = "Успешно",
-			Description = "Действие выполнено!",
-			Lifetime = 3
-		})
+local Toggle = Tab:CreateToggle({
+	Name = "Toggle Example",
+	Description = nil,
+	CurrentValue = false,
+    	Callback = function(Value)
+       	 -- The function that takes place when the toggle is switched
+       	 -- The variable (Value) is a boolean on whether the toggle is true or false
+    	end
+}, "Toggle") -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+
+local ColorPicker = Tab:CreateColorPicker({
+	Name = "Color Picker Example",
+	Color = Color3.fromRGB(86, 171, 128),
+	Flag = "ColorPicker1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+	Callback = function(Value)
+		-- The function that takes place every time the color picker is moved/changed
+		-- The variable (Value) is a Color3fromRGB value based on which color is selected
 	end
-}) --[span_9](start_span)[span_9](end_span)
+}, "ColorPicker") -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
 
--- Переключатель (Toggle)
-MainSection:Toggle({
-	Name = "Аимбот",
-	Default = false,
-	Callback = function(state)
-		print("Аимбот:", state)
+local Slider = Tab:CreateSlider({
+	Name = "Slider Example",
+	Range = {0, 200}, -- The Minimum And Maximum Values Respectively
+	Increment = 5, -- Basically The Changing Value/Rounding Off
+	CurrentValue = 100, -- The Starting Value
+    	Callback = function(Value)
+       	 -- The function that takes place when the slider changes
+       	 -- The variable (Value) is a number which correlates to the value the slider is currently at
+    	end
+}, "Slider") -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+
+local Input = Tab:CreateInput({
+	Name = "Dynamic Input Example",
+	Description = nil,
+	PlaceholderText = "Input Placeholder",
+	CurrentValue = "", -- the current text
+	Numeric = false, -- When true, the user may only type numbers in the box (Example walkspeed)
+	MaxCharacters = nil, -- if a number, the textbox length cannot exceed the number
+	Enter = false, -- When true, the callback will only be executed when the user presses enter.
+    	Callback = function(Text)
+       	 -- The function that takes place when the input is changed
+	 -- The variable (Text) is a string for the value in the text box
+    	end
+}, "Input") -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+
+local Dropdown = Tab:CreateDropdown({
+	Name = "Dropdown Example",
+    	Description = nil,
+	Options = {"Option 1","Option 2"},
+    	CurrentOption = {"Option 1"},
+    	MultipleOptions = false,
+    	SpecialType = nil,
+    	Callback = function(Options)
+     	 -- The function that takes place when the selected option is changed
+    	 -- If MultipleOptions is true then The variable (Options) is a table of strings for the current selected options. Else, it is a string of the currentoption
 	end
-}) --[span_10](start_span)[span_10](end_span)
+}, "Dropdown") -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
 
--- Ползунок (Slider)
-MainSection:Slider({
-	Name = "Скорость бега",
-	Default = 16,
-	Minimum = 0,
-	Maximum = 100,
-	DisplayMethod = "Value", -- Варианты: "Value", "Percent", "Round", "Tenths", "Degrees[span_11](start_span)"[span_11](end_span)
-	Callback = function(val)
-		print("Текущая скорость:", val)
-	end
-}) --[span_12](start_span)[span_12](end_span)
+ElementName.Settings
 
--- Поле ввода текста (Input)
-MainSection:Input({
-	Name = "Телепорт к игроку",
-	Placeholder = "Введите ник...",
-	AcceptedCharacters = "All", -- "All", "Numeric", "Alphabetic[span_13](start_span)"[span_13](end_span)
-	Callback = function(text)
-		print("Введенный текст:", text)
-	end
-}) --[span_14](start_span)[span_14](end_span)
+ElementName:Set(
+  put your new settings table here. unspecified elements will use the previous values.
+)
 
--- Бинд клавиши (Keybind)
-MainSection:Keybind({
-	Name = "Кнопка активации",
-	Default = Enum.KeyCode.E,
-	Callback = function(key)
-		print("Нажата клавиша:", key.Name)
-	end
-}) --[span_15](start_span)[span_15](end_span)
+ElementName:Destroy()
 
--- Выпадающий список (Dropdown)
-MainSection:Dropdown({
-	Name = "Режим наводки",
-	Multi = false, -- true для выбора нескольких вариантов, false для одиночного[span_16](start_span)[span_16](end_span)
-	Required = true,
-	Options = {"Голова", "Тело", "Случайно"},
-	Default = 1,
-	Callback = function(selected)
-		print("Выбран режим:", selected)
-	end
-}) --[span_17](start_span)[span_17](end_span)
+local Bind = Tab:CreateBind({
+	Name = "Bind Example",
+	Description = nil,
+	CurrentBind = "Q", -- Check Roblox Studio Docs For KeyCode Names
+	HoldToInteract = false, -- When true, Instead of toggling, You hold to achieve the active state of the Bind
+    	Callback = function(BindState)
+     	 -- The function that takes place when the keybind is pressed
+     	 -- The variable (BindState) is a boolean for whether the Bind is being held or not (HoldToInteract needs to be true) OR it is whether the Bind is active
+    	end,
 
--- Палитра цветов (Colorpicker)
-MainSection:Colorpicker({
-	Name = "Цвет ESP",
-	Default = Color3.fromRGB(0, 170, 255),
-	Alpha = 0, -- Прозрачность от 0 до 1 (необязательно)[span_18](start_span)[span_18](end_span)
-	Callback = function(color, alpha)
-		print("Выбран цвет:", color, "Прозрачность:", alpha)
-	end
-}) --[span_19](start_span)[span_19](end_span)
+	OnChangedCallback = function(Bind)
+	 -- The function that takes place when the binded key changes
+	 -- The variable (Bind) is a Enum.KeyCode for the new Binded Key
+	end,
+}, "Bind") -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
 
--- Разделители и текст
-MainSection:Divider() --[span_20](start_span)[span_20](end_span)
+local Bind = Tab:CreateBind({
+	Name = "Luna Interface Bind",
+	Description = nil,
+	CurrentBind = "K", -- Check Roblox Studio Docs For KeyCode Names
+	HoldToInteract = false, -- When true, Instead of toggling, You hold to achieve the active state of the Bind
+    	Callback = function()
+    	end,
 
-MainSection:Header({
-	Text = "Дополнительно"
-}) --[span_21](start_span)[span_21](end_span)
+	OnChangedCallback = function(Bind)
+	 Window.Bind = Bind
+	end,
+}, "WindowMenuBind") -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
 
-MainSection:Paragraph({
-	Header = "Инфо",
-	Body = "Секция поддерживает сворачивание по клику на шапку или стрелочку."
-}) --[span_22](start_span)[span_22](end_span)
+ElementName.Settings
 
--- 6. Обязательный выбор вкладки при старте
-MainTab:Select() --[span_23](start_span)[span_23](end_span)
+ElementName:Set(
+  put your new settings table here. unspecified elements will use the previous values.
+)
+
+ElementName:Destroy()
+
+local Label = Tab:CreateLabel({
+	Text = "Label Example",
+	Style = 1 -- Luna Labels Have 3 Styles : A Basic Label, A Green Information Label and A Red Warning Label. Look At The Following Image For More Details
+})
+
+local Paragraph = Tab:CreateParagraph({
+	Title = "Paragraph Example ",
+	Text = "This Is A Paragraph. You Can Type Very Long Strings Here And They'll Automatically Fit! This Counts As A Description Right? Right? Right? Right? Right? Right? Right? Right? Right? Right? Right? Right? Right? Right? Right? Also Did I Mention This Has Rich Text? Also Did I Mention This Has Rich Text? Also Did I Mention This Has Rich Text? Also Did I Mention This Has Rich Text? Also Did I Mention This Has Rich Text? Also Did I Mention This Has Rich Text?"
+})
+
+ElementName.Settings
+
+ElementName:Set(
+  put your new settings table here. unspecified elements will use the previous values.
+)
+
+ElementName:Destroy()
+
+Window:CreateHomeTab({
+	SupportedExecutors = {}, -- A Table Of Executors Your Script Supports. Add strings of the executor names for each executor.
+	DiscordInvite = "1234", -- The Discord Invite Link. Do Not Include discord.gg/ | Only Include the code.
+	Icon = 1, -- By Default, The Icon Is The Home Icon. If You would like to change it to dashboard, replace the interger with 2
+})
+
+Tab:BuildThemeSection() -- Tab Should be the name of the tab you are adding this section to.
+
+Tab:BuildConfigSection() -- Tab Should be the name of the tab you are adding this section to.
