@@ -1,40 +1,38 @@
 -- ====================================================================
--- 1. ЗАГРУЗКА БИБЛИОТЕКИ ПО ТВОЕЙ ССЫЛКЕ
+-- 1. ЗАГРУЗКА ОБНОВЛЁННОЙ БИБЛИОТЕКИ
 -- ====================================================================
 local NeverLose = loadstring(game:HttpGet("https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua"))()
 
--- Разрешаем полную выгрузку UI через кнопку в настройках
 NeverLose.UnloadEnabled = true
 
 -- ====================================================================
--- 2. ИНИЦИАЛИЗАЦИЯ МОДУЛЕЙ (Уведомления, Логи, Индикаторы, Иконка)
+-- 2. ИНИЦИАЛИЗАЦИЯ МОДУЛЕЙ
 -- ====================================================================
 local Notifier = NeverLose:CreateNotification()
 local Logger = NeverLose:CreateLogger()
 local Indicators = NeverLose:CreateIndicator()
 
--- Плавающая иконка слева по центру (удобно для телефонов и ПК)
-local MenuIcon = NeverLose:CreateMenuIcon({
-	Size = 48,
-	Image = "shield-check",
-	Draggable = true
-})
-
 -- ====================================================================
--- 3. СОЗДАНИЕ ОКНА И ВОТЕРМАРКИ
+-- 3. СОЗДАНИЕ ОКНА (Автоматически подстроится под телефон и ПК)
 -- ====================================================================
 local Window = NeverLose:CreateWindow({
 	Name = "Neverlose",
-	Content = "UI Test Build",
-	Size = NeverLose.Scales.Default, -- Small, Mobile, Default, Large
-	ConfigFolder = "NL_TestConfigs",
+	Content = "Mobile & PC Build",
+	ConfigFolder = "NL_MobileConfigs",
 	Keybind = "RightControl"
 })
 
--- Привязываем иконку к окну (добавляет ползунок размера иконки в профиль)
-Window:AttachMenuIcon(MenuIcon)
+-- Если запущено на ПК, создадим иконку вручную (на телефоне она создастся сама)
+if not Window._MenuIcon then
+	local MenuIcon = NeverLose:CreateMenuIcon({
+		Size = 46,
+		Image = "shield-check",
+		Draggable = true
+	})
+	MenuIcon.Root.Position = UDim2.new(0, 15, 0, 65)
+	Window:AttachMenuIcon(MenuIcon)
+end
 
--- Настройка профиля слева внизу
 Window:SetAccount({
 	Username = "Benzin",
 	Expires = "Lifetime"
@@ -42,17 +40,17 @@ Window:SetAccount({
 
 -- Вотермарка в правом верхнем углу
 local Watermark = Window:Watermark()
-local WmToggleBlock = Watermark:AddBlock("hammer-code", "Neverlose.cc")
+local WmMenuBlock = Watermark:AddBlock("hammer-code", "Neverlose")
 local WmStatusBlock = Watermark:AddBlock("clock", "Active")
 
--- Клик по первому блоку вотермарки тоже скрывает/открывает меню
-WmToggleBlock:Input()
+-- Тап или клик по первому блоку вотермарки открывает/закрывает меню
+WmMenuBlock:Input()
 
 -- Экранный индикатор
 local TestIndicator = Indicators.new({
 	Name = "ESP ACTIVE",
 	Icon = "eye",
-	Color = "Green" -- Red, Green, White
+	Color = "Green"
 })
 
 -- ====================================================================
@@ -63,7 +61,7 @@ Window:AddTabLabel("MAIN")
 local MainTab = Window:AddTab({
 	Name = "Combat",
 	Icon = "crosshairs",
-	Type = "Double" -- 2 колонки
+	Type = "Double" -- На телефоне автоматически станет 1 широкой колонкой
 })
 
 local VisualsTab = Window:AddTab({
@@ -77,36 +75,30 @@ Window:AddTabLabel("MISC")
 local SettingsTab = Window:AddTab({
 	Name = "Settings",
 	Icon = "gear",
-	Type = "Single" -- 1 широкая колонка
+	Type = "Single"
 })
 
--- Секции во вкладке Combat
 local LeftSec = MainTab:AddSection({ Name = "MAIN FEATURES", Position = "left" })
 local RightSec = MainTab:AddSection({ Name = "CONFIGURATION", Position = "right" })
-
--- Секции во вкладке Visuals
 local EspSec = VisualsTab:AddSection({ Name = "ESP SETTINGS", Position = "left" })
 
 -- ====================================================================
--- 5. ЭЛЕМЕНТЫ УПРАВЛЕНИЯ (Тест всех виджетов)
+-- 5. ТЕСТОВЫЕ ЭЛЕМЕНТЫ
 -- ====================================================================
-
--- 1. Строка с Toggle + ColorPicker + Вложенное меню (шестеренка)
-local AimRow = LeftSec:AddLabel("Enable Aimbot"):ToolTip("Автоматическое наведение на цель")
+local AimRow = LeftSec:AddLabel("Enable Aimbot"):ToolTip("Автоматическое наведение")
 
 AimRow:AddColorPicker({
 	Default = Color3.fromRGB(78, 127, 252),
 	Flag = "Aim_Color",
 	Callback = function(color)
-		print("Новый цвет:", color)
+		print("Цвет:", color)
 	end
 })
 
-local SubMenu = AimRow:AddOption(1) -- 1 = иконка шестеренки
+local SubMenu = AimRow:AddOption(1)
 SubMenu:AddLabel("Silent Mode"):AddToggle({
 	Default = true,
-	Flag = "Silent_Toggle",
-	Callback = function(v) print("Silent Mode:", v) end
+	Flag = "Silent_Toggle"
 })
 SubMenu:AddLabel("Hit Chance"):AddSlider({
 	Min = 0, Max = 100, Default = 85, Type = "%", Flag = "HitChance_Slider"
@@ -120,81 +112,55 @@ AimRow:AddToggle({
 	end
 })
 
--- 2. Слайдер (Slider)
 LeftSec:AddLabel("FOV Radius"):AddSlider({
 	Min = 10,
 	Max = 360,
 	Default = 120,
 	Rounding = 0,
 	Type = "px",
-	Flag = "FOV_Slider",
-	Callback = function(val)
-		print("FOV:", val)
-	end
+	Flag = "FOV_Slider"
 })
 
--- 3. Одиночный Dropdown
 LeftSec:AddLabel("Target Part"):AddDropdown({
 	Values = {"Head", "HumanoidRootPart", "Torso"},
 	Default = "Head",
 	Multi = false,
-	Flag = "Part_Dropdown",
-	Callback = function(val)
-		print("Выбрана часть:", val)
-	end
+	Flag = "Part_Dropdown"
 })
 
--- 4. Множественный Dropdown (Multi)
 LeftSec:AddLabel("Checks"):AddDropdown({
 	Values = {"Team Check", "Wall Check", "ForceField Check"},
 	Default = {"Team Check"},
 	Multi = true,
-	Flag = "Checks_Multi",
-	Callback = function(tbl)
-		for k, v in next, tbl do
-			print(k, v)
-		end
-	end
+	Flag = "Checks_Multi"
 })
 
--- 5. Кнопка (Button)
 LeftSec:AddButton({
 	Name = "Send Test Notification",
 	Icon = "bell",
-	ToolTip = "Проверка всплывающих уведомлений",
 	Callback = function()
 		Notifier.new({
 			Title = "Neverlose",
-			Content = "Уведомление успешно доставлено!",
+			Content = "Уведомление работает!",
 			Duration = 4
 		})
 	end
 })
 
--- --- Правая колонка ---
-
--- 6. Бинд клавиши (Keybind)
 RightSec:AddLabel("Trigger Key"):AddKeybind({
 	Default = "E",
 	Blacklist = {"W", "A", "S", "D"},
-	Flag = "Trigger_Bind",
-	Callback = function(key)
-		Logger.new("key", "Бинд изменен на: " .. tostring(key), 2.5)
-	end
+	Flag = "Trigger_Bind"
 })
 
--- 7. Текстовый ввод (TextInput)
 RightSec:AddLabel("Watermark Text"):AddTextInput({
-	Default = "Neverlose.cc",
+	Default = "Neverlose",
 	Placeholder = "Введите текст...",
-	Numeric = false,
 	Flag = "WM_Input",
 	Callback = function(text)
-		WmToggleBlock:SetText(text)
+		WmMenuBlock:SetText(text)
 	end
 })
-
--- --- Вкладка Visuals (Индикаторы и цвета) ---
 
 EspSec:AddLabel("Show Screen Indicator"):AddToggle({
 	Default = false,
@@ -214,13 +180,13 @@ EspSec:AddLabel("Indicator Status"):AddDropdown({
 })
 
 -- ====================================================================
--- 6. ВКЛАДКА SETTINGS (Масштаб, Темы, Выгрузка)
+-- 6. ВКЛАДКА НАСТРОЕК
 -- ====================================================================
 local UiSec = SettingsTab:AddSection({ Name = "UI MANAGEMENT", Position = "left" })
 
 UiSec:AddLabel("Window Size"):AddDropdown({
-	Values = {"Small", "Mobile", "Default", "Large"},
-	Default = "Default",
+	Values = {"Mobile", "Small", "Default", "Large"},
+	Default = "Mobile",
 	Callback = function(scale)
 		Window:SetSize(NeverLose.Scales[scale])
 	end
@@ -247,9 +213,9 @@ UiSec:AddButton({
 	end
 })
 
--- Уведомление об успешном запуске
 Notifier.new({
-	Title = "Библиотека загружена!",
-	Content = "Используй иконку щита слева или RightControl для скрытия.",
-	Duration = 5
+	Title = "Готово!",
+	Content = "Меню адаптировано под мобильные устройства и ПК.",
+	Duration = 4
 })
+a
