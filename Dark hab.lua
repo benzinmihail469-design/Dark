@@ -1,7 +1,14 @@
 -- ====================================================================
 -- 1. ЗАГРУЗКА ОБНОВЛЁННОЙ БИБЛИОТЕКИ
 -- ====================================================================
-local NeverLose = loadstring(game:HttpGet("https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua"))()
+local success, NeverLose = pcall(function()
+	return loadstring(game:HttpGet("https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua"))()
+end)
+
+if not success or type(NeverLose) ~= "table" then
+	warn("[NeverLose] Ошибка загрузки библиотеки:", tostring(NeverLose))
+	return
+end
 
 NeverLose.UnloadEnabled = true
 
@@ -218,4 +225,3 @@ Notifier.new({
 	Content = "Меню адаптировано под мобильные устройства и ПК.",
 	Duration = 4
 })
-a
