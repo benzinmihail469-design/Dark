@@ -1,211 +1,312 @@
--- Загрузчик библиотеки Luna UI (обрати внимание: loadstring пишется с маленькой буквы!)
-getgenv().ConfirmLuna = true
-local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua"))()
-​-- 1. Создание главного окна
-local Window = Luna:CreateWindow({
-Name = "Benzin Hub | Mobile & PC",
-Subtitle = "v1.0",
-LogoID = "", -- иконки вырезаны, оставляем пустым
-LoadingEnabled = true,
-LoadingTitle = "Benzin Interface",
-LoadingSubtitle = "Загрузка скрипта...",
-​ConfigSettings = {
-RootFolder = nil,
-ConfigFolder = "BenzinHub"
-},
-​KeySystem = false, -- поставь true, если нужна ключ-система
-KeySettings = {
-Title = "Benzin Hub | Key System",
-Subtitle = "Проверка ключа",
-Note = "Введите ваш ключ для доступа",
-SaveInRoot = false,
-SaveKey = true,
-Key = {"12345"},
-SecondAction = {
-Enabled = false,
-Type = "Discord", -- "Discord" или "Link"
-Parameter = "invitecode"
-}
-}
-})
-​-- 2. Создание домашней вкладки (Home Tab)
-Window:CreateHomeTab({
-Icon = 1,
-SupportedExecutors = {"Delta", "Vega X", "Codex", "Arceus X", "Fluxus", "Xeno", "Nihon"},
-DiscordInvite = "noinvitelink"
-})
-​-- 3. Создание основных вкладок (Tabs)
-local MainTab = Window:CreateTab({
-Name = "Основные",
-ShowTitle = true
-})
-​local ExtraTab = Window:CreateTab({
-Name = "Дополнительно",
-ShowTitle = true
-})
-​local SettingsTab = Window:CreateTab({
-Name = "Настройки",
-ShowTitle = true
-})
-​-- 4. Уведомление (Notification)
-Luna:Notification({
-Title = "Добро пожаловать!",
-Content = "Интерфейс успешно загружен и адаптирован под телефон и ПК.",
-Duration = 5
-})
-​-- ==========================================
--- ПРИМЕРЫ ВСЕХ ЭЛЕМЕНТОВ ВНУТРИ СЕКЦИИ
--- ==========================================
-local MainSection = MainTab:CreateSection("Интерактивные элементы")
-​-- Разделитель (Divider)
-MainSection:CreateDivider()
-​-- Кнопка (Button)
-local MyButton = MainSection:CreateButton({
-Name = "Обычная кнопка",
-Description = "Нажми, чтобы выполнить действие",
-Callback = function()
-print("Кнопка нажата!")
-Luna:Notification({
-Title = "Кнопка",
-Content = "Вы нажали на кнопку!",
-Duration = 3
-})
+--[[
+    ================================================================================
+    ⚡ CYBERCORE UI — ГОТОВЫЙ ЗАГРУЗЧИК (ПОД ТВОЮ ССЫЛКУ Esp.lua)
+    ================================================================================
+    Ссылка библиотеки: https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua
+    Работает на всех инжекторах (ПК и Телефон: Delta, Codex, Arceus X, Wave, Synapse Z)
+    ================================================================================
+]]
+
+-- [1] ЗАГРУЗКА БИБЛИОТЕКИ С GITHUB
+local LibraryURL = "https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua"
+
+local success, CyberCore = pcall(function()
+    return loadstring(game:HttpGet(LibraryURL))()
+end)
+
+if not success or type(CyberCore) ~= "table" then
+    warn("[CyberCore Loader] Ошибка загрузки библиотеки с GitHub:", tostring(CyberCore))
+    return
 end
+
+-- [2] СОЗДАНИЕ ГЛАВНОГО ОКНА
+local Window = CyberCore:CreateWindow({
+    Name = "CYBERCORE // NEXUS",
+    Subtitle = "NEURAL INTERFACE v2.4 • BENZIN",
+    ToggleKey = Enum.KeyCode.RightShift
 })
-​-- Переключатель (Toggle)
-local MyToggle = MainSection:CreateToggle({
-Name = "Переключатель (Toggle)",
-Description = "Включает или выключает функцию",
-CurrentValue = false,
-Callback = function(Value)
-print("Состояние Toggle:", Value)
-end
-}, "MyToggleFlag")
-​-- Ползунок (Slider) — адаптирован под тач на телефоне
-local MySlider = MainSection:CreateSlider({
-Name = "Ползунок (Slider)",
-Range = {0, 200},
-Increment = 1,
-CurrentValue = 50,
-Callback = function(Value)
-print("Значение Slider:", Value)
-end
-}, "MySliderFlag")
-​-- Выпадающий список с одним выбором (Single Dropdown)
-local SingleDropdown = MainSection:CreateDropdown({
-Name = "Список (Одиночный выбор)",
-Description = "Выберите один вариант из списка",
-Options = {"Вариант 1", "Вариант 2", "Вариант 3", "Вариант 4"},
-CurrentOption = {"Вариант 1"},
-MultipleOptions = false,
-SpecialType = nil,
-Callback = function(Option)
-print("Выбран вариант:", Option)
-end
-}, "SingleDropdownFlag")
-​-- Выпадающий список с мульти-выбором (Multi Dropdown)
-local MultiDropdown = MainSection:CreateDropdown({
-Name = "Список (Мульти-выбор)",
-Description = "Можно выбрать сразу несколько вариантов",
-Options = {"Меч", "Лук", "Щит", "Зелье"},
-CurrentOption = {"Меч", "Щит"},
-MultipleOptions = true,
-SpecialType = nil,
-Callback = function(OptionsTable)
-print("Выбраны варианты:", table.concat(OptionsTable, ", "))
-end
-}, "MultiDropdownFlag")
-​-- Выпадающий список игроков (Player Dropdown)
-local PlayerDropdown = MainSection:CreateDropdown({
-Name = "Выбор игрока",
-Description = "Автоматически обновляет список игроков на сервере",
-Options = {},
-CurrentOption = {},
-MultipleOptions = false,
-SpecialType = "Player",
-Callback = function(PlayerName)
-print("Выбран игрок:", PlayerName)
-end
+
+-- Стартовое уведомление
+CyberCore:Notify({
+    Title = "CyberCore Загружен",
+    Content = "Все модули успешно инициализированы! Нажми RightShift или кнопку CYBERCORE сверху экрана.",
+    Duration = 5,
+    Type = "Success"
 })
-​-- ==========================================
--- ВВОД, БИНДЫ, ЦВЕТА И ТЕКСТ НА ВТОРОЙ ВКЛАДКЕ
--- ==========================================
-local InputSection = ExtraTab:CreateSection("Ввод, бинды и цвета")
-​-- Поле ввода текста (Input)
-local MyInput = InputSection:CreateInput({
-Name = "Текстовое поле (Input)",
-Description = "Введите любой текст",
-CurrentValue = "",
-PlaceholderText = "Введите текст...",
-RemoveTextAfterFocusLost = false,
-Numeric = false, -- поставь true, если нужны только цифры
-Enter = false,   -- если true, сработает после завершения ввода
-MaxCharacters = 30,
-Callback = function(Text)
-print("Введённый текст:", Text)
-end
-}, "MyInputFlag")
-​-- Бинд клавиши / Тап-бинд на телефоне (Bind)
-local MyBind = InputSection:CreateBind({
-Name = "Бинд (Keybind)",
-Description = "На ПК — по клавише, на телефоне — тап по плашке",
-CurrentBind = "Q",
-HoldToInteract = false,
-Callback = function(Active)
-print("Бинд сработал! Состояние:", Active)
-end,
-OnChangedCallback = function(NewKey)
-print("Новая клавиша бинда:", NewKey)
-end
-}, "MyBindFlag")
-​-- Выбор цвета (ColorPicker) — адаптирован под тач на телефоне
-local MyColorPicker = InputSection:CreateColorPicker({
-Name = "Выбор цвета (ColorPicker)",
-Color = Color3.fromRGB(117, 164, 206),
-Callback = function(Color)
-print("Выбран цвет RGB:", math.floor(Color.R * 255), math.floor(Color.G * 255), math.floor(Color.B * 255))
-end
-}, "MyColorPickerFlag")
-​-- Секция текстовых элементов
-local TextSection = ExtraTab:CreateSection("Текстовые блоки (Labels & Paragraphs)")
-​-- Обычный Label (Style = 1)
-local NormalLabel = TextSection:CreateLabel({
-Text = "Обычная текстовая метка (Style = 1)",
-Style = 1
+
+-- ============================================================================
+-- ВКЛАДКА 1: COMBAT (АИМ И БОЕВЫЕ ФУНКЦИИ)
+-- ============================================================================
+local CombatTab = Window:CreateTab({
+    Name = "Combat",
+    Icon = "combat"
 })
-​-- Информационный Label (Style = 2)
-local InfoLabel = TextSection:CreateLabel({
-Text = "Информационная плашка (Style = 2)",
-Style = 2
+
+local AimSection = CombatTab:CreateSection({
+    Name = "Silent Aim & Targeting",
+    Opened = true
 })
-​-- Предупреждающий Label (Style = 3)
-local WarnLabel = TextSection:CreateLabel({
-Text = "Предупреждение / Внимание (Style = 3)",
-Style = 3
+
+AimSection:CreateToggle({
+    Name = "Enable Silent Aim",
+    Description = "Автоматическая наводка снарядов на ближайшую цель в радиусе FOV",
+    Default = false,
+    Flag = "SilentAim_Enabled",
+    Callback = function(state)
+        CyberCore:Notify({
+            Title = "Silent Aim",
+            Content = state and "Silent Aim активирован" or "Silent Aim выключен",
+            Duration = 2.5,
+            Type = state and "Success" or "Info"
+        })
+    end
 })
-​-- Параграф (Paragraph)
-local MyParagraph = TextSection:CreateParagraph({
-Title = "Заголовок параграфа",
-Text = "Здесь можно размещать длинный многострочный текст, инструкции или описание функций. Высота плашки автоматически подстраивается под размер текста."
+
+AimSection:CreateSlider({
+    Name = "FOV Radius",
+    Range = {15, 360},
+    Increment = 5,
+    Suffix = " px",
+    Default = 120,
+    Flag = "SilentAim_FOV",
+    Callback = function(val)
+        -- Твой код изменения радиуса FOV
+    end
 })
-​-- Пример программного изменения значений через :Set()
-TextSection:CreateButton({
-Name = "Обновить элементы через :Set()",
-Description = "Демонстрация динамического обновления",
-Callback = function()
-NormalLabel:Set("Текст метки успешно обновлён!")
-MyParagraph:Set({
-Title = "Новый заголовок",
-Text = "Текст параграфа был изменён нажатием кнопки."
+
+AimSection:CreateSlider({
+    Name = "Hit Chance",
+    Range = {1, 100},
+    Increment = 1,
+    Suffix = "%",
+    Default = 95,
+    Flag = "SilentAim_HitChance",
+    Callback = function(val)
+        -- Твой код шанса попадания
+    end
 })
-MyToggle:Set({CurrentValue = true})
-MySlider:UpdateValue(125)
-end
+
+AimSection:CreateDropdown({
+    Name = "Target Hitbox",
+    Options = {"Head", "UpperTorso", "HumanoidRootPart", "Nearest Point"},
+    Default = "Head",
+    Multi = false,
+    Flag = "SilentAim_Hitbox",
+    Callback = function(option)
+        print("[CyberCore] Выбран хитбокс:", option)
+    end
 })
-​-- ==========================================
--- ВКЛАДКА НАСТРОЕК ТЕМЫ И КОНФИГОВ
--- ==========================================
-SettingsTab:BuildThemeSection()
-SettingsTab:BuildConfigSection()
-​-- Автозагрузка конфига (если был сохранён)
-Luna:LoadAutoloadConfig()
+
+AimSection:CreateKeybind({
+    Name = "Target Lock Keybind",
+    Default = Enum.KeyCode.Q,
+    Flag = "TargetLock_Bind",
+    Callback = function(key)
+        CyberCore:Notify({
+            Title = "Target Lock",
+            Content = "Сработал бинд захвата цели [" .. key.Name .. "]",
+            Duration = 2,
+            Type = "Info"
+        })
+    end
+})
+
+-- ============================================================================
+-- ВКЛАДКА 2: VISUALS (ESP И ПОДСВЕТКА)
+-- ============================================================================
+local VisualsTab = Window:CreateTab({
+    Name = "Visuals",
+    Icon = "visuals"
+})
+
+local EspSection = VisualsTab:CreateSection({
+    Name = "Cyber ESP Overlay",
+    Opened = true
+})
+
+EspSection:CreateToggle({
+    Name = "Master ESP Switch",
+    Description = "Отображение боксов, линий, здоровья и дистанции через стены",
+    Default = true,
+    Flag = "ESP_Enabled",
+    Callback = function(state)
+        print("[CyberCore] ESP:", state)
+    end
+})
+
+EspSection:CreateDropdown({
+    Name = "Active ESP Elements",
+    Options = {"Corner Boxes", "2D Box", "Snaplines", "Health Bar", "Distance", "Nicknames"},
+    Default = {"Corner Boxes", "Health Bar", "Distance"},
+    Multi = true,
+    Flag = "ESP_Elements",
+    Callback = function(selectedTable)
+        print("[CyberCore] Активные элементы ESP:", table.concat(selectedTable, ", "))
+    end
+})
+
+EspSection:CreateColorPicker({
+    Name = "Enemy ESP Color",
+    Default = Color3.fromRGB(0, 240, 255),
+    Flag = "ESP_EnemyColor",
+    Callback = function(color)
+        -- Цвет врагов
+    end
+})
+
+EspSection:CreateColorPicker({
+    Name = "Team ESP Color",
+    Default = Color3.fromRGB(0, 255, 157),
+    Flag = "ESP_TeamColor",
+    Callback = function(color)
+        -- Цвет союзников
+    end
+})
+
+EspSection:CreateSlider({
+    Name = "Max Render Distance",
+    Range = {100, 5000},
+    Increment = 50,
+    Suffix = " studs",
+    Default = 1500,
+    Flag = "ESP_MaxDistance",
+    Callback = function(dist)
+        -- Максимальная дистанция прорисовки
+    end
+})
+
+-- ============================================================================
+-- ВКЛАДКА 3: PLAYER (ДВИЖЕНИЕ И ПЕРСОНАЖ)
+-- ============================================================================
+local PlayerTab = Window:CreateTab({
+    Name = "Player",
+    Icon = "player"
+})
+
+local MoveSection = PlayerTab:CreateSection({
+    Name = "Character Movement & Physics",
+    Opened = true
+})
+
+MoveSection:CreateSlider({
+    Name = "WalkSpeed",
+    Range = {16, 250},
+    Increment = 1,
+    Suffix = " ws",
+    Default = 16,
+    Flag = "Player_WalkSpeed",
+    Callback = function(speed)
+        local char = game.Players.LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.WalkSpeed = speed
+        end
+    end
+})
+
+MoveSection:CreateSlider({
+    Name = "JumpPower",
+    Range = {50, 350},
+    Increment = 5,
+    Suffix = " jp",
+    Default = 50,
+    Flag = "Player_JumpPower",
+    Callback = function(jp)
+        local char = game.Players.LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.UseJumpPower = true
+            hum.JumpPower = jp
+        end
+    end
+})
+
+MoveSection:CreateSlider({
+    Name = "Camera FOV",
+    Range = {70, 120},
+    Increment = 1,
+    Suffix = "°",
+    Default = 90,
+    Flag = "Player_FOV",
+    Callback = function(fov)
+        if workspace.CurrentCamera then
+            workspace.CurrentCamera.FieldOfView = fov
+        end
+    end
+})
+
+MoveSection:CreateButton({
+    Name = "Reset Character Physics",
+    Description = "Сбросить скорость, прыжок и FOV до стандартных значений",
+    Callback = function()
+        local char = game.Players.LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.WalkSpeed = 16
+            hum.JumpPower = 50
+        end
+        if workspace.CurrentCamera then
+            workspace.CurrentCamera.FieldOfView = 70
+        end
+        CyberCore:Notify({
+            Title = "Physics Reset",
+            Content = "Параметры персонажа возвращены по умолчанию.",
+            Duration = 3,
+            Type = "Success"
+        })
+    end
+})
+
+-- ============================================================================
+-- ВКЛАДКА 4: SETTINGS (НАСТРОЙКИ И УПРАВЛЕНИЕ UI)
+-- ============================================================================
+local SettingsTab = Window:CreateTab({
+    Name = "Settings",
+    Icon = "settings"
+})
+
+local InfoSection = SettingsTab:CreateSection({
+    Name = "System & Configuration",
+    Opened = true
+})
+
+InfoSection:CreateParagraph({
+    Title = "CyberCore UI v2.4",
+    Content = "Полная поддержка ПК и мобильных экранов (авто-масштабирование UIScale, плавная HSV-палитра и быстрый поиск по модулям в верхней панели)."
+})
+
+local StatusLabel = InfoSection:CreateLabel("Статус: Активен • Все системы в норме")
+
+InfoSection:CreateDivider()
+
+InfoSection:CreateInput({
+    Name = "Название профиля",
+    PlaceholderText = "Введи имя конфига...",
+    Default = "benzin_main",
+    RemoveTextAfterFocusLost = false,
+    Flag = "Config_Name",
+    Callback = function(text)
+        StatusLabel:Set("Активный профиль: " .. tostring(text))
+    end
+})
+
+InfoSection:CreateButton({
+    Name = "Проверить уведомление",
+    Description = "Отправляет тестовое кибер-уведомление в правый нижний угол",
+    Callback = function()
+        CyberCore:Notify({
+            Title = "Синхронизация",
+            Content = "Профиль [" .. tostring(CyberCore.Flags.Config_Name or "benzin_main") .. "] активен.",
+            Duration = 3,
+            Type = "Info"
+        })
+    end
+})
+
+InfoSection:CreateButton({
+    Name = "Выгрузить интерфейс (Unload)",
+    Description = "Отключает все соединения и полностью удаляет меню с экрана",
+    Callback = function()
+        CyberCore:Destroy()
+    end
+})
