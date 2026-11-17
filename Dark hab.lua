@@ -1,227 +1,211 @@
--- ====================================================================
--- 1. ЗАГРУЗКА ОБНОВЛЁННОЙ БИБЛИОТЕКИ
--- ====================================================================
-local success, NeverLose = pcall(function()
-	return loadstring(game:HttpGet("https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua"))()
-end)
-
-if not success or type(NeverLose) ~= "table" then
-	warn("[NeverLose] Ошибка загрузки библиотеки:", tostring(NeverLose))
-	return
+-- Загрузчик библиотеки Luna UI (обрати внимание: loadstring пишется с маленькой буквы!)
+getgenv().ConfirmLuna = true
+local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua"))()
+​-- 1. Создание главного окна
+local Window = Luna:CreateWindow({
+Name = "Benzin Hub | Mobile & PC",
+Subtitle = "v1.0",
+LogoID = "", -- иконки вырезаны, оставляем пустым
+LoadingEnabled = true,
+LoadingTitle = "Benzin Interface",
+LoadingSubtitle = "Загрузка скрипта...",
+​ConfigSettings = {
+RootFolder = nil,
+ConfigFolder = "BenzinHub"
+},
+​KeySystem = false, -- поставь true, если нужна ключ-система
+KeySettings = {
+Title = "Benzin Hub | Key System",
+Subtitle = "Проверка ключа",
+Note = "Введите ваш ключ для доступа",
+SaveInRoot = false,
+SaveKey = true,
+Key = {"12345"},
+SecondAction = {
+Enabled = false,
+Type = "Discord", -- "Discord" или "Link"
+Parameter = "invitecode"
+}
+}
+})
+​-- 2. Создание домашней вкладки (Home Tab)
+Window:CreateHomeTab({
+Icon = 1,
+SupportedExecutors = {"Delta", "Vega X", "Codex", "Arceus X", "Fluxus", "Xeno", "Nihon"},
+DiscordInvite = "noinvitelink"
+})
+​-- 3. Создание основных вкладок (Tabs)
+local MainTab = Window:CreateTab({
+Name = "Основные",
+ShowTitle = true
+})
+​local ExtraTab = Window:CreateTab({
+Name = "Дополнительно",
+ShowTitle = true
+})
+​local SettingsTab = Window:CreateTab({
+Name = "Настройки",
+ShowTitle = true
+})
+​-- 4. Уведомление (Notification)
+Luna:Notification({
+Title = "Добро пожаловать!",
+Content = "Интерфейс успешно загружен и адаптирован под телефон и ПК.",
+Duration = 5
+})
+​-- ==========================================
+-- ПРИМЕРЫ ВСЕХ ЭЛЕМЕНТОВ ВНУТРИ СЕКЦИИ
+-- ==========================================
+local MainSection = MainTab:CreateSection("Интерактивные элементы")
+​-- Разделитель (Divider)
+MainSection:CreateDivider()
+​-- Кнопка (Button)
+local MyButton = MainSection:CreateButton({
+Name = "Обычная кнопка",
+Description = "Нажми, чтобы выполнить действие",
+Callback = function()
+print("Кнопка нажата!")
+Luna:Notification({
+Title = "Кнопка",
+Content = "Вы нажали на кнопку!",
+Duration = 3
+})
 end
-
-NeverLose.UnloadEnabled = true
-
--- ====================================================================
--- 2. ИНИЦИАЛИЗАЦИЯ МОДУЛЕЙ
--- ====================================================================
-local Notifier = NeverLose:CreateNotification()
-local Logger = NeverLose:CreateLogger()
-local Indicators = NeverLose:CreateIndicator()
-
--- ====================================================================
--- 3. СОЗДАНИЕ ОКНА (Автоматически подстроится под телефон и ПК)
--- ====================================================================
-local Window = NeverLose:CreateWindow({
-	Name = "Neverlose",
-	Content = "Mobile & PC Build",
-	ConfigFolder = "NL_MobileConfigs",
-	Keybind = "RightControl"
 })
-
--- Если запущено на ПК, создадим иконку вручную (на телефоне она создастся сама)
-if not Window._MenuIcon then
-	local MenuIcon = NeverLose:CreateMenuIcon({
-		Size = 46,
-		Image = "shield-check",
-		Draggable = true
-	})
-	MenuIcon.Root.Position = UDim2.new(0, 15, 0, 65)
-	Window:AttachMenuIcon(MenuIcon)
+​-- Переключатель (Toggle)
+local MyToggle = MainSection:CreateToggle({
+Name = "Переключатель (Toggle)",
+Description = "Включает или выключает функцию",
+CurrentValue = false,
+Callback = function(Value)
+print("Состояние Toggle:", Value)
 end
-
-Window:SetAccount({
-	Username = "Benzin",
-	Expires = "Lifetime"
+}, "MyToggleFlag")
+​-- Ползунок (Slider) — адаптирован под тач на телефоне
+local MySlider = MainSection:CreateSlider({
+Name = "Ползунок (Slider)",
+Range = {0, 200},
+Increment = 1,
+CurrentValue = 50,
+Callback = function(Value)
+print("Значение Slider:", Value)
+end
+}, "MySliderFlag")
+​-- Выпадающий список с одним выбором (Single Dropdown)
+local SingleDropdown = MainSection:CreateDropdown({
+Name = "Список (Одиночный выбор)",
+Description = "Выберите один вариант из списка",
+Options = {"Вариант 1", "Вариант 2", "Вариант 3", "Вариант 4"},
+CurrentOption = {"Вариант 1"},
+MultipleOptions = false,
+SpecialType = nil,
+Callback = function(Option)
+print("Выбран вариант:", Option)
+end
+}, "SingleDropdownFlag")
+​-- Выпадающий список с мульти-выбором (Multi Dropdown)
+local MultiDropdown = MainSection:CreateDropdown({
+Name = "Список (Мульти-выбор)",
+Description = "Можно выбрать сразу несколько вариантов",
+Options = {"Меч", "Лук", "Щит", "Зелье"},
+CurrentOption = {"Меч", "Щит"},
+MultipleOptions = true,
+SpecialType = nil,
+Callback = function(OptionsTable)
+print("Выбраны варианты:", table.concat(OptionsTable, ", "))
+end
+}, "MultiDropdownFlag")
+​-- Выпадающий список игроков (Player Dropdown)
+local PlayerDropdown = MainSection:CreateDropdown({
+Name = "Выбор игрока",
+Description = "Автоматически обновляет список игроков на сервере",
+Options = {},
+CurrentOption = {},
+MultipleOptions = false,
+SpecialType = "Player",
+Callback = function(PlayerName)
+print("Выбран игрок:", PlayerName)
+end
 })
-
--- Вотермарка в правом верхнем углу
-local Watermark = Window:Watermark()
-local WmMenuBlock = Watermark:AddBlock("hammer-code", "Neverlose")
-local WmStatusBlock = Watermark:AddBlock("clock", "Active")
-
--- Тап или клик по первому блоку вотермарки открывает/закрывает меню
-WmMenuBlock:Input()
-
--- Экранный индикатор
-local TestIndicator = Indicators.new({
-	Name = "ESP ACTIVE",
-	Icon = "eye",
-	Color = "Green"
+​-- ==========================================
+-- ВВОД, БИНДЫ, ЦВЕТА И ТЕКСТ НА ВТОРОЙ ВКЛАДКЕ
+-- ==========================================
+local InputSection = ExtraTab:CreateSection("Ввод, бинды и цвета")
+​-- Поле ввода текста (Input)
+local MyInput = InputSection:CreateInput({
+Name = "Текстовое поле (Input)",
+Description = "Введите любой текст",
+CurrentValue = "",
+PlaceholderText = "Введите текст...",
+RemoveTextAfterFocusLost = false,
+Numeric = false, -- поставь true, если нужны только цифры
+Enter = false,   -- если true, сработает после завершения ввода
+MaxCharacters = 30,
+Callback = function(Text)
+print("Введённый текст:", Text)
+end
+}, "MyInputFlag")
+​-- Бинд клавиши / Тап-бинд на телефоне (Bind)
+local MyBind = InputSection:CreateBind({
+Name = "Бинд (Keybind)",
+Description = "На ПК — по клавише, на телефоне — тап по плашке",
+CurrentBind = "Q",
+HoldToInteract = false,
+Callback = function(Active)
+print("Бинд сработал! Состояние:", Active)
+end,
+OnChangedCallback = function(NewKey)
+print("Новая клавиша бинда:", NewKey)
+end
+}, "MyBindFlag")
+​-- Выбор цвета (ColorPicker) — адаптирован под тач на телефоне
+local MyColorPicker = InputSection:CreateColorPicker({
+Name = "Выбор цвета (ColorPicker)",
+Color = Color3.fromRGB(117, 164, 206),
+Callback = function(Color)
+print("Выбран цвет RGB:", math.floor(Color.R * 255), math.floor(Color.G * 255), math.floor(Color.B * 255))
+end
+}, "MyColorPickerFlag")
+​-- Секция текстовых элементов
+local TextSection = ExtraTab:CreateSection("Текстовые блоки (Labels & Paragraphs)")
+​-- Обычный Label (Style = 1)
+local NormalLabel = TextSection:CreateLabel({
+Text = "Обычная текстовая метка (Style = 1)",
+Style = 1
 })
-
--- ====================================================================
--- 4. ВКЛАДКИ И СЕКЦИИ
--- ====================================================================
-Window:AddTabLabel("MAIN")
-
-local MainTab = Window:AddTab({
-	Name = "Combat",
-	Icon = "crosshairs",
-	Type = "Double" -- На телефоне автоматически станет 1 широкой колонкой
+​-- Информационный Label (Style = 2)
+local InfoLabel = TextSection:CreateLabel({
+Text = "Информационная плашка (Style = 2)",
+Style = 2
 })
-
-local VisualsTab = Window:AddTab({
-	Name = "Visuals",
-	Icon = "eye",
-	Type = "Double"
+​-- Предупреждающий Label (Style = 3)
+local WarnLabel = TextSection:CreateLabel({
+Text = "Предупреждение / Внимание (Style = 3)",
+Style = 3
 })
-
-Window:AddTabLabel("MISC")
-
-local SettingsTab = Window:AddTab({
-	Name = "Settings",
-	Icon = "gear",
-	Type = "Single"
+​-- Параграф (Paragraph)
+local MyParagraph = TextSection:CreateParagraph({
+Title = "Заголовок параграфа",
+Text = "Здесь можно размещать длинный многострочный текст, инструкции или описание функций. Высота плашки автоматически подстраивается под размер текста."
 })
-
-local LeftSec = MainTab:AddSection({ Name = "MAIN FEATURES", Position = "left" })
-local RightSec = MainTab:AddSection({ Name = "CONFIGURATION", Position = "right" })
-local EspSec = VisualsTab:AddSection({ Name = "ESP SETTINGS", Position = "left" })
-
--- ====================================================================
--- 5. ТЕСТОВЫЕ ЭЛЕМЕНТЫ
--- ====================================================================
-local AimRow = LeftSec:AddLabel("Enable Aimbot"):ToolTip("Автоматическое наведение")
-
-AimRow:AddColorPicker({
-	Default = Color3.fromRGB(78, 127, 252),
-	Flag = "Aim_Color",
-	Callback = function(color)
-		print("Цвет:", color)
-	end
+​-- Пример программного изменения значений через :Set()
+TextSection:CreateButton({
+Name = "Обновить элементы через :Set()",
+Description = "Демонстрация динамического обновления",
+Callback = function()
+NormalLabel:Set("Текст метки успешно обновлён!")
+MyParagraph:Set({
+Title = "Новый заголовок",
+Text = "Текст параграфа был изменён нажатием кнопки."
 })
-
-local SubMenu = AimRow:AddOption(1)
-SubMenu:AddLabel("Silent Mode"):AddToggle({
-	Default = true,
-	Flag = "Silent_Toggle"
+MyToggle:Set({CurrentValue = true})
+MySlider:UpdateValue(125)
+end
 })
-SubMenu:AddLabel("Hit Chance"):AddSlider({
-	Min = 0, Max = 100, Default = 85, Type = "%", Flag = "HitChance_Slider"
-})
-
-AimRow:AddToggle({
-	Default = false,
-	Flag = "Aim_Toggle",
-	Callback = function(val)
-		Logger.new("crosshairs", "Aimbot: " .. tostring(val), 2.5)
-	end
-})
-
-LeftSec:AddLabel("FOV Radius"):AddSlider({
-	Min = 10,
-	Max = 360,
-	Default = 120,
-	Rounding = 0,
-	Type = "px",
-	Flag = "FOV_Slider"
-})
-
-LeftSec:AddLabel("Target Part"):AddDropdown({
-	Values = {"Head", "HumanoidRootPart", "Torso"},
-	Default = "Head",
-	Multi = false,
-	Flag = "Part_Dropdown"
-})
-
-LeftSec:AddLabel("Checks"):AddDropdown({
-	Values = {"Team Check", "Wall Check", "ForceField Check"},
-	Default = {"Team Check"},
-	Multi = true,
-	Flag = "Checks_Multi"
-})
-
-LeftSec:AddButton({
-	Name = "Send Test Notification",
-	Icon = "bell",
-	Callback = function()
-		Notifier.new({
-			Title = "Neverlose",
-			Content = "Уведомление работает!",
-			Duration = 4
-		})
-	end
-})
-
-RightSec:AddLabel("Trigger Key"):AddKeybind({
-	Default = "E",
-	Blacklist = {"W", "A", "S", "D"},
-	Flag = "Trigger_Bind"
-})
-
-RightSec:AddLabel("Watermark Text"):AddTextInput({
-	Default = "Neverlose",
-	Placeholder = "Введите текст...",
-	Flag = "WM_Input",
-	Callback = function(text)
-		WmMenuBlock:SetText(text)
-	end
-})
-
-EspSec:AddLabel("Show Screen Indicator"):AddToggle({
-	Default = false,
-	Flag = "Ind_Toggle",
-	Callback = function(val)
-		TestIndicator:SetRender(val)
-	end
-})
-
-EspSec:AddLabel("Indicator Status"):AddDropdown({
-	Values = {"Green", "Red", "White"},
-	Default = "Green",
-	Flag = "Ind_Color",
-	Callback = function(col)
-		TestIndicator:SetColor(col)
-	end
-})
-
--- ====================================================================
--- 6. ВКЛАДКА НАСТРОЕК
--- ====================================================================
-local UiSec = SettingsTab:AddSection({ Name = "UI MANAGEMENT", Position = "left" })
-
-UiSec:AddLabel("Window Size"):AddDropdown({
-	Values = {"Mobile", "Small", "Default", "Large"},
-	Default = "Mobile",
-	Callback = function(scale)
-		Window:SetSize(NeverLose.Scales[scale])
-	end
-})
-
-UiSec:AddButton({
-	Name = "Apply Cyberpunk Pink Theme",
-	Icon = "paint-brush",
-	Callback = function()
-		NeverLose:AddTheme({
-			Name        = "CyberPink",
-			Accent      = Color3.fromRGB(255, 65, 160),
-			Background  = Color3.fromRGB(14, 10, 20),
-			Icon        = Color3.fromRGB(255, 130, 200),
-		})
-	end
-})
-
-UiSec:AddButton({
-	Name = "Unload Interface",
-	Icon = "trash-can",
-	Callback = function()
-		NeverLose:Unload()
-	end
-})
-
-Notifier.new({
-	Title = "Готово!",
-	Content = "Меню адаптировано под мобильные устройства и ПК.",
-	Duration = 4
-})
+​-- ==========================================
+-- ВКЛАДКА НАСТРОЕК ТЕМЫ И КОНФИГОВ
+-- ==========================================
+SettingsTab:BuildThemeSection()
+SettingsTab:BuildConfigSection()
+​-- Автозагрузка конфига (если был сохранён)
+Luna:LoadAutoloadConfig()
