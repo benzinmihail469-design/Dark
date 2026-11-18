@@ -1,451 +1,231 @@
---[[
-	Полный загрузчик (Loader) со всеми элементами MacLib UI (Esp.lua)
-	Поддерживает ПК и мобильные экзекуторы (Delta, Arceus X, Fluxus, Synapse, Wave и др.)
-]]
-
-local REPO_URL = "https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua"
-
--- Безопасная загрузка библиотеки через loadstring + game:HttpGet
-local okFetch, sourceCode = pcall(function()
-	return game:HttpGet(REPO_URL)
-end)
-
-if not okFetch or type(sourceCode) ~= "string" or #sourceCode == 0 then
-	warn("[MacLib Loader] Ошибка загрузки файла по ссылке: " .. tostring(sourceCode))
-	return
-end
-
-local chunk, syntaxErr = loadstring(sourceCode)
-if not chunk then
-	warn("[MacLib Loader] Синтаксическая ошибка в Esp.lua: " .. tostring(syntaxErr))
-	return
-end
-
-local okRun, MacLib = pcall(chunk)
-if not okRun or type(MacLib) ~= "table" then
-	warn("[MacLib Loader] Ошибка инициализации библиотеки: " .. tostring(MacLib))
-	return
-end
-
 -- ============================================================================
--- 1. СОЗДАНИЕ ГЛАВНОГО ОКНА
+-- 1. ЗАГРУЗКА БИБЛИОТЕКИ (LOADER)
+-- ============================================================================
+local MacLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/benzinmihail469-design/Rararara/refs/heads/main/Esp.lua"))()
+​-- ============================================================================
+-- 2. СОЗДАНИЕ ГЛАВНОГО ОКНА (WINDOW)
 -- ============================================================================
 local Window = MacLib:Window({
-	Title = "MacLib ESP & Combat Hub",
-	Subtitle = "v2.5 • Полная демонстрация всех элементов",
-	Size = UDim2.fromOffset(868, 650),
-	DragStyle = 1, -- 1 = за иконку перемещения, 2 = за любое место окна
-	DisabledWindowControls = {},
-	ShowUserInfo = true,
-	Keybind = Enum.KeyCode.RightControl,
-	AcrylicBlur = true
+Title = "Rararara Hub",
+Subtitle = "v2.5 • ESP & Visuals",
+Size = UDim2.fromOffset(868, 650),
+DragStyle = 1, -- 1 = перетаскивание за иконку сверху, 2 = за всё окно
+DisabledWindowControls = {},
+ShowUserInfo = true,
+Keybind = Enum.KeyCode.RightControl, -- клавиша скрытия/показа меню
+AcrylicBlur = true,
 })
-
--- ============================================================================
--- 2. ГЛОБАЛЬНЫЕ НАСТРОЙКИ (Иконка шестеренки в левой панели)
+​-- ============================================================================
+-- 3. ГЛОБАЛЬНЫЕ НАСТРОЙКИ (ИКОНКА ШЕСТЕРЁНКИ В ШАПКЕ САЙДБАРА)
 -- ============================================================================
 Window:GlobalSetting({
-	Name = "Размытие фона (Acrylic Blur)",
-	Default = Window:GetAcrylicBlurState(),
-	Callback = function(state)
-		Window:SetAcrylicBlurState(state)
-		Window:Notify({
-			Title = "Глобальные настройки",
-			Description = (state and "Включено" or "Выключено") .. " размытие фона",
-			Lifetime = 3
-		})
-	end
+Name = "UI Blur",
+Default = Window:GetAcrylicBlurState(),
+Callback = function(state)
+Window:SetAcrylicBlurState(state)
+end,
 })
-
-Window:GlobalSetting({
-	Name = "Уведомления (Notifications)",
-	Default = Window:GetNotificationsState(),
-	Callback = function(state)
-		Window:SetNotificationsState(state)
-		Window:Notify({
-			Title = "Глобальные настройки",
-			Description = (state and "Включены" or "Выключены") .. " уведомления",
-			Lifetime = 3
-		})
-	end
+​Window:GlobalSetting({
+Name = "Notifications",
+Default = Window:GetNotificationsState(),
+Callback = function(state)
+Window:SetNotificationsState(state)
+end,
 })
-
-Window:GlobalSetting({
-	Name = "Показывать профиль игрока",
-	Default = Window:GetUserInfoState(),
-	Callback = function(state)
-		Window:SetUserInfoState(state)
-		Window:Notify({
-			Title = "Глобальные настройки",
-			Description = state and "Профиль отображается" or "Профиль скрыт",
-			Lifetime = 3
-		})
-	end
+​Window:GlobalSetting({
+Name = "Show User Info",
+Default = Window:GetUserInfoState(),
+Callback = function(state)
+Window:SetUserInfoState(state)
+end,
 })
-
+​-- ============================================================================
+-- 4. СОЗДАНИЕ ГРУППЫ ВКЛАДОК И ВКЛАДОК (TABGROUP & TAB)
 -- ============================================================================
--- 3. ГРУППЫ ВКЛАДОК И ВКЛАДКИ (TABGROUPS & TABS)
+local MainTabGroup = Window:TabGroup()
+​local VisualsTab = MainTabGroup:Tab({
+Name = "ESP & Visuals",
+Image = "rbxassetid://10723346959" -- иконка вкладки
+})
+​local CombatTab = MainTabGroup:Tab({
+Name = "Combat",
+Image = "rbxassetid://10734974297"
+})
+​-- ============================================================================
+-- 5. СОЗДАНИЕ СВОРАЧИВАЕМЫХ СЕКЦИЙ (SECTION)
 -- ============================================================================
-local MainGroup = Window:TabGroup()
-local SettingsGroup = Window:TabGroup()
-
-local CombatTab = MainGroup:Tab({
-	Name = "Бой и Оружие",
-	Image = "rbxassetid://18821914323"
+local LeftSection = VisualsTab:Section({
+Side = "Left", -- "Left" или "Right"
+Name = "Player ESP",
+Icon = "rbxassetid://10723346959"
 })
-
-local VisualsTab = MainGroup:Tab({
-	Name = "Визуалы и ESP",
-	Image = "rbxassetid://10734950309"
+​local RightSection = VisualsTab:Section({
+Side = "Right",
+Name = "Color Palette",
+Icon = "rbxassetid://10734950309"
 })
-
-local MiscTab = SettingsGroup:Tab({
-	Name = "Инфо и Текст",
-	Image = "rbxassetid://18767849817"
-})
-
+​-- ============================================================================
+-- 6. ВЫЗОВ ФУНКЦИИ ЦВЕТА (COLOR / COLORPICKER) — ОБНОВЛЁННАЯ ПАЛИТРА С ИКОНКАМИ
 -- ============================================================================
--- 4. ВКЛАДКА 1: БОЙ И ОРУЖИЕ (Toggles, Sliders, Keybinds, Dropdowns, Buttons)
+-- Вариант 1: Через короткий вызов :Color(...)
+local BoxColor = RightSection:Color({
+Name = "Box ESP Color",
+Icon = "rbxassetid://10734950309", -- кастомная иконка слева на карточке
+Default = Color3.fromRGB(0, 210, 255),
+Rainbow = false, -- можно включить радугу сразу (true/false)
+Callback = function(color)
+print("Выбран цвет Box ESP:", color)
+end,
+})
+​-- Вариант 2: С прозрачностью (Alpha) через :Colorpicker(...) или :Color(...)
+local ChamsColor = RightSection:Colorpicker({
+Name = "Chams Fill & Alpha",
+Icon = "rbxassetid://10723346959",
+Default = Color3.fromRGB(255, 65, 85),
+Alpha = 0.25, -- от 0 (непрозрачный) до 1 (полностью прозрачный)
+Callback = function(color, alpha)
+print("Цвет Chams:", color, "Прозрачность:", alpha)
+end,
+})
+​-- Методы управления цветом из кода:
+-- BoxColor:SetColor(Color3.fromRGB(55, 225, 125), true)
+-- BoxColor:GetColor()
+-- ChamsColor:SetAlpha(0.5, true)
+-- ChamsColor:GetAlpha()
+-- BoxColor:SetRainbow(true)
+-- BoxColor:UpdateName("New Color Name")
+-- BoxColor:UpdateIcon("rbxassetid://10734974297")
+-- BoxColor:SetVisibility(true)
+​-- ============================================================================
+-- 7. ВЫЗОВ ОСТАЛЬНЫХ ЭЛЕМЕНТОВ БИБЛИОТЕКИ
 -- ============================================================================
-local AimbotSection = CombatTab:Section({
-	Side = "Left",
-	Name = "Настройки Аимбота",
-	Icon = "rbxassetid://18821914323"
+​-- [TOGGLE] Переключатель
+local EspToggle = LeftSection:Toggle({
+Name = "Enable Player ESP",
+Default = true,
+Callback = function(state)
+print("ESP включён:", state)
+end,
 })
-
-AimbotSection:Header({
-	Text = "Основные параметры"
+-- Методы: EspToggle:UpdateState(false), EspToggle:GetState(), EspToggle:UpdateName("...")
+​-- [SLIDER] Ползунок
+local DistanceSlider = LeftSection:Slider({
+Name = "Max ESP Distance",
+Default = 1500,
+Minimum = 100,
+Maximum = 5000,
+DisplayMethod = "Value", -- "Value", "Percent", "Degrees", "Tenths", "Hundredths", "Round"
+Callback = function(value)
+print("Дистанция ESP:", value)
+end,
 })
-
-local AimToggle = AimbotSection:Toggle({
-	Name = "Включить Silent Aim",
-	Default = true,
-	Callback = function(state)
-		Window:Notify({
-			Title = "Аимбот",
-			Description = "Silent Aim: " .. (state and "Активен" or "Выключен"),
-			Lifetime = 2
-		})
-	end
+-- Методы: DistanceSlider:UpdateValue(2000), DistanceSlider:GetValue()
+​-- [DROPDOWN] Одиночный выпадающий список
+local ModeDropdown = LeftSection:Dropdown({
+Name = "Box Style",
+Search = false,
+Multi = false,
+Required = true,
+Options = {"2D Corner", "2D Box", "3D Box", "Highlight"},
+Default = 1,
+Callback = function(selected)
+print("Выбран режим:", selected)
+end,
 })
-
-local FovSlider = AimbotSection:Slider({
-	Name = "Радиус FOV",
-	Default = 120,
-	Minimum = 10,
-	Maximum = 360,
-	DisplayMethod = "Degrees", -- Доступно: Value, Percent, Degrees, Round, Tenths, Hundredths
-	Callback = function(val)
-		print("[Aimbot] Радиус FOV:", val)
-	end
+​-- [MULTI-DROPDOWN] Множественный выпадающий список с поиском
+local ElementsDropdown = LeftSection:Dropdown({
+Name = "ESP Elements",
+Search = true,
+Multi = true,
+Required = false,
+Options = {"Box", "Name", "HealthBar", "Tracers", "Distance"},
+Default = {"Box", "Name", "HealthBar"},
+Callback = function(selectedTable)
+for optionName, isSelected in pairs(selectedTable) do
+print(optionName, isSelected)
+end
+end,
 })
-
-local SmoothSlider = AimbotSection:Slider({
-	Name = "Плавность доводки",
-	Default = 45,
-	Minimum = 0,
-	Maximum = 100,
-	DisplayMethod = "Percent",
-	Callback = function(val)
-		print("[Aimbot] Плавность:", val)
-	end
+-- Методы: ModeDropdown:UpdateSelection("3D Box"), ModeDropdown:InsertOptions({"Skeleton"}), ModeDropdown:ClearOptions()
+​-- [KEYBIND] Бинд клавиши (поддерживает ПК и мобильную клавиатуру)
+local EspKeybind = LeftSection:Keybind({
+Name = "Toggle ESP Keybind",
+Default = Enum.KeyCode.V,
+Callback = function(key)
+EspToggle:Toggle()
+end,
+onBinded = function(newKey)
+Window:Notify({
+Title = "Keybind",
+Description = "Новая клавиша: " .. tostring(newKey and newKey.Name or "None"),
+Lifetime = 3
 })
-
-AimbotSection:Keybind({
-	Name = "Клавиша захвата цели",
-	Default = Enum.KeyCode.Q,
-	Callback = function(bind)
-		Window:Notify({
-			Title = "Кейбинд сработал",
-			Description = "Нажата клавиша: " .. tostring(bind.Name),
-			Lifetime = 2
-		})
-	end,
-	onBinded = function(newBind)
-		Window:Notify({
-			Title = "Кейбинд изменён",
-			Description = "Новая клавиша: " .. tostring(newBind.Name),
-			Lifetime = 3
-		})
-	end
+end,
 })
-
-local HitboxDropdown = AimbotSection:Dropdown({
-	Name = "Часть тела для наводки (Single)",
-	Multi = false,
-	Required = true,
-	Options = { "Голова", "Торс", "Руки", "Ноги", "Ближайшая часть" },
-	Default = 1,
-	Callback = function(selected)
-		print("[Aimbot] Выбрана часть тела:", selected)
-	end
+​-- [INPUT] Текстовое поле ввода
+local ConfigInput = LeftSection:Input({
+Name = "Config Name",
+Placeholder = "Введите название...",
+Default = "LegitCfg",
+AcceptedCharacters = "All", -- "All", "Numeric", "Alphabetic"
+Callback = function(text)
+print("Введён текст (Enter/FocusLost):", text)
+end,
+onChanged = function(text)
+print("Текст изменён:", text)
+end,
 })
-
-local WeaponMultiDropdown = CombatTab:Section({
-	Side = "Right",
-	Name = "Фильтры и Управление",
-	Icon = "rbxassetid://10734949856"
+​-- [BUTTON] Кнопка с иконкой
+RightSection:Button({
+Name = "Apply & Notify",
+Icon = "rbxassetid://10709790644",
+Callback = function()
+Window:Notify({
+Title = "Rararara Hub",
+Description = "Настройки цветов успешно применены!",
+Style = "Confirm", -- "None", "Confirm", "Cancel"
+Lifetime = 4
 })
-
-local ChecksDropdown = WeaponMultiDropdown:Dropdown({
-	Name = "Проверки целей (Multi + Поиск)",
-	Search = true,
-	Multi = true,
-	Required = false,
-	Options = {
-		"Проверка команды (Team Check)",
-		"Проверка стен (Wall Check)",
-		"Проверка здоровья (Alive Check)",
-		"Игнорировать друзей",
-		"Игнорировать невидимых"
-	},
-	Default = { "Проверка команды (Team Check)", "Проверка стен (Wall Check)" },
-	Callback = function(selectedTable)
-		local active = {}
-		for optionName, isSelected in pairs(selectedTable) do
-			if isSelected then
-				table.insert(active, optionName)
-			end
-		end
-		print("[Checks] Активные фильтры:", table.concat(active, ", "))
-	end
+end,
 })
-
-WeaponMultiDropdown:Input({
-	Name = "Лимит дистанции (Numeric)",
-	Placeholder = "Например: 500",
-	Default = "500",
-	AcceptedCharacters = "Numeric", -- Доступно: All, Numeric, Alphabetic
-	Callback = function(text)
-		Window:Notify({
-			Title = "Дистанция обновлена",
-			Description = "Установлена дистанция: " .. tostring(text) .. " м",
-			Lifetime = 3
-		})
-	end
+​-- [DIALOG] Модальное диалоговое окно
+RightSection:Button({
+Name = "Reset All Settings",
+Icon = "rbxassetid://10734941499",
+Callback = function()
+Window:Dialog({
+Title = "Сброс настроек",
+Description = "Вы уверены, что хотите сбросить цвета и настройки ESP по умолчанию?",
+Buttons = {
+{
+Name = "Подтвердить",
+Callback = function()
+BoxColor:SetColor(Color3.fromRGB(0, 210, 255), true)
+ChamsColor:SetColor(Color3.fromRGB(255, 65, 85), true)
+ChamsColor:SetAlpha(0.25, true)
+end,
+},
+{
+Name = "Отмена"
+}
+}
 })
-
-WeaponMultiDropdown:Input({
-	Name = "Тег конфигурации (All)",
-	Placeholder = "Введите название...",
-	Default = "Legit_v1",
-	AcceptedCharacters = "All",
-	Callback = function(text)
-		print("[Config] Имя профиля:", text)
-	end
+end,
 })
-
-WeaponMultiDropdown:Divider()
-
-WeaponMultiDropdown:Button({
-	Name = "Сбросить выбор дропдаунов",
-	Callback = function()
-		HitboxDropdown:UpdateSelection("Торс")
-		ChecksDropdown:UpdateSelection({ "Проверка команды (Team Check)" })
-		FovSlider:UpdateValue(90)
-		Window:Notify({
-			Title = "Сброс настроек",
-			Description = "Параметры возвращены к базовым значениям",
-			Style = "Confirm",
-			Lifetime = 3
-		})
-	end
+​-- [DIVIDER / HEADER / PARAGRAPH / LABEL / SUBLABEL] Текстовые элементы и разделители
+RightSection:Divider()
+​RightSection:Header({
+Text = "Информация"
 })
-
-WeaponMultiDropdown:Button({
-	Name = "Открыть диалоговое окно (Dialog)",
-	Callback = function()
-		Window:Dialog({
-			Title = "Подтверждение действия",
-			Description = "Ты уверен, что хочешь применить настройки боевого модуля?",
-			Buttons = {
-				{
-					Name = "Подтвердить",
-					Callback = function()
-						Window:Notify({
-							Title = "Диалог",
-							Description = "Настройки успешно применены!",
-							Style = "Confirm",
-							Lifetime = 3
-						})
-					end
-				},
-				{
-					Name = "Отмена",
-					Callback = function()
-						print("Действие отменено")
-					end
-				}
-			}
-		})
-	end
+​RightSection:Paragraph({
+Header = "Управление палитрой",
+Body = "Нажми на карточку цвета, чтобы открыть 2D HSV-палитру, выбрать готовый оттенок из Quick Palette или включить режим Rainbow."
 })
-
--- ============================================================================
--- 5. ВКЛАДКА 2: ВИЗУАЛЫ И ESP (Исправленная палитра Colorpicker / Color)
--- ============================================================================
-local EspLeftSection = VisualsTab:Section({
-	Side = "Left",
-	Name = "Палитра цветов ESP",
-	Icon = "rbxassetid://10734950309"
+​RightSection:Label({
+Text = "Статус: Все модули активны"
 })
-
-EspLeftSection:Toggle({
-	Name = "Боксы игроков (2D Box)",
-	Default = true,
-	Callback = function(state)
-		print("[ESP] Боксы:", state)
-	end
+​RightSection:SubLabel({
+Text = "Поддерживается управление мышью и сенсорным экраном"
 })
-
--- Обычный Colorpicker (без Alpha)
-local BoxColorPicker = EspLeftSection:Colorpicker({
-	Name = "Цвет боксов (Colorpicker)",
-	Default = Color3.fromRGB(0, 225, 255),
-	Callback = function(color)
-		Window:Notify({
-			Title = "Цвет боксов обновлён",
-			Description = string.format("RGB: %d, %d, %d", math.round(color.R * 255), math.round(color.G * 255), math.round(color.B * 255)),
-			Lifetime = 3
-		})
-	end
-})
-
--- Colorpicker с прозрачностью (Alpha)
-local ChamsColorPicker = EspLeftSection:Colorpicker({
-	Name = "Цвет Chams + Прозрачность (Alpha)",
-	Default = Color3.fromRGB(255, 65, 110),
-	Alpha = 0.25,
-	Callback = function(color, alpha)
-		Window:Notify({
-			Title = "Chams обновлён",
-			Description = string.format("RGB: %d, %d, %d | Alpha: %.2f", math.round(color.R * 255), math.round(color.G * 255), math.round(color.B * 255), alpha or 0),
-			Lifetime = 3
-		})
-	end
-})
-
--- Вызов через алиас :Color(...)
-local TracerColorPicker = EspLeftSection:Color({
-	Name = "Цвет линий (через алиас :Color)",
-	Default = Color3.fromRGB(110, 255, 130),
-	Callback = function(color)
-		print("[ESP] Цвет линий:", color)
-	end
-})
-
-local EspRightSection = VisualsTab:Section({
-	Side = "Right",
-	Name = "Динамические эффекты",
-	Icon = "rbxassetid://10734974297"
-})
-
-local rainbowConnection = nil
-local rainbowHue = 0
-
-EspRightSection:Toggle({
-	Name = "Радужное переливание (Rainbow)",
-	Default = false,
-	Callback = function(state)
-		if state then
-			rainbowConnection = game:GetService("RunService").RenderStepped:Connect(function(dt)
-				rainbowHue = (rainbowHue + dt * 0.15) % 1
-				local c = Color3.fromHSV(rainbowHue, 1, 1)
-				BoxColorPicker:SetColor(c)
-				ChamsColorPicker:SetColor(c)
-			end)
-		else
-			if rainbowConnection then
-				rainbowConnection:Disconnect()
-				rainbowConnection = nil
-			end
-		end
-	end
-})
-
-EspRightSection:Button({
-	Name = "Установить неоново-фиолетовый цвет",
-	Callback = function()
-		local purple = Color3.fromRGB(175, 75, 255)
-		BoxColorPicker:SetColor(purple)
-		ChamsColorPicker:SetColor(purple)
-		ChamsColorPicker:SetAlpha(0.15)
-		TracerColorPicker:SetColor(purple)
-	end
-})
-
--- ============================================================================
--- 6. ВКЛАДКА 3: ИНФО И ТЕКСТОВЫЕ ЭЛЕМЕНТЫ (Header, Paragraph, Label, SubLabel, Divider, Spacer)
--- ============================================================================
-local InfoSection = MiscTab:Section({
-	Side = "Left",
-	Name = "Текстовые компоненты",
-	Icon = "rbxassetid://18767849817"
-})
-
-InfoSection:Header({
-	Text = "Заголовок секции (Header)"
-})
-
-InfoSection:Paragraph({
-	Header = "Параграф (Paragraph)",
-	Body = "Это многострочный текстовый блок для описания функций, логов обновлений или инструкций по управлению меню."
-})
-
-InfoSection:Divider()
-
-InfoSection:Label({
-	Text = "Обычная текстовая метка (Label) для важной информации."
-})
-
-InfoSection:SubLabel({
-	Text = "Вспомогательная подпись меньшего размера (SubLabel) для подсказок."
-})
-
-InfoSection:Spacer()
-
-InfoSection:Button({
-	Name = "Свернуть / Развернуть эту секцию",
-	Callback = function()
-		InfoSection:ToggleCollapse()
-	end
-})
-
-local ControlSection = MiscTab:Section({
-	Side = "Right",
-	Name = "Управление окном",
-	Icon = "rbxassetid://18767849817"
-})
-
-ControlSection:Button({
-	Name = "Показать уведомление (Confirm)",
-	Callback = function()
-		Window:Notify({
-			Title = "Проверка связи",
-			Description = "Нажми на галочку справа для подтверждения.",
-			Style = "Confirm",
-			Lifetime = 5,
-			Callback = function()
-				print("Уведомление подтверждено пользователем!")
-			end
-		})
-	end
-})
-
-ControlSection:Button({
-	Name = "Выгрузить интерфейс (Unload)",
-	Callback = function()
-		Window:Unload()
-	end
-})
-
-Window.onUnloaded(function()
-	if rainbowConnection then
-		rainbowConnection:Disconnect()
-		rainbowConnection = nil
-	end
-	print("[MacLib] Интерфейс полностью выгружен и очищен!")
-end)
-
--- Выбираем первую вкладку при старте
-CombatTab:Select()s
+​-- Активируем первую вкладку при запуске
+VisualsTab:Select()
