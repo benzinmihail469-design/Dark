@@ -1,181 +1,43 @@
---[[
-	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
-]]
-repeat task.wait() until game:IsLoaded()
+local NEVERLOSE = loadstring(game:HttpGet("https://raw.githubusercontent.com/CludeHub/SourceCludeLib/refs/heads/main/NerverLoseLibEdited.lua"))()
+    local Window = NEVERLOSE:AddWindow("NEVERLOSE","SSG-08",'original')
 
-local success, NeverloseUI = pcall(function()
-    return loadstring(game:HttpGet("https://script.roscripts.io/Ci0HsqM"))()
-end)
+    
+Window:AddTabLabel("Aimbot")
+    local RageTab = Window:AddTab("Rage","crosshair")
+    local LegitTab = Window:AddTab("Legit","mouse")
+Window:AddTabLabel("Common")
+local VisualTab = Window:AddTab("Visual","earth")
 
-if not success or not NeverloseUI then
-    warn("Failed to load NeverloseUI.")
-    return
-end
+    local Main = RageTab:AddSection("MAIN","left")
+    Main:AddToggle("Enabled",true,function(v)end)
+    Main:AddToggle("Silent Aim",true,function(v)end)
+    Main:AddToggle("Automatic Fire",true,function(v)end)
+    Main:AddToggle("Penetrate Walls",true,function(v)end)
+    Main:AddSlider("Field of View",1,180,180,function(v)end)
 
-local Window
-local function SafeCall(callback)
-    local ok, result = pcall(callback)
-    if not ok then
-        warn("[NeverloseUI] " .. tostring(result))
-    end
-    return ok, result
-end
+    local Selection = RageTab:AddSection("SELECTION","left")
+    Selection:AddDropdown("Target",{"Highest Damage","Closest"},"Highest Damage",function(v)end)
+    Selection:AddDropdown("Hitboxes",{"Head","Chest","Stomach"},"Head",function(v)end)
+    Selection:AddDropdown("Multipoint",{"Head","Chest","Stomach"},"Head",function(v)end)
+    Selection:AddSlider("Hit Chance",1,100,65,function(v)end)
+    Selection:AddSlider("Min Damage",1,100,100,function(v)end)
+    Selection:AddToggle("Auto Stop",true,function(v)end)
+    Selection:AddToggle("Auto Scope",true,function(v)end)
 
-SafeCall(function()
-    NeverloseUI:AddTheme({
-        Name = "Ocean Blue",
-        Accent = Color3.fromRGB(55, 145, 255),
-        Background = Color3.fromRGB(18, 21, 29),
-        Secondary = Color3.fromRGB(25, 30, 42),
-        Text = Color3.fromRGB(235, 242, 255),
-        Border = Color3.fromRGB(45, 65, 95)
-    })
-end)
+    local Other = RageTab:AddSection("OTHER","right")
+    Other:AddDropdown("History",{"Maximum","Medium","Low"},"Maximum",function(v)end)
+    Other:AddToggle("Delay Shot",true,function(v)end)
+    Other:AddToggle("Duck Peek Assist",false,function(v)end)
+    Other:AddToggle("Quick Peek Assist",false,function(v)end)
+    Other:AddDropdown("Magic Bullet",{"Off","On"},"Off",function(v)end)
+    Other:AddDropdown("Rapid Fire",{"Default","Instant"},"Default",function(v)end)
 
-local created, result = SafeCall(function()
-    return NeverloseUI:CreateWindow({
-        Title = "Example Hub",
-        Subtitle = "Blue Edition",
-        Theme = "Ocean Blue",
-        ToggleKeybind = Enum.KeyCode.RightShift,
-        ConfigEnabled = true,
-        AutoSave = true,
-        AutoLoad = true,
-        DraggableToggle = true
-    })
-end)
+    local AntiAim = RageTab:AddSection("ANTI-AIM","right")
+    AntiAim:AddToggle("Enabled",false,function(v)end)
+    AntiAim:AddDropdown("Pitch",{"Down","Up","Zero"},"Down",function(v)end)
+    AntiAim:AddDropdown("Yaw",{"Backward","Forward","Zero"},"Backward",function(v)end)
+    AntiAim:AddDropdown("Yaw Jitter",{"Disabled","Low","High"},"Disabled",function(v)end)
+    AntiAim:AddToggle("Slow Walk",false,function(v)end)
+    AntiAim:AddToggle("Freestanding",false,function(v)end)
 
-if not created or not result then
-    warn("Failed to create the interface.")
-    return
-end
 
-Window = result
-
-local function AddTab(name, icon)
-    local ok, tab = SafeCall(function()
-        return Window:AddTab({
-            Name = name,
-            Icon = icon
-        })
-    end)
-
-    if ok then
-        return tab
-    end
-
-    return nil
-end
-
-local function AddSection(tab, name)
-    if not tab then
-        return nil
-    end
-
-    local ok, section = SafeCall(function()
-        return tab:AddSection({
-            Name = name
-        })
-    end)
-
-    if ok then
-        return section
-    end
-
-    return nil
-end
-
-local HomeTab = AddTab("Home", "house")
-local SettingsTab = AddTab("Settings", "settings")
-
-local MainSection = AddSection(HomeTab, "Main")
-
-if MainSection then
-    SafeCall(function()
-        MainSection:AddParagraph({
-            Title = "Welcome",
-            Content = "Welcome to Example Hub."
-        })
-    end)
-
-    SafeCall(function()
-        MainSection:AddButton({
-            Name = "Show Notification",
-            Callback = function()
-                SafeCall(function()
-                    NeverloseUI:Notify({
-                        Title = "Example Hub",
-                        Content = "The interface is working.",
-                        Duration = 3
-                    })
-                end)
-            end
-        })
-    end)
-
-    SafeCall(function()
-        MainSection:AddToggle({
-            Name = "Example Toggle",
-            Default = false,
-            Callback = function(value)
-                print("Example Toggle:", value)
-            end
-        })
-    end)
-
-    SafeCall(function()
-        MainSection:AddSlider({
-            Name = "Example Slider",
-            Min = 0,
-            Max = 100,
-            Default = 50,
-            Callback = function(value)
-                print("Slider Value:", value)
-            end
-        })
-    end)
-
-    SafeCall(function()
-        MainSection:AddDropdown({
-            Name = "Example Dropdown",
-            Options = {"Option A", "Option B", "Option C"},
-            Default = "Option A",
-            Callback = function(value)
-                print("Selected Option:", value)
-            end
-        })
-    end)
-end
-
-local SettingsSection = AddSection(SettingsTab, "Settings")
-
-if SettingsSection then
-    SafeCall(function()
-        SettingsSection:AddToggle({
-            Name = "Example Setting",
-            Default = true,
-            Callback = function(value)
-                print("Setting Enabled:", value)
-            end
-        })
-    end)
-
-    SafeCall(function()
-        SettingsSection:AddButton({
-            Name = "Unload Interface",
-            Callback = function()
-                SafeCall(function()
-                    NeverloseUI:Unload()
-                end)
-            end
-        })
-    end)
-end
-
-SafeCall(function()
-    NeverloseUI:Notify({
-        Title = "Example Hub",
-        Content = "Interface loaded.",
-        Duration = 3
-    })
-end)
